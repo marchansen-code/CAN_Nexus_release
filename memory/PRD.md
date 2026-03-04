@@ -47,12 +47,22 @@ Wissensmanagement-Plattform für CANUSA Touristik GmbH & Co. KG und CU-Travel.
    - `GET /api/articles/{id}/export/docx` - Word-Export (python-docx)
    - Export-Dropdown in Artikel-Ansicht
 
+### Iteration 11 (23.02.2026 - abgeschlossen)
+**Dokumente-Backup als ZIP:**
+
+- `GET /api/backup/documents` - Alle PDFs als ZIP herunterladen
+- `POST /api/backup/documents/import` - ZIP-Backup importieren
+- ZIP enthält: `documents/[filename].pdf` + `manifest.json`
+- UI-Sektion "Dokumente sichern" auf `/backup` Seite
+
 ## API Endpoints
 
 ### Backup (Admin only)
 - `GET /api/backup/preview` - Statistiken abrufen
 - `GET /api/backup/export` - JSON-Backup herunterladen
-- `POST /api/backup/import` - Backup importieren
+- `POST /api/backup/import` - JSON-Backup importieren
+- `GET /api/backup/documents` - PDF-Dokumente als ZIP
+- `POST /api/backup/documents/import` - ZIP importieren
 
 ### Artikel-Export (alle Benutzer)
 - `GET /api/articles/{id}/export/pdf` - Als PDF
@@ -93,6 +103,7 @@ Siehe `/app/deployment/README.md` für vollständige Anleitung.
 ## Test Coverage
 - Iteration 9: Backend 100% (28/28), Frontend 100%
 - Iteration 10: Backend 100% (23/23), Frontend 100%
+- Iteration 11: Backend 100% (10/10), Frontend 100%
 - Last tested: 23.02.2026
 
 ## Backlog
