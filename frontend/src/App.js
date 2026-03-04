@@ -16,6 +16,7 @@ import Documents from "@/pages/Documents";
 import Categories from "@/pages/Categories";
 import Settings from "@/pages/Settings";
 import UserManagement from "@/pages/UserManagement";
+import Backup from "@/pages/Backup";
 import Layout from "@/components/Layout";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -176,6 +177,16 @@ const AppRouter = () => {
           <ProtectedRoute>
             <Layout>
               <UserManagement />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/backup"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <Backup />
             </Layout>
           </ProtectedRoute>
         }

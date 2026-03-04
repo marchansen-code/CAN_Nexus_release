@@ -1138,6 +1138,399 @@ async def widget_get_article(article_id: str):
         raise HTTPException(status_code=404, detail="Artikel nicht gefunden")
     return article
 
+# ==================== BACKUP & RESTORE ====================
+
+def json_serializer(obj):
+    """Custom JSON serializer for objects not serializable by default json code"""
+    if isinstance(obj, datetime):
+        return obj.isoformat()
+    raise TypeError(f"Object of type {type(obj)} is not JSON serializable")
+
+@api_router.get("/backup/export")
+async def export_backup(user: User = Depends(get_current_user)):
+    """Export all data as JSON backup (admin only)"""
+    if user.role != "admin":
+        raise HTTPException(status_code=403, detail="Nur Administratoren können Backups erstellen")
+    
+    from fastapi.responses import StreamingResponse
+    import json
+    import io
+    
+    # Collect all data
+    articles = await db.articles.find({}, {"_id": 0}).to_list(10000)
+    categories = await db.categories.find({}, {"_id": 0}).to_list(1000)
+    users = await db.users.find({}, {"_id": 0, "password_hash": 0}).to_list(1000)  # No passwords!
+    documents_meta = await db.documents.find({}, {"_id": 0, "file_path": 0, "temp_path": 0}).to_list(1000)
+    
+    backup_data = {
+        "version": "2.0.0",
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "created_by": user.email,
+        "statistics": {
+            "articles": len(articles),
+            "categories": len(categories),
+            "users": len(users),
+            "documents": len(documents_meta)
+        },
+        "data": {
+            "articles": articles,
+            "categories": categories,
+            "users": users,
+            "documents_metadata": documents_meta
+        }
+    }
+    
+    # Create JSON file with custom serializer for datetime objects
+    json_content = json.dumps(backup_data, ensure_ascii=False, indent=2, default=json_serializer)
+    
+    # Generate filename with timestamp
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    filename = f"canusa_nexus_backup_{timestamp}.json"
+    
+    return StreamingResponse(
+        io.BytesIO(json_content.encode('utf-8')),
+        media_type="application/json",
+        headers={
+            "Content-Disposition": f"attachment; filename={filename}"
+        }
+    )
+
+class BackupImportRequest(BaseModel):
+    backup_data: Dict[str, Any]
+    import_articles: bool = True
+    import_categories: bool = True
+    import_users: bool = True
+    merge_mode: bool = True  # True = merge with existing, False = replace all
+
+@api_router.post("/backup/import")
+async def import_backup(request: BackupImportRequest, user: User = Depends(get_current_user)):
+    """Import data from JSON backup (admin only)"""
+    if user.role != "admin":
+        raise HTTPException(status_code=403, detail="Nur Administratoren können Backups wiederherstellen")
+    
+    backup = request.backup_data
+    
+    # Validate backup structure
+    if "data" not in backup:
+        raise HTTPException(status_code=400, detail="Ungültiges Backup-Format: 'data' fehlt")
+    
+    results = {
+        "articles": {"imported": 0, "skipped": 0, "errors": 0},
+        "categories": {"imported": 0, "skipped": 0, "errors": 0},
+        "users": {"imported": 0, "skipped": 0, "errors": 0}
+    }
+    
+    data = backup["data"]
+    
+    # Import categories first (articles may reference them)
+    if request.import_categories and "categories" in data:
+        for cat in data["categories"]:
+            try:
+                existing = await db.categories.find_one({"category_id": cat.get("category_id")})
+                if existing:
+                    if not request.merge_mode:
+                        await db.categories.replace_one({"category_id": cat["category_id"]}, cat)
+                        results["categories"]["imported"] += 1
+                    else:
+                        results["categories"]["skipped"] += 1
+                else:
+                    await db.categories.insert_one(cat)
+                    results["categories"]["imported"] += 1
+            except Exception as e:
+                logger.error(f"Category import error: {e}")
+                results["categories"]["errors"] += 1
+    
+    # Import articles
+    if request.import_articles and "articles" in data:
+        for art in data["articles"]:
+            try:
+                existing = await db.articles.find_one({"article_id": art.get("article_id")})
+                if existing:
+                    if not request.merge_mode:
+                        await db.articles.replace_one({"article_id": art["article_id"]}, art)
+                        results["articles"]["imported"] += 1
+                    else:
+                        results["articles"]["skipped"] += 1
+                else:
+                    await db.articles.insert_one(art)
+                    results["articles"]["imported"] += 1
+            except Exception as e:
+                logger.error(f"Article import error: {e}")
+                results["articles"]["errors"] += 1
+    
+    # Import users (without passwords - they need to be set manually)
+    if request.import_users and "users" in data:
+        for usr in data["users"]:
+            try:
+                # Normalize email to lowercase for consistency
+                if usr.get("email"):
+                    usr["email"] = usr["email"].lower()
+                existing = await db.users.find_one({"email": usr.get("email")})
+                if existing:
+                    results["users"]["skipped"] += 1
+                else:
+                    # Set a temporary password that must be changed
+                    usr["password_hash"] = get_password_hash("TempPassword123!")
+                    usr["needs_password_change"] = True
+                    await db.users.insert_one(usr)
+                    results["users"]["imported"] += 1
+            except Exception as e:
+                logger.error(f"User import error: {e}")
+                results["users"]["errors"] += 1
+    
+    return {
+        "message": "Backup-Import abgeschlossen",
+        "results": results,
+        "note": "Importierte Benutzer haben das temporäre Passwort 'TempPassword123!' und müssen es ändern."
+    }
+
+@api_router.get("/backup/preview")
+async def preview_backup_info(user: User = Depends(get_current_user)):
+    """Get current database statistics for backup preview (admin only)"""
+    if user.role != "admin":
+        raise HTTPException(status_code=403, detail="Nur Administratoren")
+    
+    return {
+        "articles": await db.articles.count_documents({}),
+        "categories": await db.categories.count_documents({}),
+        "users": await db.users.count_documents({}),
+        "documents": await db.documents.count_documents({})
+    }
+
+# ==================== ARTICLE EXPORT (PDF & DOCX) ====================
+
+def strip_html(html_content: str) -> str:
+    """Remove HTML tags and convert to plain text"""
+    import re
+    # Remove script and style elements
+    text = re.sub(r'<script[^>]*>.*?</script>', '', html_content, flags=re.DOTALL)
+    text = re.sub(r'<style[^>]*>.*?</style>', '', text, flags=re.DOTALL)
+    # Convert some tags to text equivalents
+    text = re.sub(r'<br\s*/?>', '\n', text)
+    text = re.sub(r'</p>', '\n\n', text)
+    text = re.sub(r'</h[1-6]>', '\n\n', text)
+    text = re.sub(r'<li>', '• ', text)
+    text = re.sub(r'</li>', '\n', text)
+    # Remove all remaining tags
+    text = re.sub(r'<[^>]+>', '', text)
+    # Clean up whitespace
+    text = re.sub(r'\n\s*\n', '\n\n', text)
+    text = text.strip()
+    return text
+
+@api_router.get("/articles/{article_id}/export/pdf")
+async def export_article_pdf(article_id: str, user: User = Depends(get_current_user)):
+    """Export article as PDF"""
+    from fastapi.responses import StreamingResponse
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.units import cm
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
+    from reportlab.lib.enums import TA_JUSTIFY, TA_CENTER
+    from reportlab.pdfbase import pdfmetrics
+    from reportlab.pdfbase.ttfonts import TTFont
+    import io
+    
+    article = await db.articles.find_one({"article_id": article_id}, {"_id": 0})
+    if not article:
+        raise HTTPException(status_code=404, detail="Artikel nicht gefunden")
+    
+    # Get category name
+    category_name = "Keine Kategorie"
+    if article.get("category_id"):
+        cat = await db.categories.find_one({"category_id": article["category_id"]}, {"_id": 0, "name": 1})
+        if cat:
+            category_name = cat["name"]
+    
+    # Get author name
+    author_name = "Unbekannt"
+    if article.get("created_by"):
+        author = await db.users.find_one({"user_id": article["created_by"]}, {"_id": 0, "name": 1})
+        if author:
+            author_name = author["name"]
+    
+    # Create PDF
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=A4,
+        rightMargin=2*cm,
+        leftMargin=2*cm,
+        topMargin=2*cm,
+        bottomMargin=2*cm
+    )
+    
+    styles = getSampleStyleSheet()
+    
+    # Custom styles
+    title_style = ParagraphStyle(
+        'CustomTitle',
+        parent=styles['Heading1'],
+        fontSize=18,
+        spaceAfter=12,
+        textColor='#1e293b'
+    )
+    
+    meta_style = ParagraphStyle(
+        'Meta',
+        parent=styles['Normal'],
+        fontSize=10,
+        textColor='#64748b',
+        spaceAfter=20
+    )
+    
+    body_style = ParagraphStyle(
+        'CustomBody',
+        parent=styles['Normal'],
+        fontSize=11,
+        leading=16,
+        alignment=TA_JUSTIFY,
+        spaceAfter=12
+    )
+    
+    # Build content
+    story = []
+    
+    # Title
+    story.append(Paragraph(article["title"], title_style))
+    
+    # Meta info
+    created_at = article.get("created_at", "")
+    if isinstance(created_at, str) and created_at:
+        try:
+            dt = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
+            created_at = dt.strftime("%d.%m.%Y")
+        except Exception:
+            pass
+    
+    meta_text = f"Kategorie: {category_name} | Autor: {author_name} | Erstellt: {created_at}"
+    story.append(Paragraph(meta_text, meta_style))
+    
+    # Summary
+    if article.get("summary"):
+        story.append(Paragraph(f"<b>Zusammenfassung:</b> {article['summary']}", body_style))
+        story.append(Spacer(1, 12))
+    
+    # Content
+    content = strip_html(article.get("content", ""))
+    paragraphs = content.split('\n\n')
+    for para in paragraphs:
+        if para.strip():
+            # Escape special characters for ReportLab
+            para = para.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+            story.append(Paragraph(para, body_style))
+    
+    # Footer
+    story.append(Spacer(1, 30))
+    footer_style = ParagraphStyle('Footer', parent=styles['Normal'], fontSize=8, textColor='#94a3b8', alignment=TA_CENTER)
+    story.append(Paragraph(f"Exportiert aus CANUSA Nexus am {datetime.now().strftime('%d.%m.%Y %H:%M')}", footer_style))
+    
+    doc.build(story)
+    buffer.seek(0)
+    
+    # Sanitize filename
+    safe_title = "".join(c for c in article["title"] if c.isalnum() or c in (' ', '-', '_')).strip()[:50]
+    filename = f"{safe_title}.pdf"
+    
+    return StreamingResponse(
+        buffer,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f"attachment; filename=\"{filename}\""
+        }
+    )
+
+@api_router.get("/articles/{article_id}/export/docx")
+async def export_article_docx(article_id: str, user: User = Depends(get_current_user)):
+    """Export article as Word document"""
+    from fastapi.responses import StreamingResponse
+    from docx import Document as DocxDocument
+    from docx.shared import Inches, Pt, RGBColor
+    from docx.enum.text import WD_ALIGN_PARAGRAPH
+    import io
+    
+    article = await db.articles.find_one({"article_id": article_id}, {"_id": 0})
+    if not article:
+        raise HTTPException(status_code=404, detail="Artikel nicht gefunden")
+    
+    # Get category name
+    category_name = "Keine Kategorie"
+    if article.get("category_id"):
+        cat = await db.categories.find_one({"category_id": article["category_id"]}, {"_id": 0, "name": 1})
+        if cat:
+            category_name = cat["name"]
+    
+    # Get author name
+    author_name = "Unbekannt"
+    if article.get("created_by"):
+        author = await db.users.find_one({"user_id": article["created_by"]}, {"_id": 0, "name": 1})
+        if author:
+            author_name = author["name"]
+    
+    # Create Word document
+    doc = DocxDocument()
+    
+    # Title
+    title = doc.add_heading(article["title"], level=1)
+    title.alignment = WD_ALIGN_PARAGRAPH.LEFT
+    
+    # Meta info
+    created_at = article.get("created_at", "")
+    if isinstance(created_at, str) and created_at:
+        try:
+            dt = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
+            created_at = dt.strftime("%d.%m.%Y")
+        except Exception:
+            pass
+    
+    meta = doc.add_paragraph()
+    meta_run = meta.add_run(f"Kategorie: {category_name} | Autor: {author_name} | Erstellt: {created_at}")
+    meta_run.font.size = Pt(10)
+    meta_run.font.color.rgb = RGBColor(100, 116, 139)
+    
+    doc.add_paragraph()  # Spacer
+    
+    # Summary
+    if article.get("summary"):
+        summary_para = doc.add_paragraph()
+        summary_run = summary_para.add_run("Zusammenfassung: ")
+        summary_run.bold = True
+        summary_para.add_run(article["summary"])
+        doc.add_paragraph()
+    
+    # Content
+    content = strip_html(article.get("content", ""))
+    paragraphs = content.split('\n\n')
+    for para in paragraphs:
+        if para.strip():
+            p = doc.add_paragraph(para.strip())
+            p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+    
+    # Footer
+    doc.add_paragraph()
+    footer = doc.add_paragraph()
+    footer_run = footer.add_run(f"Exportiert aus CANUSA Nexus am {datetime.now().strftime('%d.%m.%Y %H:%M')}")
+    footer_run.font.size = Pt(8)
+    footer_run.font.color.rgb = RGBColor(148, 163, 184)
+    footer.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    
+    # Save to buffer
+    buffer = io.BytesIO()
+    doc.save(buffer)
+    buffer.seek(0)
+    
+    # Sanitize filename
+    safe_title = "".join(c for c in article["title"] if c.isalnum() or c in (' ', '-', '_')).strip()[:50]
+    filename = f"{safe_title}.docx"
+    
+    return StreamingResponse(
+        buffer,
+        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        headers={
+            "Content-Disposition": f"attachment; filename=\"{filename}\""
+        }
+    )
+
 # ==================== ROOT ====================
 
 @api_router.get("/")
@@ -1180,7 +1573,7 @@ async def startup():
                     "is_blocked": False
                 }}
             )
-            logger.info(f"Admin user migrated successfully")
+            logger.info("Admin user migrated successfully")
     else:
         # Create new admin user
         admin_user = {

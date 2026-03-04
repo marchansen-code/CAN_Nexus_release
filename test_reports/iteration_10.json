@@ -1,0 +1,115 @@
+{
+  "summary": "Iteration 10: Tested new Backup & Export features. All 23 backend tests passed. Fixed 2 bugs: 1) datetime serialization in backup export, 2) email normalization for imported users. Frontend backup page and article export dropdown both working correctly.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "bugs_fixed_by_testing_agent": [
+    {
+      "file": "/app/backend/server.py",
+      "issue": "TypeError: Object of type datetime is not JSON serializable in backup export",
+      "fix": "Added json_serializer() function to handle datetime objects during JSON serialization"
+    },
+    {
+      "file": "/app/backend/server.py",
+      "issue": "Imported users could not login due to email case mismatch",
+      "fix": "Added email normalization (lowercase) during user import"
+    }
+  ],
+  "test_report_links": [
+    "/app/backend/tests/test_iteration10_backup_export.py",
+    "/app/test_reports/pytest/pytest_results_iter10.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "updated_files": [
+    "/app/backend/server.py",
+    "/app/backend/tests/test_iteration10_backup_export.py"
+  ],
+  "success_rate": {
+    "backend": "100% (23/23 pytest tests passed)",
+    "frontend": "100% (all features verified via Playwright)"
+  },
+  "test_credentials": {
+    "admin_email": "marc.hansen@canusa.de",
+    "admin_password": "CanusaNexus2024!",
+    "note": "Test users prefixed with TEST_iter10_ were cleaned up after tests"
+  },
+  "seed_data_creation": "",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Iteration 10 features all working correctly. Backup export/import and article PDF/DOCX export fully functional.",
+  "features_verified": {
+    "backup_preview": {
+      "status": "VERIFIED",
+      "endpoint": "GET /api/backup/preview",
+      "notes": "Returns database statistics (articles, categories, users, documents count). Admin only."
+    },
+    "backup_export": {
+      "status": "VERIFIED",
+      "endpoint": "GET /api/backup/export",
+      "notes": "Downloads JSON backup file with all data (excluding password hashes). Admin only."
+    },
+    "backup_import": {
+      "status": "VERIFIED",
+      "endpoint": "POST /api/backup/import",
+      "notes": "Imports data from JSON backup. Supports merge_mode and selective import. Admin only."
+    },
+    "pdf_export": {
+      "status": "VERIFIED",
+      "endpoint": "GET /api/articles/{id}/export/pdf",
+      "notes": "Exports article as PDF using reportlab. Available to all authenticated users."
+    },
+    "docx_export": {
+      "status": "VERIFIED",
+      "endpoint": "GET /api/articles/{id}/export/docx",
+      "notes": "Exports article as Word document using python-docx. Available to all authenticated users."
+    },
+    "frontend_backup_page": {
+      "status": "VERIFIED",
+      "component": "Backup.jsx",
+      "notes": "Full backup page with stats display, export button, import file picker, and import options."
+    },
+    "frontend_export_dropdown": {
+      "status": "VERIFIED",
+      "component": "ArticleView.jsx",
+      "notes": "Export dropdown with PDF and Word options. Downloads work correctly."
+    }
+  },
+  "api_tests_performed": {
+    "backup_preview_admin": "GET /api/backup/preview as admin returns 200 with stats",
+    "backup_preview_viewer_forbidden": "GET /api/backup/preview as viewer returns 403",
+    "backup_preview_no_auth": "GET /api/backup/preview without auth returns 401",
+    "backup_export_admin": "GET /api/backup/export as admin returns JSON backup file",
+    "backup_export_viewer_forbidden": "GET /api/backup/export as viewer returns 403",
+    "backup_export_no_auth": "GET /api/backup/export without auth returns 401",
+    "backup_import_valid": "POST /api/backup/import with valid backup imports data",
+    "backup_import_invalid_format": "POST /api/backup/import with invalid format returns 400",
+    "backup_import_viewer_forbidden": "POST /api/backup/import as viewer returns 403",
+    "backup_import_no_auth": "POST /api/backup/import without auth returns 401",
+    "backup_import_user_temp_password": "Imported user can login with TempPassword123!",
+    "pdf_export_existing": "GET /api/articles/{id}/export/pdf returns valid PDF",
+    "pdf_export_nonexistent": "GET /api/articles/{id}/export/pdf for unknown article returns 404",
+    "pdf_export_no_auth": "GET /api/articles/{id}/export/pdf without auth returns 401",
+    "pdf_export_viewer": "GET /api/articles/{id}/export/pdf as viewer returns 200",
+    "docx_export_existing": "GET /api/articles/{id}/export/docx returns valid DOCX",
+    "docx_export_nonexistent": "GET /api/articles/{id}/export/docx for unknown article returns 404",
+    "docx_export_no_auth": "GET /api/articles/{id}/export/docx without auth returns 401",
+    "docx_export_viewer": "GET /api/articles/{id}/export/docx as viewer returns 200",
+    "full_backup_cycle": "Export backup -> Import same backup in merge mode -> all items skipped"
+  },
+  "ui_tests_performed": {
+    "backup_page_navigation": "Backup link visible in sidebar for admin, page loads correctly",
+    "backup_page_stats": "Database statistics displayed correctly (articles, categories, users, documents)",
+    "backup_export_button": "Export button triggers JSON file download",
+    "backup_import_input": "File input visible for selecting backup file",
+    "article_export_dropdown": "Exportieren button visible on article view page",
+    "article_pdf_export": "Als PDF exportieren option downloads PDF file",
+    "article_docx_export": "Als Word exportieren option downloads DOCX file"
+  }
+}

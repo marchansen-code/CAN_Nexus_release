@@ -13,13 +13,22 @@ import {
   Calendar,
   Users,
   Eye,
-  User
+  User,
+  Download,
+  FileText,
+  FileDown
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const StatusBadge = ({ status }) => {
   const styles = {
@@ -139,6 +148,34 @@ const ArticleView = () => {
       .slice(0, 2) || "?";
   };
 
+  const handleExport = async (format) => {
+    try {
+      const response = await axios.get(`${API}/articles/${id}/export/${format}`, {
+        responseType: 'blob'
+      });
+      
+      // Create download link
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      
+      // Generate filename
+      const safeTitle = article.title.replace(/[^a-zA-Z0-9äöüÄÖÜß\s-_]/g, '').trim().slice(0, 50);
+      const extension = format === 'pdf' ? 'pdf' : 'docx';
+      link.setAttribute('download', `${safeTitle}.${extension}`);
+      
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      
+      toast.success(`Artikel als ${format.toUpperCase()} exportiert`);
+    } catch (error) {
+      console.error("Export failed:", error);
+      toast.error("Export fehlgeschlagen");
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -170,6 +207,27 @@ const ArticleView = () => {
             <Star className={`w-4 h-4 mr-1.5 ${isFavorite ? "fill-amber-500" : ""}`} />
             {isFavorite ? "Favorit" : "Favorisieren"}
           </Button>
+          
+          {/* Export Dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" data-testid="export-dropdown">
+                <Download className="w-4 h-4 mr-1.5" />
+                Exportieren
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => handleExport('pdf')} data-testid="export-pdf-btn">
+                <FileDown className="w-4 h-4 mr-2 text-red-500" />
+                Als PDF exportieren
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleExport('docx')} data-testid="export-docx-btn">
+                <FileText className="w-4 h-4 mr-2 text-blue-500" />
+                Als Word exportieren
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          
           {canEdit && (
             <Button 
               onClick={() => navigate(`/articles/${id}/edit`)} 
