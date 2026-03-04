@@ -1,20 +1,20 @@
 # CANUSA Nexus - The Knowledge Hub - PRD
 
 ## Original Problem Statement
-KI-gestützte Wissensmanagement-Plattform für CANUSA Touristik GmbH & Co. KG und CU-Travel.
+Wissensmanagement-Plattform für CANUSA Touristik GmbH & Co. KG und CU-Travel.
 
 ## Technology Stack
 - **Frontend**: React 18, TailwindCSS, Shadcn/UI, TipTap Rich Editor
-- **Backend**: FastAPI, Python 3.11, bcrypt (Passwort-Hashing)
+- **Backend**: FastAPI, Python 3.11, bcrypt, reportlab (PDF), python-docx (Word)
 - **Database**: MongoDB
 - **Auth**: E-Mail/Passwort mit Session-Cookies
 
 ## Implemented Features
 
 ### Core Features
-- ✅ E-Mail/Passwort Login (ersetzt Google Auth)
+- ✅ E-Mail/Passwort Login
 - ✅ Dashboard mit Statistiken, Favoriten, Beliebteste Artikel
-- ✅ Keyword-basierte Suche mit Live-Vorschau (ersetzt KI-Suche)
+- ✅ Keyword-basierte Suche mit Live-Vorschau
 - ✅ Artikel-CRUD mit Status-Workflow
 - ✅ Kategorieverwaltung (Baumstruktur)
 - ✅ Dark/Light/Auto Theme-Mode
@@ -29,101 +29,85 @@ KI-gestützte Wissensmanagement-Plattform für CANUSA Touristik GmbH & Co. KG un
 ### PDF Features
 - ✅ PDF-Upload mit Duplikat-Prüfung
 - ✅ PDF-Einbettung als iFrame
-- ✅ PDF in neuem Tab öffnen
 - ✅ Text-Extraktion mit Layout-Erhaltung
 
-### Iteration 9 (23.02.2026 - abgeschlossen)
-**Große Änderungen:**
+### Iteration 10 (23.02.2026 - abgeschlossen)
+**Backup & Export Features:**
 
-1. **Google Auth → E-Mail/Passwort Login**
-   - Klassisches Login mit E-Mail und Passwort
-   - bcrypt-verschlüsselte Passwörter
-   - "Angemeldet bleiben" Option (7 oder 30 Tage)
-   - Stylische Login-Seite mit CANUSA-Branding
-   - Admins können Benutzer anlegen und Passwörter vergeben
-   - Domain-Beschränkung entfernt
+1. **Backup & Restore (Admin only)**
+   - `GET /api/backup/preview` - Datenbank-Statistiken
+   - `GET /api/backup/export` - JSON-Backup herunterladen
+   - `POST /api/backup/import` - Backup wiederherstellen
+   - Export enthält: Artikel, Kategorien, Benutzer (ohne Passwörter)
+   - Import-Optionen: Merge-Modus, selektiver Import
+   - Neue Frontend-Seite: `/backup`
 
-2. **KI-Suche → Ajax-Keyword-Suche**
-   - Pinecone/LLM komplett entfernt
-   - Echtzeit-Suche beim Tippen (300ms Debounce)
-   - MongoDB regex-basierte Suche
-   - Ergebnisse mit Relevanz-Scoring und Highlighting
-   - Schnellsuche für Autocomplete
-
-3. **Docker Deployment Dokumentation**
-   - `/app/deployment/README.md` - Schritt-für-Schritt Anleitung
-   - `docker-compose.yml` - MongoDB, Backend, Frontend
-   - `Dockerfile.backend` und `Dockerfile.frontend`
-   - `nginx.conf` für Production
-   - `.env.example` - Umgebungsvariablen Template
+2. **Artikel-Export**
+   - `GET /api/articles/{id}/export/pdf` - PDF-Export (reportlab)
+   - `GET /api/articles/{id}/export/docx` - Word-Export (python-docx)
+   - Export-Dropdown in Artikel-Ansicht
 
 ## API Endpoints
 
+### Backup (Admin only)
+- `GET /api/backup/preview` - Statistiken abrufen
+- `GET /api/backup/export` - JSON-Backup herunterladen
+- `POST /api/backup/import` - Backup importieren
+
+### Artikel-Export (alle Benutzer)
+- `GET /api/articles/{id}/export/pdf` - Als PDF
+- `GET /api/articles/{id}/export/docx` - Als Word
+
 ### Auth
-- `POST /api/auth/login` - Login mit E-Mail/Passwort
-- `GET /api/auth/me` - Aktuellen Benutzer abrufen
+- `POST /api/auth/login` - Login
+- `GET /api/auth/me` - Aktueller Benutzer
 - `POST /api/auth/logout` - Logout
 
 ### Users (Admin only)
-- `GET /api/users` - Alle Benutzer auflisten
-- `POST /api/users` - Neuen Benutzer anlegen
+- `GET /api/users` - Alle Benutzer
+- `POST /api/users` - Neuer Benutzer
 - `PUT /api/users/{id}/role` - Rolle ändern
 - `PUT /api/users/{id}/password` - Passwort ändern
 - `PUT /api/users/{id}/block` - Sperren/Entsperren
-- `DELETE /api/users/{id}` - Benutzer löschen
+- `DELETE /api/users/{id}` - Löschen
 
 ### Search
-- `POST /api/search` - Volltext-Suche mit Scoring
-- `GET /api/search/quick` - Schnellsuche für Autocomplete
-
-### Articles
-- Standard CRUD Endpoints
-
-### Documents
-- PDF Upload, Abruf, Embed, Löschen
-
-### Images
-- Bild-Upload für Editor
+- `POST /api/search` - Volltext-Suche
+- `GET /api/search/quick` - Schnellsuche
 
 ## Default Admin
 - **E-Mail**: marc.hansen@canusa.de
 - **Passwort**: CanusaNexus2024!
-- **Rolle**: Administrator
-
-⚠️ **Wichtig**: Passwort nach erstem Login ändern!
-
-## Test Coverage
-- Backend: 100% (28/28 Tests für Iteration 9)
-- Frontend: 100%
-- Last tested: 23.02.2026
 
 ## Deployment
 
-### Docker (empfohlen)
+### Docker
 ```bash
 cd deployment
 cp .env.example .env
-# .env anpassen
 docker-compose up -d
 ```
 
 Siehe `/app/deployment/README.md` für vollständige Anleitung.
 
+## Test Coverage
+- Iteration 9: Backend 100% (28/28), Frontend 100%
+- Iteration 10: Backend 100% (23/23), Frontend 100%
+- Last tested: 23.02.2026
+
 ## Backlog
 
 ### P1 (High)
-- [ ] Hierarchische Kategorie-Verwaltung UI (Add/Edit/Delete)
+- [ ] Hierarchische Kategorie-Verwaltung UI
 - [ ] Bild-Extraktion aus PDFs
 - [ ] OCR für gescannte PDFs
 
 ### P2 (Medium)
 - [ ] High-Fidelity PDF-Import (Tabellen → editierbares HTML)
 - [ ] Artikel-Versionierung
-- [ ] Export zu Word/PDF
 - [ ] Schnellsuche (Strg+K)
 - [ ] Backend Refactoring (server.py in Router aufteilen)
 
 ### P3 (Nice to Have)
 - [ ] Mehrsprachige UI
 - [ ] Analytics Dashboard
-- [ ] KI-Suche als optionales Feature (später wieder aktivierbar)
