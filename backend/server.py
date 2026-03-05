@@ -55,7 +55,20 @@ class User(BaseModel):
     name: str
     role: str = "viewer"
     is_blocked: bool = False
+    group_ids: List[str] = []
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class Group(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    group_id: str = Field(default_factory=lambda: f"grp_{uuid.uuid4().hex[:12]}")
+    name: str
+    description: Optional[str] = None
+    created_by: str
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class GroupCreate(BaseModel):
+    name: str
+    description: Optional[str] = None
 
 class UserSession(BaseModel):
     model_config = ConfigDict(extra="ignore")
@@ -87,15 +100,17 @@ class Article(BaseModel):
     article_id: str = Field(default_factory=lambda: f"art_{uuid.uuid4().hex[:12]}")
     title: str
     content: str
-    summary: Optional[str] = None
-    category_id: Optional[str] = None
+    category_ids: List[str] = []  # Multiple categories
     status: str = "draft"
-    visibility: str = "all"
     tags: List[str] = []
     source_document_id: Optional[str] = None
     review_date: Optional[datetime] = None
+    expiry_date: Optional[datetime] = None  # Article expires and goes back to draft
     favorited_by: List[str] = []
     contact_person_id: Optional[str] = None
+    visible_to_groups: List[str] = []  # Empty = visible to all, otherwise only to these groups
+    is_important: bool = False
+    important_until: Optional[datetime] = None  # Important marking expires
     created_by: str
     updated_by: str
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
@@ -105,23 +120,27 @@ class Article(BaseModel):
 class ArticleCreate(BaseModel):
     title: str
     content: str
-    summary: Optional[str] = None
-    category_id: Optional[str] = None
+    category_ids: List[str] = []
     status: str = "draft"
-    visibility: str = "all"
     tags: List[str] = []
     contact_person_id: Optional[str] = None
+    visible_to_groups: List[str] = []
+    expiry_date: Optional[datetime] = None
+    is_important: bool = False
+    important_until: Optional[datetime] = None
 
 class ArticleUpdate(BaseModel):
     title: Optional[str] = None
     content: Optional[str] = None
-    summary: Optional[str] = None
-    category_id: Optional[str] = None
+    category_ids: Optional[List[str]] = None
     status: Optional[str] = None
-    visibility: Optional[str] = None
     tags: Optional[List[str]] = None
     review_date: Optional[datetime] = None
+    expiry_date: Optional[datetime] = None
     contact_person_id: Optional[str] = None
+    visible_to_groups: Optional[List[str]] = None
+    is_important: Optional[bool] = None
+    important_until: Optional[datetime] = None
 
 class Document(BaseModel):
     model_config = ConfigDict(extra="ignore")
@@ -429,6 +448,116 @@ async def delete_user(user_id: str, current_user: User = Depends(get_current_use
     
     return {"message": "Benutzer gelöscht"}
 
+# ==================== GROUP ENDPOINTS ====================
+
+@api_router.get("/groups", response_model=List[Dict])
+async def get_groups(user: User = Depends(get_current_user)):
+    """Get all groups"""
+    groups = await db.groups.find({}, {"_id": 0}).to_list(100)
+    return groups
+
+@api_router.post("/groups", response_model=Dict)
+async def create_group(group: GroupCreate, user: User = Depends(get_current_user)):
+    """Create a new group (admin only)"""
+    if user.role != "admin":
+        raise HTTPException(status_code=403, detail="Nur Administratoren können Gruppen erstellen")
+    
+    # Check if group name already exists
+    existing = await db.groups.find_one({"name": group.name})
+    if existing:
+        raise HTTPException(status_code=400, detail="Eine Gruppe mit diesem Namen existiert bereits")
+    
+    group_doc = Group(
+        name=group.name,
+        description=group.description,
+        created_by=user.user_id
+    )
+    doc = group_doc.model_dump()
+    doc["created_at"] = doc["created_at"].isoformat()
+    await db.groups.insert_one(doc)
+    return {k: v for k, v in doc.items() if k != "_id"}
+
+@api_router.put("/groups/{group_id}", response_model=Dict)
+async def update_group(group_id: str, group: GroupCreate, user: User = Depends(get_current_user)):
+    """Update a group (admin only)"""
+    if user.role != "admin":
+        raise HTTPException(status_code=403, detail="Nur Administratoren können Gruppen bearbeiten")
+    
+    result = await db.groups.update_one(
+        {"group_id": group_id},
+        {"$set": {
+            "name": group.name,
+            "description": group.description,
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }}
+    )
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Gruppe nicht gefunden")
+    
+    updated = await db.groups.find_one({"group_id": group_id}, {"_id": 0})
+    return updated
+
+@api_router.delete("/groups/{group_id}")
+async def delete_group(group_id: str, user: User = Depends(get_current_user)):
+    """Delete a group (admin only)"""
+    if user.role != "admin":
+        raise HTTPException(status_code=403, detail="Nur Administratoren können Gruppen löschen")
+    
+    # Remove group from all users
+    await db.users.update_many(
+        {"group_ids": group_id},
+        {"$pull": {"group_ids": group_id}}
+    )
+    
+    # Remove group from all articles
+    await db.articles.update_many(
+        {"visible_to_groups": group_id},
+        {"$pull": {"visible_to_groups": group_id}}
+    )
+    
+    result = await db.groups.delete_one({"group_id": group_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Gruppe nicht gefunden")
+    
+    return {"message": "Gruppe gelöscht"}
+
+class UserGroupUpdate(BaseModel):
+    group_ids: List[str]
+
+@api_router.put("/users/{user_id}/groups")
+async def update_user_groups(user_id: str, data: UserGroupUpdate, current_user: User = Depends(get_current_user)):
+    """Update user's group memberships (admin only)"""
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Nur Administratoren können Gruppenzugehörigkeiten ändern")
+    
+    # Verify all groups exist
+    for gid in data.group_ids:
+        exists = await db.groups.find_one({"group_id": gid})
+        if not exists:
+            raise HTTPException(status_code=400, detail=f"Gruppe {gid} nicht gefunden")
+    
+    result = await db.users.update_one(
+        {"user_id": user_id},
+        {"$set": {"group_ids": data.group_ids}}
+    )
+    
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Benutzer nicht gefunden")
+    
+    return {"message": "Gruppenzugehörigkeiten aktualisiert", "group_ids": data.group_ids}
+
+@api_router.get("/groups/{group_id}/members")
+async def get_group_members(group_id: str, user: User = Depends(get_current_user)):
+    """Get all members of a group"""
+    if user.role != "admin":
+        raise HTTPException(status_code=403, detail="Nur Administratoren")
+    
+    members = await db.users.find(
+        {"group_ids": group_id},
+        {"_id": 0, "password_hash": 0}
+    ).to_list(1000)
+    return members
+
 # ==================== CATEGORY ENDPOINTS ====================
 
 @api_router.get("/categories", response_model=List[Dict])
@@ -482,36 +611,102 @@ async def delete_category(category_id: str, user: User = Depends(get_current_use
 
 # ==================== ARTICLE ENDPOINTS ====================
 
+def can_user_see_article(article: dict, user: User) -> bool:
+    """Check if user can see the article based on status, groups, etc."""
+    # Admin can see everything
+    if user.role == "admin":
+        return True
+    
+    # Draft articles: only creator can see
+    if article.get("status") == "draft":
+        return article.get("created_by") == user.user_id
+    
+    # Group-restricted articles
+    visible_groups = article.get("visible_to_groups", [])
+    if visible_groups:
+        user_groups = getattr(user, 'group_ids', []) or []
+        if not any(g in user_groups for g in visible_groups):
+            return False
+    
+    return True
+
 @api_router.get("/articles", response_model=List[Dict])
 async def get_articles(
     status: Optional[str] = None,
     category_id: Optional[str] = None,
     user: User = Depends(get_current_user)
 ):
-    """Get all articles with optional filtering"""
+    """Get all articles with optional filtering, respecting visibility rules"""
+    # Get user's group memberships
+    user_doc = await db.users.find_one({"user_id": user.user_id}, {"group_ids": 1})
+    user_groups = user_doc.get("group_ids", []) if user_doc else []
+    
     query = {}
     if status:
         query["status"] = status
     if category_id:
-        query["category_id"] = category_id
+        query["category_ids"] = category_id
     
     articles = await db.articles.find(query, {"_id": 0}).sort("updated_at", -1).to_list(1000)
-    return articles
+    
+    # Filter articles based on visibility
+    filtered = []
+    for art in articles:
+        # Admin sees everything
+        if user.role == "admin":
+            filtered.append(art)
+            continue
+        
+        # Draft: only creator sees it
+        if art.get("status") == "draft":
+            if art.get("created_by") == user.user_id:
+                filtered.append(art)
+            continue
+        
+        # Group-restricted
+        visible_groups = art.get("visible_to_groups", [])
+        if visible_groups:
+            if any(g in user_groups for g in visible_groups):
+                filtered.append(art)
+        else:
+            filtered.append(art)
+    
+    return filtered
 
 @api_router.get("/articles/top-viewed")
 async def get_top_viewed_articles(limit: int = 10, user: User = Depends(get_current_user)):
-    """Get top viewed articles system-wide"""
-    articles = await db.articles.find({}, {"_id": 0}).sort("view_count", -1).limit(limit).to_list(limit)
+    """Get top viewed articles (published only)"""
+    articles = await db.articles.find(
+        {"status": "published"},
+        {"_id": 0}
+    ).sort("view_count", -1).limit(limit).to_list(limit)
     return articles
 
 @api_router.get("/articles/by-category/{category_id}")
 async def get_articles_by_category(category_id: str, user: User = Depends(get_current_user)):
     """Get articles in a specific category"""
+    user_doc = await db.users.find_one({"user_id": user.user_id}, {"group_ids": 1})
+    user_groups = user_doc.get("group_ids", []) if user_doc else []
+    
     articles = await db.articles.find(
-        {"category_id": category_id},
+        {"category_ids": category_id},
         {"_id": 0}
     ).sort("updated_at", -1).to_list(100)
-    return articles
+    
+    # Filter by visibility
+    filtered = []
+    for art in articles:
+        if user.role == "admin":
+            filtered.append(art)
+            continue
+        if art.get("status") == "draft" and art.get("created_by") != user.user_id:
+            continue
+        visible_groups = art.get("visible_to_groups", [])
+        if visible_groups and not any(g in user_groups for g in visible_groups):
+            continue
+        filtered.append(art)
+    
+    return filtered
 
 @api_router.get("/articles/{article_id}", response_model=Dict)
 async def get_article(article_id: str, user: User = Depends(get_current_user)):
@@ -519,6 +714,18 @@ async def get_article(article_id: str, user: User = Depends(get_current_user)):
     article = await db.articles.find_one({"article_id": article_id}, {"_id": 0})
     if not article:
         raise HTTPException(status_code=404, detail="Artikel nicht gefunden")
+    
+    # Check visibility
+    user_doc = await db.users.find_one({"user_id": user.user_id}, {"group_ids": 1})
+    user_groups = user_doc.get("group_ids", []) if user_doc else []
+    
+    if user.role != "admin":
+        if article.get("status") == "draft" and article.get("created_by") != user.user_id:
+            raise HTTPException(status_code=403, detail="Zugriff verweigert")
+        visible_groups = article.get("visible_to_groups", [])
+        if visible_groups and not any(g in user_groups for g in visible_groups):
+            raise HTTPException(status_code=403, detail="Zugriff verweigert")
+    
     return article
 
 @api_router.post("/articles", response_model=Dict)
@@ -527,11 +734,14 @@ async def create_article(article: ArticleCreate, user: User = Depends(get_curren
     art_doc = Article(
         title=article.title,
         content=article.content,
-        summary=article.summary,
-        category_id=article.category_id,
+        category_ids=article.category_ids,
         status=article.status,
-        visibility=article.visibility,
         tags=article.tags,
+        contact_person_id=article.contact_person_id,
+        visible_to_groups=article.visible_to_groups,
+        expiry_date=article.expiry_date,
+        is_important=article.is_important,
+        important_until=article.important_until,
         created_by=user.user_id,
         updated_by=user.user_id
     )
@@ -540,6 +750,10 @@ async def create_article(article: ArticleCreate, user: User = Depends(get_curren
     doc["updated_at"] = doc["updated_at"].isoformat()
     if doc.get("review_date"):
         doc["review_date"] = doc["review_date"].isoformat()
+    if doc.get("expiry_date"):
+        doc["expiry_date"] = doc["expiry_date"].isoformat()
+    if doc.get("important_until"):
+        doc["important_until"] = doc["important_until"].isoformat()
     
     await db.articles.insert_one(doc)
     return {k: v for k, v in doc.items() if k != "_id"}
@@ -551,8 +765,10 @@ async def update_article(article_id: str, update: ArticleUpdate, user: User = De
     update_data["updated_by"] = user.user_id
     update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
     
-    if update_data.get("review_date"):
-        update_data["review_date"] = update_data["review_date"].isoformat()
+    # Convert dates to ISO strings
+    for date_field in ["review_date", "expiry_date", "important_until"]:
+        if update_data.get(date_field):
+            update_data[date_field] = update_data[date_field].isoformat()
     
     result = await db.articles.update_one(
         {"article_id": article_id},
@@ -572,6 +788,31 @@ async def delete_article(article_id: str, user: User = Depends(get_current_user)
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Artikel nicht gefunden")
     return {"message": "Artikel gelöscht"}
+
+@api_router.get("/tags")
+async def get_all_tags(user: User = Depends(get_current_user)):
+    """Get all unique tags from articles"""
+    pipeline = [
+        {"$unwind": "$tags"},
+        {"$group": {"_id": "$tags"}},
+        {"$sort": {"_id": 1}}
+    ]
+    result = await db.articles.aggregate(pipeline).to_list(500)
+    tags = [r["_id"] for r in result if r["_id"]]
+    return {"tags": tags}
+
+@api_router.get("/articles/search/linkable")
+async def search_linkable_articles(q: str, limit: int = 10, user: User = Depends(get_current_user)):
+    """Search articles for linking (@ mentions)"""
+    if not q or len(q) < 2:
+        return {"results": []}
+    
+    articles = await db.articles.find(
+        {"title": {"$regex": q, "$options": "i"}},
+        {"_id": 0, "article_id": 1, "title": 1, "status": 1}
+    ).limit(limit).to_list(limit)
+    
+    return {"results": articles}
 
 # ==================== SEARCH ====================
 
@@ -1301,12 +1542,6 @@ async def import_documents_backup(
     
     try:
         with zipfile.ZipFile(zip_buffer, 'r') as zip_file:
-            # Read manifest
-            manifest = None
-            if "manifest.json" in zip_file.namelist():
-                manifest_data = zip_file.read("manifest.json")
-                manifest = json.loads(manifest_data.decode('utf-8'))
-            
             # Create upload directory
             os.makedirs("/tmp/pdfs", exist_ok=True)
             
@@ -1716,9 +1951,10 @@ async def startup():
     # Create indexes
     await db.articles.create_index([("title", "text"), ("content", "text")])
     await db.articles.create_index("status")
-    await db.articles.create_index("category_id")
+    await db.articles.create_index("category_ids")
     await db.users.create_index("email", unique=True)
     await db.user_sessions.create_index("session_token")
+    await db.groups.create_index("name", unique=True)
     
     # Check for existing admin user
     admin_exists = await db.users.find_one({"email": DEFAULT_ADMIN_EMAIL})
@@ -1732,7 +1968,8 @@ async def startup():
                 {"$set": {
                     "password_hash": get_password_hash(DEFAULT_ADMIN_PASSWORD),
                     "role": "admin",
-                    "is_blocked": False
+                    "is_blocked": False,
+                    "group_ids": []
                 }}
             )
             logger.info("Admin user migrated successfully")
@@ -1745,11 +1982,41 @@ async def startup():
             "password_hash": get_password_hash(DEFAULT_ADMIN_PASSWORD),
             "role": "admin",
             "is_blocked": False,
+            "group_ids": [],
             "recently_viewed": [],
             "created_at": datetime.now(timezone.utc).isoformat()
         }
         await db.users.insert_one(admin_user)
         logger.info(f"Default admin user created: {DEFAULT_ADMIN_EMAIL}")
+    
+    # Process expired articles and important markings
+    await process_expirations()
+
+async def process_expirations():
+    """Check for expired articles and important markings"""
+    now = datetime.now(timezone.utc).isoformat()
+    
+    # Expired articles -> back to draft
+    expired = await db.articles.update_many(
+        {
+            "expiry_date": {"$lte": now, "$ne": None},
+            "status": {"$ne": "draft"}
+        },
+        {"$set": {"status": "draft"}}
+    )
+    if expired.modified_count > 0:
+        logger.info(f"Set {expired.modified_count} expired articles to draft")
+    
+    # Expired important markings
+    important_expired = await db.articles.update_many(
+        {
+            "important_until": {"$lte": now, "$ne": None},
+            "is_important": True
+        },
+        {"$set": {"is_important": False, "important_until": None}}
+    )
+    if important_expired.modified_count > 0:
+        logger.info(f"Removed important marking from {important_expired.modified_count} articles")
 
 @app.on_event("shutdown")
 async def shutdown_db_client():

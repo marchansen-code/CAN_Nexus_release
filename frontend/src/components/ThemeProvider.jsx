@@ -11,9 +11,15 @@ export const useTheme = () => useContext(ThemeContext);
 export const ThemeProvider = ({ children }) => {
   const [theme, setThemeState] = useState(() => {
     if (typeof window !== 'undefined') {
-      return localStorage.getItem('theme') || 'system';
+      const savedTheme = localStorage.getItem('theme');
+      // If no saved theme, default to 'light' for new users
+      if (!savedTheme) {
+        localStorage.setItem('theme', 'light');
+        return 'light';
+      }
+      return savedTheme;
     }
-    return 'system';
+    return 'light';
   });
   
   const [resolvedTheme, setResolvedTheme] = useState('light');

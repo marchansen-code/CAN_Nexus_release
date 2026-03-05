@@ -42,25 +42,51 @@
     
     .dark {
         --background: 222 47% 8%;
-        --foreground: 210 20% 95%;
+        --foreground: 210 20% 98%;
         --card: 222 47% 11%;
-        --card-foreground: 210 20% 95%;
+        --card-foreground: 210 20% 98%;
         --popover: 222 47% 11%;
-        --popover-foreground: 210 20% 95%;
+        --popover-foreground: 210 20% 98%;
         --primary: 0 84% 55%;
         --primary-foreground: 0 0% 100%;
         --secondary: 217 33% 17%;
-        --secondary-foreground: 210 20% 95%;
+        --secondary-foreground: 210 20% 98%;
         --muted: 217 33% 17%;
-        --muted-foreground: 215 20% 65%;
+        --muted-foreground: 215 20% 70%;
         --accent: 217 33% 17%;
-        --accent-foreground: 210 20% 95%;
+        --accent-foreground: 210 20% 98%;
         --destructive: 0 84% 60%;
         --destructive-foreground: 0 0% 100%;
-        --border: 217 33% 22%;
-        --input: 217 33% 22%;
+        --border: 217 33% 25%;
+        --input: 217 33% 25%;
         --ring: 0 84% 55%;
     }
+}
+
+/* Dark mode input text fix */
+.dark input,
+.dark textarea,
+.dark select,
+.dark [contenteditable] {
+    color: hsl(210 20% 98%);
+}
+
+.dark input::placeholder,
+.dark textarea::placeholder {
+    color: hsl(215 20% 60%);
+}
+
+.dark .prose {
+    color: hsl(210 20% 95%);
+}
+
+.dark .prose h1,
+.dark .prose h2,
+.dark .prose h3,
+.dark .prose h4,
+.dark .prose h5,
+.dark .prose h6 {
+    color: hsl(210 20% 98%);
 }
 
 body {
@@ -263,6 +289,47 @@ input:focus, textarea:focus, select:focus {
     pointer-events: none;
 }
 
+/* Preserve empty paragraphs/lines */
+.ProseMirror p {
+    margin-top: 0.5em;
+    margin-bottom: 0.5em;
+    min-height: 1.5em;
+}
+
+.ProseMirror p:empty::before {
+    content: "\00a0";
+}
+
+/* Lists */
+.ProseMirror ul {
+    list-style-type: disc;
+    padding-left: 1.5em;
+    margin: 0.5em 0;
+}
+
+.ProseMirror ol {
+    list-style-type: decimal;
+    padding-left: 1.5em;
+    margin: 0.5em 0;
+}
+
+.ProseMirror li {
+    margin: 0.25em 0;
+}
+
+.ProseMirror li p {
+    margin: 0;
+}
+
+/* Blockquote */
+.ProseMirror blockquote {
+    border-left: 4px solid #c8102e;
+    padding-left: 1rem;
+    margin: 1rem 0;
+    font-style: italic;
+    color: #64748b;
+}
+
 .ProseMirror table {
     border-collapse: collapse;
     width: 100%;
@@ -288,4 +355,21 @@ input:focus, textarea:focus, select:focus {
 
 .ProseMirror mark {
     background-color: #fef08a;
+}
+
+/* Dark mode editor */
+.dark .ProseMirror {
+    color: hsl(210 20% 98%);
+}
+
+.dark .ProseMirror blockquote {
+    color: hsl(215 20% 70%);
+}
+
+.dark .ProseMirror td, .dark .ProseMirror th {
+    border-color: hsl(217 33% 30%);
+}
+
+.dark .ProseMirror th {
+    background: hsl(217 33% 20%);
 }

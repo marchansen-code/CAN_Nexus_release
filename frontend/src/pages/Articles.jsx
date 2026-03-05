@@ -235,37 +235,8 @@ const Articles = () => {
         )}
       </div>
 
-      {/* Top 10 Articles - Compact */}
-      <Card className="overflow-hidden">
-        <CardHeader className="py-2 px-4">
-          <CardTitle className="text-sm flex items-center gap-2">
-            <TrendingUp className="w-4 h-4 text-canusa-red" />
-            Top 10 Artikel
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="py-2 px-4">
-          <div className="flex gap-2 overflow-x-auto scrollbar-thin">
-            {topArticles.slice(0, 10).map((article, index) => (
-              <Link
-                key={article.article_id}
-                to={`/articles/${article.article_id}`}
-                className="shrink-0 flex items-center gap-1.5 px-2 py-1.5 bg-muted/50 rounded hover:bg-muted transition-colors text-xs"
-              >
-                <span className="w-5 h-5 rounded-full bg-red-100 text-red-700 flex items-center justify-center text-xs font-bold">
-                  {index + 1}
-                </span>
-                <span className="font-medium max-w-[120px] truncate">{article.title}</span>
-              </Link>
-            ))}
-            {topArticles.length === 0 && (
-              <p className="text-xs text-muted-foreground">Noch keine Artikel</p>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-
       {/* Split Layout */}
-      <div className="flex gap-6 h-[calc(100vh-22rem)]">
+      <div className="flex gap-6 h-[calc(100vh-14rem)]">
         {/* Left: Categories Tree */}
         <Card className="w-72 shrink-0 flex flex-col">
           <CardHeader className="py-3 border-b">

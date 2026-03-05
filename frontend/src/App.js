@@ -16,6 +16,7 @@ import Documents from "@/pages/Documents";
 import Categories from "@/pages/Categories";
 import Settings from "@/pages/Settings";
 import UserManagement from "@/pages/UserManagement";
+import Groups from "@/pages/Groups";
 import Backup from "@/pages/Backup";
 import Layout from "@/components/Layout";
 
@@ -177,6 +178,16 @@ const AppRouter = () => {
           <ProtectedRoute>
             <Layout>
               <UserManagement />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/groups"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <Groups />
             </Layout>
           </ProtectedRoute>
         }
