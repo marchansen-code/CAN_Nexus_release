@@ -12,12 +12,34 @@ Wissensmanagement-Plattform für CANUSA Touristik GmbH & Co. KG und CU-Travel.
 ## Implemented Features
 
 ### Core Features
-- ✅ E-Mail/Passwort Login
+- ✅ E-Mail/Passwort Login mit "Angemeldet bleiben"
 - ✅ Dashboard mit Statistiken, Favoriten, Beliebteste Artikel
 - ✅ Keyword-basierte Suche mit Live-Vorschau
 - ✅ Artikel-CRUD mit Status-Workflow
 - ✅ Kategorieverwaltung (Baumstruktur)
-- ✅ Dark/Light/Auto Theme-Mode
+- ✅ Dark/Light/Auto Theme (Light als Default)
+
+### Gruppen-System (Iteration 12)
+- ✅ Admins können Gruppen erstellen/bearbeiten/löschen
+- ✅ Admins können User zu Gruppen hinzufügen/entfernen
+- ✅ Artikel können für bestimmte Gruppen eingeschränkt werden
+- ✅ Gruppen-Management Seite `/groups`
+
+### Artikel-Features (Iteration 12)
+- ✅ **Mehrere Kategorien** pro Artikel (Checkboxen)
+- ✅ **Tag-Vorschläge** beim Eingeben
+- ✅ **Artikel-Gültigkeit** (Ablaufdatum → automatisch Entwurf)
+- ✅ **Wichtig-Markierung** mit optionalem Ablaufdatum
+- ✅ **Entwurf-Sichtbarkeit** nur für Admin + Ersteller
+- ✅ **Gruppen-Sichtbarkeit** für Artikel
+- ✅ **Nach Speichern zurück navigieren**
+- ✅ **Zusammenfassung entfernt** (nicht mehr im Model)
+
+### Backup & Export
+- ✅ JSON-Backup (Artikel, Kategorien, Benutzer)
+- ✅ ZIP-Backup für Dokumente (PDFs)
+- ✅ PDF-Export für Artikel
+- ✅ Word-Export für Artikel
 
 ### Admin Features
 - ✅ Benutzer anlegen mit E-Mail/Passwort
@@ -26,99 +48,66 @@ Wissensmanagement-Plattform für CANUSA Touristik GmbH & Co. KG und CU-Travel.
 - ✅ Dokumente löschen
 - ✅ Rollenverwaltung (Admin/Editor/Viewer)
 
-### PDF Features
-- ✅ PDF-Upload mit Duplikat-Prüfung
-- ✅ PDF-Einbettung als iFrame
-- ✅ Text-Extraktion mit Layout-Erhaltung
-
-### Iteration 10 (23.02.2026 - abgeschlossen)
-**Backup & Export Features:**
-
-1. **Backup & Restore (Admin only)**
-   - `GET /api/backup/preview` - Datenbank-Statistiken
-   - `GET /api/backup/export` - JSON-Backup herunterladen
-   - `POST /api/backup/import` - Backup wiederherstellen
-   - Export enthält: Artikel, Kategorien, Benutzer (ohne Passwörter)
-   - Import-Optionen: Merge-Modus, selektiver Import
-   - Neue Frontend-Seite: `/backup`
-
-2. **Artikel-Export**
-   - `GET /api/articles/{id}/export/pdf` - PDF-Export (reportlab)
-   - `GET /api/articles/{id}/export/docx` - Word-Export (python-docx)
-   - Export-Dropdown in Artikel-Ansicht
-
-### Iteration 11 (23.02.2026 - abgeschlossen)
-**Dokumente-Backup als ZIP:**
-
-- `GET /api/backup/documents` - Alle PDFs als ZIP herunterladen
-- `POST /api/backup/documents/import` - ZIP-Backup importieren
-- ZIP enthält: `documents/[filename].pdf` + `manifest.json`
-- UI-Sektion "Dokumente sichern" auf `/backup` Seite
+### UI/UX Verbesserungen (Iteration 12)
+- ✅ Dark Mode Schriftfarbe verbessert
+- ✅ Light Mode als Default für neue User
+- ✅ Kalender `fixedWeeks` (springt nicht mehr)
+- ✅ Top 10 aus Wissensartikel entfernt
 
 ## API Endpoints
 
-### Backup (Admin only)
-- `GET /api/backup/preview` - Statistiken abrufen
-- `GET /api/backup/export` - JSON-Backup herunterladen
-- `POST /api/backup/import` - JSON-Backup importieren
-- `GET /api/backup/documents` - PDF-Dokumente als ZIP
+### Groups (Admin only)
+- `GET /api/groups` - Alle Gruppen
+- `POST /api/groups` - Gruppe erstellen
+- `PUT /api/groups/{id}` - Gruppe bearbeiten
+- `DELETE /api/groups/{id}` - Gruppe löschen
+- `GET /api/groups/{id}/members` - Mitglieder abrufen
+- `PUT /api/users/{id}/groups` - User-Gruppen aktualisieren
+
+### Tags
+- `GET /api/tags` - Alle eindeutigen Tags
+
+### Articles (erweitert)
+- `POST /api/articles` mit:
+  - `category_ids[]` - Mehrere Kategorien
+  - `visible_to_groups[]` - Gruppen-Sichtbarkeit
+  - `expiry_date` - Ablaufdatum
+  - `is_important` - Wichtig-Markierung
+  - `important_until` - Ablauf der Markierung
+
+### Backup
+- `GET /api/backup/preview` - Statistiken
+- `GET /api/backup/export` - JSON-Backup
+- `POST /api/backup/import` - JSON importieren
+- `GET /api/backup/documents` - ZIP mit PDFs
 - `POST /api/backup/documents/import` - ZIP importieren
 
-### Artikel-Export (alle Benutzer)
-- `GET /api/articles/{id}/export/pdf` - Als PDF
-- `GET /api/articles/{id}/export/docx` - Als Word
-
-### Auth
-- `POST /api/auth/login` - Login
-- `GET /api/auth/me` - Aktueller Benutzer
-- `POST /api/auth/logout` - Logout
-
-### Users (Admin only)
-- `GET /api/users` - Alle Benutzer
-- `POST /api/users` - Neuer Benutzer
-- `PUT /api/users/{id}/role` - Rolle ändern
-- `PUT /api/users/{id}/password` - Passwort ändern
-- `PUT /api/users/{id}/block` - Sperren/Entsperren
-- `DELETE /api/users/{id}` - Löschen
-
-### Search
-- `POST /api/search` - Volltext-Suche
-- `GET /api/search/quick` - Schnellsuche
+### Article Export
+- `GET /api/articles/{id}/export/pdf`
+- `GET /api/articles/{id}/export/docx`
 
 ## Default Admin
 - **E-Mail**: marc.hansen@canusa.de
 - **Passwort**: CanusaNexus2024!
 
-## Deployment
-
-### Docker
-```bash
-cd deployment
-cp .env.example .env
-docker-compose up -d
-```
-
-Siehe `/app/deployment/README.md` für vollständige Anleitung.
-
 ## Test Coverage
-- Iteration 9: Backend 100% (28/28), Frontend 100%
-- Iteration 10: Backend 100% (23/23), Frontend 100%
-- Iteration 11: Backend 100% (10/10), Frontend 100%
-- Last tested: 23.02.2026
+- Iteration 12: Backend 100% (19/19), Frontend 100%
+- Last tested: 05.03.2026
 
 ## Backlog
 
 ### P1 (High)
-- [ ] Hierarchische Kategorie-Verwaltung UI
-- [ ] Bild-Extraktion aus PDFs
-- [ ] OCR für gescannte PDFs
+- [ ] **Artikel-Links (@-Mentions)** - Im Editor andere Artikel verlinken
+- [ ] Hierarchische Kategorie-Verwaltung UI verbessern
+- [ ] Editor Buttons prüfen (Quote, Listen)
 
 ### P2 (Medium)
-- [ ] High-Fidelity PDF-Import (Tabellen → editierbares HTML)
-- [ ] Artikel-Versionierung
 - [ ] Schnellsuche (Strg+K)
-- [ ] Backend Refactoring (server.py in Router aufteilen)
+- [ ] Benutzer-Suche in @-Mentions
+- [ ] Artikel-Versionierung
+- [ ] Backend Refactoring (server.py aufteilen)
 
 ### P3 (Nice to Have)
-- [ ] Mehrsprachige UI
+- [ ] OCR für gescannte PDFs
 - [ ] Analytics Dashboard
+- [ ] E-Mail-Benachrichtigungen
