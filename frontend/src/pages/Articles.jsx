@@ -180,8 +180,10 @@ const Articles = () => {
   const filteredArticles = articles.filter(article => {
     const matchesSearch = !searchTerm || 
       article.title.toLowerCase().includes(searchTerm.toLowerCase());
+    // Support both old category_id and new category_ids
+    const articleCategoryIds = article.category_ids || (article.category_id ? [article.category_id] : []);
     const matchesCategory = !selectedCategoryId || 
-      article.category_id === selectedCategoryId;
+      articleCategoryIds.includes(selectedCategoryId);
     return matchesSearch && matchesCategory;
   });
 
@@ -295,15 +297,29 @@ const Articles = () => {
 
           {/* Current Location */}
           {selectedCategoryId && (
-            <div className="mb-4 flex items-center gap-2 text-sm">
-              <button 
-                onClick={() => setSelectedCategoryId(null)}
-                className="text-muted-foreground hover:text-foreground"
-              >
-                Alle
-              </button>
-              <ChevronRight className="w-4 h-4 text-muted-foreground" />
-              <span className="font-medium">{getCategoryName(selectedCategoryId)}</span>
+            <div className="mb-4 flex items-center justify-between">
+              <div className="flex items-center gap-2 text-sm">
+                <button 
+                  onClick={() => setSelectedCategoryId(null)}
+                  className="text-muted-foreground hover:text-foreground"
+                >
+                  Alle
+                </button>
+                <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                <span className="font-medium">{getCategoryName(selectedCategoryId)}</span>
+              </div>
+              {canEdit && (
+                <Button 
+                  size="sm"
+                  variant="outline"
+                  onClick={() => navigate(`/articles/new?category=${selectedCategoryId}`)}
+                  className="text-xs"
+                  data-testid="create-article-in-category-btn"
+                >
+                  <Plus className="w-3 h-3 mr-1" />
+                  Neuer Artikel hier
+                </Button>
+              )}
             </div>
           )}
 

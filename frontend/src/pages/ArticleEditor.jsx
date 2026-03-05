@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useContext } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import axios from "axios";
 import { API, AuthContext } from "@/App";
 import { toast } from "sonner";
@@ -17,7 +17,11 @@ import {
   X,
   CalendarIcon,
   Users,
-  Check
+  Check,
+  ChevronRight,
+  ChevronDown,
+  Folder,
+  FolderOpen
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -52,17 +56,96 @@ import { format } from "date-fns";
 import { de } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 
+// Category Tree Item for Selection
+const CategoryTreeItem = ({ category, categories, selectedIds, onToggle, expandedIds, onToggleExpand, level = 0 }) => {
+  const childCategories = categories.filter(c => c.parent_id === category.category_id);
+  const hasChildren = childCategories.length > 0;
+  const isExpanded = expandedIds.has(category.category_id);
+  const isSelected = selectedIds.includes(category.category_id);
+
+  return (
+    <div>
+      <div 
+        className={cn(
+          "flex items-center gap-2 py-1.5 px-2 rounded-md cursor-pointer hover:bg-accent transition-colors",
+          isSelected && "bg-red-50 dark:bg-red-900/20"
+        )}
+        style={{ paddingLeft: `${level * 16 + 8}px` }}
+      >
+        {hasChildren ? (
+          <button 
+            onClick={(e) => { e.stopPropagation(); onToggleExpand(category.category_id); }}
+            className="p-0.5 hover:bg-muted rounded"
+          >
+            {isExpanded ? (
+              <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />
+            ) : (
+              <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />
+            )}
+          </button>
+        ) : (
+          <span className="w-4" />
+        )}
+        
+        {hasChildren ? (
+          isExpanded ? (
+            <FolderOpen className="w-4 h-4 text-amber-500 shrink-0" />
+          ) : (
+            <Folder className="w-4 h-4 text-amber-500 shrink-0" />
+          )
+        ) : (
+          <Folder className="w-4 h-4 text-amber-500 shrink-0" />
+        )}
+        
+        <Checkbox
+          id={`cat-tree-${category.category_id}`}
+          checked={isSelected}
+          onCheckedChange={() => onToggle(category.category_id)}
+          className="data-[state=checked]:bg-red-500 data-[state=checked]:border-red-500"
+        />
+        <label 
+          htmlFor={`cat-tree-${category.category_id}`} 
+          className="text-sm cursor-pointer flex-1 truncate"
+        >
+          {category.name}
+        </label>
+      </div>
+      
+      {isExpanded && hasChildren && (
+        <div className="border-l border-slate-200 dark:border-slate-700 ml-4">
+          {childCategories.map(child => (
+            <CategoryTreeItem
+              key={child.category_id}
+              category={child}
+              categories={categories}
+              selectedIds={selectedIds}
+              onToggle={onToggle}
+              expandedIds={expandedIds}
+              onToggleExpand={onToggleExpand}
+              level={level + 1}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
 const ArticleEditor = () => {
   const navigate = useNavigate();
   const { id: articleId } = useParams();
+  const [searchParams] = useSearchParams();
   const { user } = useContext(AuthContext);
   const isNew = !articleId || articleId === "new";
+  
+  // Get pre-selected category from URL
+  const preSelectedCategory = searchParams.get("category");
 
   // Article state
   const [article, setArticle] = useState({
     title: "",
     content: "",
-    category_ids: [],
+    category_ids: preSelectedCategory ? [preSelectedCategory] : [],
     status: "draft",
     tags: [],
     contact_person_id: null,
@@ -82,6 +165,7 @@ const ArticleEditor = () => {
   const [allTags, setAllTags] = useState([]);
   const [tagInput, setTagInput] = useState("");
   const [showTagSuggestions, setShowTagSuggestions] = useState(false);
+  const [expandedCategoryIds, setExpandedCategoryIds] = useState(new Set());
 
   // Load data
   useEffect(() => {
@@ -214,6 +298,22 @@ const ArticleEditor = () => {
     }));
   };
 
+  // Toggle category expansion in tree
+  const toggleCategoryExpand = (categoryId) => {
+    setExpandedCategoryIds(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(categoryId)) {
+        newSet.delete(categoryId);
+      } else {
+        newSet.add(categoryId);
+      }
+      return newSet;
+    });
+  };
+
+  // Get root categories (those without parent)
+  const rootCategories = categories.filter(c => !c.parent_id);
+
   // Group toggle
   const toggleGroup = (groupId) => {
     setArticle(prev => ({
@@ -311,19 +411,30 @@ const ArticleEditor = () => {
               {categories.length === 0 ? (
                 <p className="text-sm text-muted-foreground">Keine Kategorien vorhanden</p>
               ) : (
-                <div className="space-y-2 max-h-48 overflow-y-auto">
-                  {categories.map(cat => (
-                    <div key={cat.category_id} className="flex items-center space-x-2">
-                      <Checkbox
-                        id={`cat-${cat.category_id}`}
-                        checked={article.category_ids.includes(cat.category_id)}
-                        onCheckedChange={() => toggleCategory(cat.category_id)}
-                      />
-                      <label htmlFor={`cat-${cat.category_id}`} className="text-sm cursor-pointer">
-                        {cat.name}
-                      </label>
-                    </div>
+                <div className="space-y-1 max-h-64 overflow-y-auto pr-1">
+                  {rootCategories.map(cat => (
+                    <CategoryTreeItem
+                      key={cat.category_id}
+                      category={cat}
+                      categories={categories}
+                      selectedIds={article.category_ids}
+                      onToggle={toggleCategory}
+                      expandedIds={expandedCategoryIds}
+                      onToggleExpand={toggleCategoryExpand}
+                    />
                   ))}
+                  {rootCategories.length === 0 && categories.length > 0 && (
+                    <p className="text-xs text-muted-foreground">
+                      Kategorien ohne Hierarchie erkannt. Bitte Kategorien mit Eltern-Kind-Beziehungen anlegen.
+                    </p>
+                  )}
+                </div>
+              )}
+              {article.category_ids.length > 0 && (
+                <div className="pt-2 border-t">
+                  <p className="text-xs text-muted-foreground">
+                    {article.category_ids.length} Kategorie(n) ausgewählt
+                  </p>
                 </div>
               )}
             </CardContent>
