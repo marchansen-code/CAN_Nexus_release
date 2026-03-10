@@ -59,18 +59,36 @@ import {
   ColumnsIcon,
   RowsIcon,
   Indent,
-  Outdent
+  Outdent,
+  Grid3X3,
+  PaintBucket,
+  Maximize2,
+  AlignVerticalJustifyStart,
+  AlignVerticalJustifyCenter,
+  AlignVerticalJustifyEnd
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Toggle } from '@/components/ui/toggle';
 import { Separator } from '@/components/ui/separator';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import {
   Popover,
   PopoverContent,
@@ -153,6 +171,10 @@ const EditorToolbar = ({ editor, onImageUpload }) => {
   const [linkUrl, setLinkUrl] = React.useState('');
   const [imageUrl, setImageUrl] = React.useState('');
   const [youtubeUrl, setYoutubeUrl] = React.useState('');
+  const [tableRows, setTableRows] = React.useState(3);
+  const [tableCols, setTableCols] = React.useState(3);
+  const [tableWithHeader, setTableWithHeader] = React.useState(true);
+  const [showTableDialog, setShowTableDialog] = React.useState(false);
   const fileInputRef = useRef(null);
 
   const setLink = useCallback(() => {
@@ -177,7 +199,16 @@ const EditorToolbar = ({ editor, onImageUpload }) => {
   }, [editor, youtubeUrl]);
 
   const addTable = useCallback(() => {
-    editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run();
+    editor.chain().focus().insertTable({ 
+      rows: tableRows, 
+      cols: tableCols, 
+      withHeaderRow: tableWithHeader 
+    }).run();
+    setShowTableDialog(false);
+    // Reset to defaults
+    setTableRows(3);
+    setTableCols(3);
+    setTableWithHeader(true);
   }, [editor]);
 
   const handleFileUpload = async (event) => {
@@ -517,42 +548,107 @@ const EditorToolbar = ({ editor, onImageUpload }) => {
             <TableIcon className="h-4 w-4" />
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent>
-          <DropdownMenuItem onClick={addTable}>
-            <Plus className="h-4 w-4 mr-2" /> Neue Tabelle (3x3)
+        <DropdownMenuContent className="w-56">
+          <DropdownMenuItem onClick={() => setShowTableDialog(true)}>
+            <Grid3X3 className="h-4 w-4 mr-2" /> Neue Tabelle einfügen...
           </DropdownMenuItem>
           {editor.isActive('table') && (
             <>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => editor.chain().focus().addColumnBefore().run()}>
-                <ColumnsIcon className="h-4 w-4 mr-2" /> Spalte davor
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => editor.chain().focus().addColumnAfter().run()}>
-                <ColumnsIcon className="h-4 w-4 mr-2" /> Spalte danach
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => editor.chain().focus().deleteColumn().run()}>
-                <Minus className="h-4 w-4 mr-2" /> Spalte löschen
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => editor.chain().focus().addRowBefore().run()}>
-                <RowsIcon className="h-4 w-4 mr-2" /> Zeile darüber
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => editor.chain().focus().addRowAfter().run()}>
-                <RowsIcon className="h-4 w-4 mr-2" /> Zeile darunter
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => editor.chain().focus().deleteRow().run()}>
-                <Minus className="h-4 w-4 mr-2" /> Zeile löschen
-              </DropdownMenuItem>
+              
+              {/* Spalten */}
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger>
+                  <ColumnsIcon className="h-4 w-4 mr-2" /> Spalten
+                </DropdownMenuSubTrigger>
+                <DropdownMenuSubContent>
+                  <DropdownMenuItem onClick={() => editor.chain().focus().addColumnBefore().run()}>
+                    <Plus className="h-4 w-4 mr-2" /> Spalte links einfügen
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => editor.chain().focus().addColumnAfter().run()}>
+                    <Plus className="h-4 w-4 mr-2" /> Spalte rechts einfügen
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => editor.chain().focus().deleteColumn().run()} className="text-red-600">
+                    <Trash2 className="h-4 w-4 mr-2" /> Spalte löschen
+                  </DropdownMenuItem>
+                </DropdownMenuSubContent>
+              </DropdownMenuSub>
+              
+              {/* Zeilen */}
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger>
+                  <RowsIcon className="h-4 w-4 mr-2" /> Zeilen
+                </DropdownMenuSubTrigger>
+                <DropdownMenuSubContent>
+                  <DropdownMenuItem onClick={() => editor.chain().focus().addRowBefore().run()}>
+                    <Plus className="h-4 w-4 mr-2" /> Zeile oberhalb einfügen
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => editor.chain().focus().addRowAfter().run()}>
+                    <Plus className="h-4 w-4 mr-2" /> Zeile unterhalb einfügen
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => editor.chain().focus().deleteRow().run()} className="text-red-600">
+                    <Trash2 className="h-4 w-4 mr-2" /> Zeile löschen
+                  </DropdownMenuItem>
+                </DropdownMenuSubContent>
+              </DropdownMenuSub>
+              
+              {/* Zellen */}
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger>
+                  <Maximize2 className="h-4 w-4 mr-2" /> Zellen
+                </DropdownMenuSubTrigger>
+                <DropdownMenuSubContent>
+                  <DropdownMenuItem onClick={() => editor.chain().focus().mergeCells().run()}>
+                    Zellen verbinden
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => editor.chain().focus().splitCell().run()}>
+                    Zelle teilen
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => editor.chain().focus().toggleHeaderCell().run()}>
+                    Als Kopfzelle umschalten
+                  </DropdownMenuItem>
+                </DropdownMenuSubContent>
+              </DropdownMenuSub>
+              
+              {/* Zellen-Hintergrund */}
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger>
+                  <PaintBucket className="h-4 w-4 mr-2" /> Zellenhintergrund
+                </DropdownMenuSubTrigger>
+                <DropdownMenuSubContent>
+                  <DropdownMenuItem onClick={() => editor.chain().focus().setCellAttribute('backgroundColor', '#fef3c7').run()}>
+                    <div className="w-4 h-4 mr-2 rounded bg-amber-100 border" /> Gelb
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => editor.chain().focus().setCellAttribute('backgroundColor', '#dcfce7').run()}>
+                    <div className="w-4 h-4 mr-2 rounded bg-green-100 border" /> Grün
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => editor.chain().focus().setCellAttribute('backgroundColor', '#dbeafe').run()}>
+                    <div className="w-4 h-4 mr-2 rounded bg-blue-100 border" /> Blau
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => editor.chain().focus().setCellAttribute('backgroundColor', '#fce7f3').run()}>
+                    <div className="w-4 h-4 mr-2 rounded bg-pink-100 border" /> Rosa
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => editor.chain().focus().setCellAttribute('backgroundColor', '#f3f4f6').run()}>
+                    <div className="w-4 h-4 mr-2 rounded bg-gray-100 border" /> Grau
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => editor.chain().focus().setCellAttribute('backgroundColor', null).run()}>
+                    <Minus className="h-4 w-4 mr-2" /> Entfernen
+                  </DropdownMenuItem>
+                </DropdownMenuSubContent>
+              </DropdownMenuSub>
+
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => editor.chain().focus().toggleHeaderRow().run()}>
                 Kopfzeile umschalten
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => editor.chain().focus().mergeCells().run()}>
-                Zellen verbinden
+              <DropdownMenuItem onClick={() => editor.chain().focus().toggleHeaderColumn().run()}>
+                Kopfspalte umschalten
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => editor.chain().focus().splitCell().run()}>
-                Zelle teilen
-              </DropdownMenuItem>
+              
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => editor.chain().focus().deleteTable().run()} className="text-red-600">
                 <Trash2 className="h-4 w-4 mr-2" /> Tabelle löschen
@@ -561,6 +657,99 @@ const EditorToolbar = ({ editor, onImageUpload }) => {
           )}
         </DropdownMenuContent>
       </DropdownMenu>
+
+      {/* Table Creation Dialog */}
+      <Dialog open={showTableDialog} onOpenChange={setShowTableDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Grid3X3 className="h-5 w-5" />
+              Neue Tabelle einfügen
+            </DialogTitle>
+            <DialogDescription>
+              Wählen Sie die Größe der Tabelle
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="table-rows">Zeilen</Label>
+                <Input
+                  id="table-rows"
+                  type="number"
+                  min="1"
+                  max="20"
+                  value={tableRows}
+                  onChange={(e) => setTableRows(Math.max(1, Math.min(20, parseInt(e.target.value) || 1)))}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="table-cols">Spalten</Label>
+                <Input
+                  id="table-cols"
+                  type="number"
+                  min="1"
+                  max="10"
+                  value={tableCols}
+                  onChange={(e) => setTableCols(Math.max(1, Math.min(10, parseInt(e.target.value) || 1)))}
+                />
+              </div>
+            </div>
+            
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="table-header"
+                checked={tableWithHeader}
+                onCheckedChange={setTableWithHeader}
+              />
+              <Label htmlFor="table-header" className="cursor-pointer">
+                Mit Kopfzeile
+              </Label>
+            </div>
+            
+            {/* Preview Grid */}
+            <div className="border rounded-lg p-3 bg-muted/50">
+              <p className="text-xs text-muted-foreground mb-2">Vorschau:</p>
+              <div 
+                className="grid gap-0.5"
+                style={{ 
+                  gridTemplateColumns: `repeat(${Math.min(tableCols, 6)}, 1fr)`,
+                  maxWidth: '200px'
+                }}
+              >
+                {Array.from({ length: Math.min(tableRows, 6) * Math.min(tableCols, 6) }).map((_, i) => {
+                  const row = Math.floor(i / Math.min(tableCols, 6));
+                  const isHeader = tableWithHeader && row === 0;
+                  return (
+                    <div 
+                      key={i} 
+                      className={cn(
+                        "h-4 rounded-sm border",
+                        isHeader ? "bg-slate-200" : "bg-white"
+                      )}
+                    />
+                  );
+                })}
+              </div>
+              {(tableRows > 6 || tableCols > 6) && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  Zeigt max. 6x6 Vorschau ({tableRows}x{tableCols} wird erstellt)
+                </p>
+              )}
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowTableDialog(false)}>
+              Abbrechen
+            </Button>
+            <Button onClick={addTable} className="bg-canusa-red hover:bg-red-600">
+              Tabelle einfügen
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

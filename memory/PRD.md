@@ -31,6 +31,15 @@ Wissensmanagement-Plattform für CANUSA Touristik GmbH & Co. KG und CU-Travel.
 - ✅ **Klickbare Mention-Links** mit rosa/rotem Styling in Editor und Artikelansicht
 - ✅ **Zusammenfassung-Feld entfernt** aus der Artikelansicht (ArticleView.jsx)
 
+### Erweiterte Tabellen-Funktionalität (Iteration 15) - 10.03.2026
+- ✅ **Tabellen-Dialog** mit wählbarer Zeilen-/Spaltenanzahl (1-20 Zeilen, 1-10 Spalten)
+- ✅ **Live-Vorschau** der Tabellengröße im Erstellungsdialog
+- ✅ **Kopfzeile-Option** beim Erstellen aktivierbar
+- ✅ **Erweiterte Bearbeitungsoptionen**: Zeilen/Spalten hinzufügen/löschen via Untermenüs
+- ✅ **Zellen-Formatierung**: Hintergrundfarben (Gelb, Grün, Blau, Rosa, Grau)
+- ✅ **Zellen verbinden/teilen**, Kopfzellen umschalten
+- ✅ **Kopfzeile/Kopfspalte** umschalten für bestehende Tabellen
+
 ### Gruppen-System (Iteration 12)
 - ✅ Admins können Gruppen erstellen/bearbeiten/löschen
 - ✅ Admins können User zu Gruppen hinzufügen/entfernen
@@ -103,10 +112,11 @@ Wissensmanagement-Plattform für CANUSA Touristik GmbH & Co. KG und CU-Travel.
 - **Passwort**: CanusaNexus2024!
 
 ## Test Coverage
+- Iteration 15: Manuell getestet (Tabellen-Dialog, Bearbeitungsoptionen)
 - Iteration 14: Backend 100% (8/8), Frontend 100% (23/23)
 - Iteration 13: Backend 100% (11/11), Frontend 100% (14/14)
 - Iteration 12: Backend 100% (19/19), Frontend 100%
-- Last tested: 05.03.2026
+- Last tested: 10.03.2026
 
 ## Backlog
 
