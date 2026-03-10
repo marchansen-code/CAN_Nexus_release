@@ -855,6 +855,8 @@ const RichTextEditor = ({ content, onChange, placeholder = "Inhalt eingeben...",
       }),
       Table.configure({
         resizable: true,
+        lastColumnResizable: true,
+        cellMinWidth: 50,
         HTMLAttributes: {
           class: 'border-collapse w-full my-4',
         },
@@ -862,12 +864,12 @@ const RichTextEditor = ({ content, onChange, placeholder = "Inhalt eingeben...",
       TableRow,
       TableCell.configure({
         HTMLAttributes: {
-          class: 'border border-slate-300 p-3 align-top',
+          class: 'border border-slate-300 p-3 align-top relative',
         },
       }),
       TableHeader.configure({
         HTMLAttributes: {
-          class: 'border border-slate-300 p-3 bg-slate-100 font-semibold',
+          class: 'border border-slate-300 p-3 bg-slate-100 font-semibold relative',
         },
       }),
       TextAlign.configure({

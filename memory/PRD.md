@@ -39,6 +39,7 @@ Wissensmanagement-Plattform für CANUSA Touristik GmbH & Co. KG und CU-Travel.
 - ✅ **Zellen-Formatierung**: Hintergrundfarben (Gelb, Grün, Blau, Rosa, Grau)
 - ✅ **Zellen verbinden/teilen**, Kopfzellen umschalten
 - ✅ **Kopfzeile/Kopfspalte** umschalten für bestehende Tabellen
+- ✅ **Spaltenbreite per Drag & Drop** anpassen (roter Resize-Handle am Spaltenrand)
 
 ### Gruppen-System (Iteration 12)
 - ✅ Admins können Gruppen erstellen/bearbeiten/löschen

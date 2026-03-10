@@ -374,6 +374,80 @@ input:focus, textarea:focus, select:focus {
     background: hsl(217 33% 20%);
 }
 
+/* Table Resize Handles */
+.ProseMirror table {
+    overflow: hidden;
+    table-layout: fixed;
+    width: 100%;
+    margin: 1rem 0;
+    border-collapse: collapse;
+}
+
+.ProseMirror td,
+.ProseMirror th {
+    min-width: 50px;
+    position: relative;
+    vertical-align: top;
+    box-sizing: border-box;
+}
+
+/* Column resize handle */
+.ProseMirror .column-resize-handle {
+    position: absolute;
+    right: -2px;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    background-color: hsl(0 84% 50%);
+    pointer-events: none;
+    z-index: 20;
+}
+
+/* Resize cursor when hovering over column borders */
+.ProseMirror.resize-cursor {
+    cursor: col-resize;
+}
+
+/* Selected cells highlight */
+.ProseMirror .selectedCell:after {
+    z-index: 2;
+    position: absolute;
+    content: "";
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    background: rgba(200, 16, 46, 0.15);
+    pointer-events: none;
+}
+
+/* Table wrapper for better control */
+.ProseMirror .tableWrapper {
+    padding: 1rem 0;
+    overflow-x: auto;
+}
+
+/* Cell background colors (for setCellAttribute) */
+.ProseMirror td[style*="background"],
+.ProseMirror th[style*="background"] {
+    background-color: attr(style background-color) !important;
+}
+
+/* Grip for row/column selection - visual indicator */
+.ProseMirror table td:first-child,
+.ProseMirror table th:first-child {
+    position: relative;
+}
+
+/* Dark mode table resize */
+.dark .ProseMirror .column-resize-handle {
+    background-color: hsl(0 84% 60%);
+}
+
+.dark .ProseMirror .selectedCell:after {
+    background: rgba(200, 16, 46, 0.25);
+}
+
 
 /* Mention Links (Article References) */
 .mention-link {
