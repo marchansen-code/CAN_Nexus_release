@@ -641,7 +641,7 @@ async def get_articles(
     user_doc = await db.users.find_one({"user_id": user.user_id}, {"group_ids": 1})
     user_groups = user_doc.get("group_ids", []) if user_doc else []
     
-    query = {}
+    query = {"deleted_at": {"$exists": False}}  # Exclude soft-deleted articles
     if status:
         query["status"] = status
     if category_id:
@@ -675,9 +675,9 @@ async def get_articles(
 
 @api_router.get("/articles/top-viewed")
 async def get_top_viewed_articles(limit: int = 10, user: User = Depends(get_current_user)):
-    """Get top viewed articles (published only)"""
+    """Get top viewed articles (published only, not deleted)"""
     articles = await db.articles.find(
-        {"status": "published"},
+        {"status": "published", "deleted_at": {"$exists": False}},
         {"_id": 0}
     ).sort("view_count", -1).limit(limit).to_list(limit)
     return articles
@@ -688,8 +688,9 @@ async def get_articles_by_category(category_id: str, user: User = Depends(get_cu
     user_doc = await db.users.find_one({"user_id": user.user_id}, {"group_ids": 1})
     user_groups = user_doc.get("group_ids", []) if user_doc else []
     
+    # Exclude soft-deleted articles
     articles = await db.articles.find(
-        {"category_ids": category_id},
+        {"category_ids": category_id, "deleted_at": {"$exists": False}},
         {"_id": 0}
     ).sort("updated_at", -1).to_list(100)
     
@@ -783,11 +784,20 @@ async def update_article(article_id: str, update: ArticleUpdate, user: User = De
 
 @api_router.delete("/articles/{article_id}")
 async def delete_article(article_id: str, user: User = Depends(get_current_user)):
-    """Delete an article"""
-    result = await db.articles.delete_one({"article_id": article_id})
-    if result.deleted_count == 0:
+    """Soft delete an article - moves to trash for 30 days"""
+    article = await db.articles.find_one({"article_id": article_id})
+    if not article:
         raise HTTPException(status_code=404, detail="Artikel nicht gefunden")
-    return {"message": "Artikel gelöscht"}
+    
+    # Soft delete - set deleted_at timestamp
+    await db.articles.update_one(
+        {"article_id": article_id},
+        {"$set": {
+            "deleted_at": datetime.now(timezone.utc),
+            "deleted_by": user.user_id
+        }}
+    )
+    return {"message": "Artikel in Papierkorb verschoben"}
 
 @api_router.get("/tags")
 async def get_all_tags(user: User = Depends(get_current_user)):
@@ -1087,21 +1097,27 @@ async def process_document(document_id: str, file_path: str, target_language: st
 
 @api_router.get("/documents", response_model=List[Dict])
 async def get_documents(user: User = Depends(get_current_user)):
-    """Get all documents"""
-    docs = await db.documents.find({}, {"_id": 0, "temp_path": 0}).sort("created_at", -1).to_list(100)
+    """Get all documents (excluding soft-deleted)"""
+    docs = await db.documents.find(
+        {"deleted_at": {"$exists": False}}, 
+        {"_id": 0, "temp_path": 0}
+    ).sort("created_at", -1).to_list(100)
     return docs
 
 @api_router.get("/documents/{document_id}", response_model=Dict)
 async def get_document(document_id: str, user: User = Depends(get_current_user)):
     """Get document details"""
-    doc = await db.documents.find_one({"document_id": document_id}, {"_id": 0, "temp_path": 0})
+    doc = await db.documents.find_one(
+        {"document_id": document_id, "deleted_at": {"$exists": False}}, 
+        {"_id": 0, "temp_path": 0}
+    )
     if not doc:
         raise HTTPException(status_code=404, detail="Dokument nicht gefunden")
     return doc
 
 @api_router.delete("/documents/{document_id}")
 async def delete_document(document_id: str, user: User = Depends(get_current_user)):
-    """Delete a document (admin only)"""
+    """Soft delete a document - moves to trash for 30 days (admin only)"""
     if user.role != "admin":
         raise HTTPException(status_code=403, detail="Nur Administratoren können Dokumente löschen")
     
@@ -1109,6 +1125,120 @@ async def delete_document(document_id: str, user: User = Depends(get_current_use
     if not doc:
         raise HTTPException(status_code=404, detail="Dokument nicht gefunden")
     
+    # Soft delete - set deleted_at timestamp
+    await db.documents.update_one(
+        {"document_id": document_id},
+        {"$set": {
+            "deleted_at": datetime.now(timezone.utc),
+            "deleted_by": user.user_id
+        }}
+    )
+    return {"message": "Dokument in Papierkorb verschoben"}
+
+
+# ==================== TRASH / PAPIERKORB ====================
+
+@api_router.get("/trash")
+async def get_trash(user: User = Depends(get_current_user)):
+    """Get all soft-deleted items (admin only)"""
+    if user.role != "admin":
+        raise HTTPException(status_code=403, detail="Nur Administratoren können den Papierkorb sehen")
+    
+    # Get deleted articles
+    deleted_articles = await db.articles.find(
+        {"deleted_at": {"$exists": True}},
+        {"_id": 0}
+    ).sort("deleted_at", -1).to_list(100)
+    
+    # Get deleted documents
+    deleted_documents = await db.documents.find(
+        {"deleted_at": {"$exists": True}},
+        {"_id": 0, "temp_path": 0}
+    ).sort("deleted_at", -1).to_list(100)
+    
+    # Calculate days until permanent deletion (30 days)
+    now = datetime.now(timezone.utc)
+    for art in deleted_articles:
+        deleted_at = art.get("deleted_at")
+        if deleted_at:
+            if isinstance(deleted_at, str):
+                deleted_at = datetime.fromisoformat(deleted_at.replace("Z", "+00:00"))
+            # Ensure timezone-aware
+            if deleted_at.tzinfo is None:
+                deleted_at = deleted_at.replace(tzinfo=timezone.utc)
+            days_left = 30 - (now - deleted_at).days
+            art["days_until_permanent_deletion"] = max(0, days_left)
+    
+    for doc in deleted_documents:
+        deleted_at = doc.get("deleted_at")
+        if deleted_at:
+            if isinstance(deleted_at, str):
+                deleted_at = datetime.fromisoformat(deleted_at.replace("Z", "+00:00"))
+            # Ensure timezone-aware
+            if deleted_at.tzinfo is None:
+                deleted_at = deleted_at.replace(tzinfo=timezone.utc)
+            days_left = 30 - (now - deleted_at).days
+            doc["days_until_permanent_deletion"] = max(0, days_left)
+    
+    return {
+        "articles": deleted_articles,
+        "documents": deleted_documents
+    }
+
+@api_router.post("/trash/restore/article/{article_id}")
+async def restore_article(article_id: str, user: User = Depends(get_current_user)):
+    """Restore a soft-deleted article (admin only)"""
+    if user.role != "admin":
+        raise HTTPException(status_code=403, detail="Nur Administratoren können Artikel wiederherstellen")
+    
+    article = await db.articles.find_one({"article_id": article_id, "deleted_at": {"$exists": True}})
+    if not article:
+        raise HTTPException(status_code=404, detail="Artikel nicht im Papierkorb gefunden")
+    
+    await db.articles.update_one(
+        {"article_id": article_id},
+        {"$unset": {"deleted_at": "", "deleted_by": ""}}
+    )
+    return {"message": "Artikel wiederhergestellt"}
+
+@api_router.post("/trash/restore/document/{document_id}")
+async def restore_document(document_id: str, user: User = Depends(get_current_user)):
+    """Restore a soft-deleted document (admin only)"""
+    if user.role != "admin":
+        raise HTTPException(status_code=403, detail="Nur Administratoren können Dokumente wiederherstellen")
+    
+    doc = await db.documents.find_one({"document_id": document_id, "deleted_at": {"$exists": True}})
+    if not doc:
+        raise HTTPException(status_code=404, detail="Dokument nicht im Papierkorb gefunden")
+    
+    await db.documents.update_one(
+        {"document_id": document_id},
+        {"$unset": {"deleted_at": "", "deleted_by": ""}}
+    )
+    return {"message": "Dokument wiederhergestellt"}
+
+@api_router.delete("/trash/permanent/article/{article_id}")
+async def permanently_delete_article(article_id: str, user: User = Depends(get_current_user)):
+    """Permanently delete an article (admin only)"""
+    if user.role != "admin":
+        raise HTTPException(status_code=403, detail="Nur Administratoren können endgültig löschen")
+    
+    result = await db.articles.delete_one({"article_id": article_id, "deleted_at": {"$exists": True}})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Artikel nicht im Papierkorb gefunden")
+    return {"message": "Artikel endgültig gelöscht"}
+
+@api_router.delete("/trash/permanent/document/{document_id}")
+async def permanently_delete_document(document_id: str, user: User = Depends(get_current_user)):
+    """Permanently delete a document (admin only)"""
+    if user.role != "admin":
+        raise HTTPException(status_code=403, detail="Nur Administratoren können endgültig löschen")
+    
+    doc = await db.documents.find_one({"document_id": document_id, "deleted_at": {"$exists": True}})
+    if not doc:
+        raise HTTPException(status_code=404, detail="Dokument nicht im Papierkorb gefunden")
+    
+    # Delete the actual file
     file_path = doc.get("file_path") or doc.get("temp_path")
     if file_path and os.path.exists(file_path):
         try:
@@ -1117,7 +1247,44 @@ async def delete_document(document_id: str, user: User = Depends(get_current_use
             pass
     
     await db.documents.delete_one({"document_id": document_id})
-    return {"message": "Dokument gelöscht"}
+    return {"message": "Dokument endgültig gelöscht"}
+
+@api_router.post("/trash/cleanup")
+async def cleanup_trash(user: User = Depends(get_current_user)):
+    """Auto-delete items older than 30 days (admin only)"""
+    if user.role != "admin":
+        raise HTTPException(status_code=403, detail="Nur Administratoren können den Papierkorb aufräumen")
+    
+    cutoff_date = datetime.now(timezone.utc) - timedelta(days=30)
+    
+    # Delete old articles
+    deleted_articles = await db.articles.delete_many({
+        "deleted_at": {"$exists": True, "$lt": cutoff_date}
+    })
+    
+    # Delete old documents (and their files)
+    old_docs = await db.documents.find({
+        "deleted_at": {"$exists": True, "$lt": cutoff_date}
+    }).to_list(100)
+    
+    for doc in old_docs:
+        file_path = doc.get("file_path") or doc.get("temp_path")
+        if file_path and os.path.exists(file_path):
+            try:
+                os.remove(file_path)
+            except Exception:
+                pass
+    
+    deleted_documents = await db.documents.delete_many({
+        "deleted_at": {"$exists": True, "$lt": cutoff_date}
+    })
+    
+    return {
+        "message": "Papierkorb aufgeräumt",
+        "deleted_articles": deleted_articles.deleted_count,
+        "deleted_documents": deleted_documents.deleted_count
+    }
+
 
 @api_router.get("/documents/{document_id}/pdf-embed")
 async def get_document_pdf_embed(document_id: str, token: str = None):

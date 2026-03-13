@@ -18,7 +18,8 @@ import {
   Sun,
   Monitor,
   Database,
-  UsersRound
+  UsersRound,
+  Trash2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -40,6 +41,7 @@ const allNavItems = [
   { path: "/categories", icon: FolderTree, label: "Kategorien", roles: ["admin", "editor"] },
   { path: "/users", icon: Users, label: "Benutzer", roles: ["admin"] },
   { path: "/groups", icon: UsersRound, label: "Gruppen", roles: ["admin"] },
+  { path: "/trash", icon: Trash2, label: "Papierkorb", roles: ["admin"] },
   { path: "/backup", icon: Database, label: "Backup", roles: ["admin"] },
   { path: "/settings", icon: Settings, label: "Einstellungen", roles: ["admin"] },
 ];

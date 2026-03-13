@@ -85,6 +85,14 @@ Wissensmanagement-Plattform für CANUSA Touristik GmbH & Co. KG und CU-Travel.
 - ✅ **Hierarchischer Baum-Selektor** für "Übergeordnete Kategorie" beim Erstellen/Bearbeiten
 - ✅ **"+"-Button für Unterkategorien** - Schnelles Erstellen von Unterkategorien bei Hover
 
+### Papierkorb / Lösch-Historie (Iteration 17) - 13.03.2026
+- ✅ **Soft-Delete** für Artikel und Dokumente - Items werden nicht sofort gelöscht
+- ✅ **30-Tage-Aufbewahrung** mit Countdown-Anzeige
+- ✅ **Admin-only Papierkorb-Seite** unter /trash mit Tabs für Artikel und Dokumente
+- ✅ **Wiederherstellen-Funktion** - Gelöschte Items können wiederhergestellt werden
+- ✅ **Endgültig löschen** - Items können vor Ablauf der 30 Tage dauerhaft entfernt werden
+- ✅ **Auto-Cleanup** - Button zum Entfernen aller Items älter als 30 Tage
+
 ## API Endpoints
 
 ### Groups (Admin only)
