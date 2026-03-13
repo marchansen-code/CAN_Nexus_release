@@ -78,6 +78,13 @@ Wissensmanagement-Plattform für CANUSA Touristik GmbH & Co. KG und CU-Travel.
 - ✅ Kalender `fixedWeeks` (springt nicht mehr)
 - ✅ Top 10 aus Wissensartikel entfernt
 
+### Editor & Kategorien Erweiterungen (Iteration 16) - 13.03.2026
+- ✅ **"Zurück zu Entwurf"-Button** - Veröffentlichte Artikel können wieder in Entwurf versetzt werden
+- ✅ **Entwurf-Sichtbarkeit** - Entwürfe nur für Ersteller sichtbar (Backend bereits implementiert)
+- ✅ **Bildgrößen-Anpassung** im Editor (25%, 50%, 75%, 100%, Auto, 300px)
+- ✅ **Hierarchischer Baum-Selektor** für "Übergeordnete Kategorie" beim Erstellen/Bearbeiten
+- ✅ **"+"-Button für Unterkategorien** - Schnelles Erstellen von Unterkategorien bei Hover
+
 ## API Endpoints
 
 ### Groups (Admin only)

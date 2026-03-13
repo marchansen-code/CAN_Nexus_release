@@ -21,7 +21,8 @@ import {
   ChevronRight,
   ChevronDown,
   Folder,
-  FolderOpen
+  FolderOpen,
+  FileEdit
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -351,7 +352,20 @@ const ArticleEditor = () => {
         </div>
         
         <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={() => handleSave("draft")} disabled={saving}>
+          {/* Zurück zu Entwurf Button - nur für veröffentlichte Artikel */}
+          {!isNew && article.status === "published" && (
+            <Button 
+              variant="outline" 
+              onClick={() => handleSave("draft")} 
+              disabled={saving}
+              className="text-amber-600 border-amber-300 hover:bg-amber-50"
+              data-testid="revert-to-draft-btn"
+            >
+              <FileEdit className="w-4 h-4 mr-2" />
+              Zurück zu Entwurf
+            </Button>
+          )}
+          <Button variant="outline" onClick={() => handleSave(article.status)} disabled={saving}>
             <Save className="w-4 h-4 mr-2" />
             Speichern
           </Button>

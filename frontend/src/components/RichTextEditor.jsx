@@ -68,7 +68,10 @@ import {
   AlignVerticalJustifyEnd,
   MoveHorizontal,
   MoveVertical,
-  SeparatorHorizontal
+  SeparatorHorizontal,
+  ImagePlus,
+  ZoomIn,
+  ZoomOut
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Toggle } from '@/components/ui/toggle';
@@ -252,6 +255,35 @@ const EditorToolbar = ({ editor, onImageUpload }) => {
       
       editor.commands.focus();
     }, 50);
+  }, [editor]);
+
+  // Set image size
+  const setImageSize = useCallback((width) => {
+    const { state, view } = editor;
+    const { selection } = state;
+    
+    // Check if an image is selected
+    if (selection.node?.type?.name === 'image') {
+      const pos = selection.from;
+      const tr = state.tr;
+      
+      tr.setNodeMarkup(pos, null, {
+        ...selection.node.attrs,
+        style: `width: ${width}; height: auto;`
+      });
+      
+      view.dispatch(tr);
+    } else {
+      // Try to find image in the editor by DOM
+      setTimeout(() => {
+        const editorElement = editor.view.dom;
+        const selectedImg = editorElement.querySelector('img.ProseMirror-selectednode');
+        if (selectedImg) {
+          selectedImg.style.width = width;
+          selectedImg.style.height = 'auto';
+        }
+      }, 50);
+    }
   }, [editor]);
 
   const handleFileUpload = async (event) => {
@@ -557,6 +589,34 @@ const EditorToolbar = ({ editor, onImageUpload }) => {
                 Bild hochladen
               </Button>
             </div>
+            {editor.isActive('image') && (
+              <>
+                <DropdownMenuSeparator />
+                <div className="space-y-2">
+                  <Label className="text-xs">Bildgröße anpassen</Label>
+                  <div className="grid grid-cols-3 gap-1">
+                    <Button variant="outline" size="sm" className="text-xs" onClick={() => setImageSize('25%')}>
+                      25%
+                    </Button>
+                    <Button variant="outline" size="sm" className="text-xs" onClick={() => setImageSize('50%')}>
+                      50%
+                    </Button>
+                    <Button variant="outline" size="sm" className="text-xs" onClick={() => setImageSize('75%')}>
+                      75%
+                    </Button>
+                    <Button variant="outline" size="sm" className="text-xs" onClick={() => setImageSize('100%')}>
+                      100%
+                    </Button>
+                    <Button variant="outline" size="sm" className="text-xs" onClick={() => setImageSize('auto')}>
+                      Auto
+                    </Button>
+                    <Button variant="outline" size="sm" className="text-xs" onClick={() => setImageSize('300px')}>
+                      300px
+                    </Button>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         </DropdownMenuContent>
       </DropdownMenu>

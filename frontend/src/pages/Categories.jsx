@@ -10,13 +10,15 @@ import {
   ChevronRight,
   ChevronDown,
   Folder,
-  FolderOpen
+  FolderOpen,
+  Check
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
 import {
   Dialog,
   DialogContent,
@@ -36,14 +38,87 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 
-const TreeItem = ({ category, categories, level = 0, onEdit, onDelete, expandedIds, toggleExpand }) => {
+// Category Tree Selector for parent selection
+const CategoryTreeSelector = ({ categories, selectedId, onSelect, excludeId }) => {
+  const [expandedIds, setExpandedIds] = useState([]);
+  
+  const toggleExpand = (id) => {
+    setExpandedIds(prev => 
+      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+    );
+  };
+  
+  const renderCategory = (category, level = 0) => {
+    const children = categories.filter(c => c.parent_id === category.category_id && c.category_id !== excludeId);
+    const hasChildren = children.length > 0;
+    const isExpanded = expandedIds.includes(category.category_id);
+    const isSelected = selectedId === category.category_id;
+    const isExcluded = category.category_id === excludeId;
+    
+    if (isExcluded) return null;
+    
+    return (
+      <div key={category.category_id}>
+        <div 
+          className={cn(
+            "flex items-center gap-2 py-1.5 px-2 rounded-md cursor-pointer hover:bg-accent transition-colors",
+            isSelected && "bg-indigo-50 dark:bg-indigo-900/20"
+          )}
+          style={{ paddingLeft: `${level * 16 + 8}px` }}
+          onClick={() => onSelect(category.category_id)}
+        >
+          {hasChildren ? (
+            <button 
+              onClick={(e) => { e.stopPropagation(); toggleExpand(category.category_id); }}
+              className="p-0.5 hover:bg-muted rounded"
+            >
+              {isExpanded ? (
+                <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />
+              ) : (
+                <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />
+              )}
+            </button>
+          ) : (
+            <span className="w-4" />
+          )}
+          
+          {hasChildren && isExpanded ? (
+            <FolderOpen className="w-4 h-4 text-amber-500 shrink-0" />
+          ) : (
+            <Folder className="w-4 h-4 text-amber-500 shrink-0" />
+          )}
+          
+          <span className="text-sm flex-1 truncate">{category.name}</span>
+          
+          {isSelected && (
+            <Check className="w-4 h-4 text-indigo-600" />
+          )}
+        </div>
+        
+        {isExpanded && hasChildren && (
+          <div>
+            {children.map(child => renderCategory(child, level + 1))}
+          </div>
+        )}
+      </div>
+    );
+  };
+  
+  const rootCategories = categories.filter(c => !c.parent_id && c.category_id !== excludeId);
+  
+  return (
+    <div className="max-h-64 overflow-y-auto">
+      {rootCategories.map(cat => renderCategory(cat))}
+    </div>
+  );
+};
+
+const TreeItem = ({ category, categories, level = 0, onEdit, onDelete, onAddChild, expandedIds, toggleExpand }) => {
   const children = categories.filter(c => c.parent_id === category.category_id);
   const hasChildren = children.length > 0;
   const isExpanded = expandedIds.includes(category.category_id);
@@ -81,6 +156,15 @@ const TreeItem = ({ category, categories, level = 0, onEdit, onDelete, expandedI
           <Button 
             variant="ghost" 
             size="icon" 
+            className="h-8 w-8 text-green-600 hover:text-green-700 hover:bg-green-50"
+            onClick={(e) => { e.stopPropagation(); onAddChild(category); }}
+            title="Unterkategorie erstellen"
+          >
+            <Plus className="w-4 h-4" />
+          </Button>
+          <Button 
+            variant="ghost" 
+            size="icon" 
             className="h-8 w-8"
             onClick={(e) => { e.stopPropagation(); onEdit(category); }}
           >
@@ -107,6 +191,7 @@ const TreeItem = ({ category, categories, level = 0, onEdit, onDelete, expandedI
               level={level + 1}
               onEdit={onEdit}
               onDelete={onDelete}
+              onAddChild={onAddChild}
               expandedIds={expandedIds}
               toggleExpand={toggleExpand}
             />
@@ -156,6 +241,15 @@ const Categories = () => {
   const handleOpenCreate = () => {
     setFormData({ name: "", description: "", parent_id: null });
     setEditDialog({ open: true, category: null });
+  };
+
+  const handleOpenCreateChild = (parentCategory) => {
+    setFormData({ name: "", description: "", parent_id: parentCategory.category_id });
+    setEditDialog({ open: true, category: null });
+    // Expand the parent so the new child will be visible
+    if (!expandedIds.includes(parentCategory.category_id)) {
+      setExpandedIds(prev => [...prev, parentCategory.category_id]);
+    }
   };
 
   const handleOpenEdit = (category) => {
@@ -261,6 +355,7 @@ const Categories = () => {
                   categories={categories}
                   onEdit={handleOpenEdit}
                   onDelete={(cat) => setDeleteDialog({ open: true, category: cat })}
+                  onAddChild={handleOpenCreateChild}
                   expandedIds={expandedIds}
                   toggleExpand={toggleExpand}
                 />
@@ -322,28 +417,44 @@ const Categories = () => {
             
             <div className="space-y-2">
               <Label>Übergeordnete Kategorie</Label>
-              <Select 
-                value={formData.parent_id || "none"} 
-                onValueChange={(value) => setFormData(prev => ({ 
-                  ...prev, 
-                  parent_id: value === "none" ? null : value 
-                }))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Keine (Root-Kategorie)" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Keine (Root-Kategorie)</SelectItem>
-                  {categories
-                    .filter(c => c.category_id !== editDialog.category?.category_id)
-                    .map((cat) => (
-                      <SelectItem key={cat.category_id} value={cat.category_id}>
-                        {cat.name}
-                      </SelectItem>
-                    ))
-                  }
-                </SelectContent>
-              </Select>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="w-full justify-start">
+                    {formData.parent_id ? (
+                      <span className="flex items-center gap-2">
+                        <Folder className="w-4 h-4 text-amber-500" />
+                        {categories.find(c => c.category_id === formData.parent_id)?.name || "Unbekannt"}
+                      </span>
+                    ) : (
+                      <span className="text-muted-foreground">Keine (Root-Kategorie)</span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-80 p-2" align="start">
+                  <div className="space-y-2">
+                    <Button 
+                      variant="ghost" 
+                      className={cn(
+                        "w-full justify-start",
+                        !formData.parent_id && "bg-indigo-50 dark:bg-indigo-900/20"
+                      )}
+                      onClick={() => setFormData(prev => ({ ...prev, parent_id: null }))}
+                    >
+                      <FolderTree className="w-4 h-4 mr-2 text-muted-foreground" />
+                      Keine (Root-Kategorie)
+                      {!formData.parent_id && <Check className="w-4 h-4 ml-auto text-indigo-600" />}
+                    </Button>
+                    <div className="border-t pt-2">
+                      <CategoryTreeSelector
+                        categories={categories}
+                        selectedId={formData.parent_id}
+                        onSelect={(id) => setFormData(prev => ({ ...prev, parent_id: id }))}
+                        excludeId={editDialog.category?.category_id}
+                      />
+                    </div>
+                  </div>
+                </PopoverContent>
+              </Popover>
             </div>
           </div>
           

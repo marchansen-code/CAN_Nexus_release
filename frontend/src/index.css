@@ -469,6 +469,34 @@ input:focus, textarea:focus, select:focus {
 }
 
 
+/* Image Selection and Resize */
+.ProseMirror img {
+    cursor: pointer;
+    transition: box-shadow 0.15s ease;
+}
+
+.ProseMirror img.ProseMirror-selectednode {
+    outline: 3px solid hsl(0 84% 50%);
+    outline-offset: 2px;
+    box-shadow: 0 0 0 6px hsl(0 84% 50% / 0.1);
+}
+
+.ProseMirror img:hover {
+    box-shadow: 0 0 0 3px hsl(0 84% 50% / 0.2);
+}
+
+/* Image resize wrapper */
+.ProseMirror .image-resizer {
+    display: inline-block;
+    position: relative;
+}
+
+.ProseMirror .image-resizer img {
+    max-width: 100%;
+    height: auto;
+}
+
+
 /* Mention Links (Article References) */
 .mention-link {
     background: linear-gradient(135deg, hsl(0 84% 95%) 0%, hsl(0 84% 92%) 100%);
