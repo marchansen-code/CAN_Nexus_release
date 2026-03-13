@@ -173,6 +173,31 @@ const ColorPicker = ({ colors, onSelect, currentColor, icon: Icon, title }) => (
   </Popover>
 );
 
+// Extended Image extension with resizing support
+const ResizableImage = Image.extend({
+  addAttributes() {
+    return {
+      ...this.parent?.(),
+      width: {
+        default: null,
+        parseHTML: element => element.getAttribute('width') || element.style.width || null,
+        renderHTML: attributes => {
+          if (!attributes.width) return {};
+          return { width: attributes.width, style: `width: ${attributes.width}` };
+        },
+      },
+      height: {
+        default: null,
+        parseHTML: element => element.getAttribute('height') || element.style.height || null,
+        renderHTML: attributes => {
+          if (!attributes.height) return {};
+          return { height: attributes.height };
+        },
+      },
+    };
+  },
+});
+
 const EditorToolbar = ({ editor, onImageUpload }) => {
   const [linkUrl, setLinkUrl] = React.useState('');
   const [imageUrl, setImageUrl] = React.useState('');
@@ -257,33 +282,39 @@ const EditorToolbar = ({ editor, onImageUpload }) => {
     }, 50);
   }, [editor]);
 
-  // Set image size
+  // Set image size using TipTap's updateAttributes
   const setImageSize = useCallback((width) => {
-    const { state, view } = editor;
+    // First try to use updateAttributes if image is selected
+    const { state } = editor;
     const { selection } = state;
     
-    // Check if an image is selected
+    // Check if we have an image node selected
     if (selection.node?.type?.name === 'image') {
-      const pos = selection.from;
-      const tr = state.tr;
-      
-      tr.setNodeMarkup(pos, null, {
-        ...selection.node.attrs,
-        style: `width: ${width}; height: auto;`
-      });
-      
-      view.dispatch(tr);
-    } else {
-      // Try to find image in the editor by DOM
-      setTimeout(() => {
-        const editorElement = editor.view.dom;
-        const selectedImg = editorElement.querySelector('img.ProseMirror-selectednode');
-        if (selectedImg) {
-          selectedImg.style.width = width;
-          selectedImg.style.height = 'auto';
-        }
-      }, 50);
+      editor.chain().focus().updateAttributes('image', { 
+        width: width,
+        height: 'auto'
+      }).run();
+      return;
     }
+    
+    // Fallback: find any image in the editor and update it
+    const editorElement = editor.view.dom;
+    const images = editorElement.querySelectorAll('img');
+    if (images.length > 0) {
+      // Update the last image or the selected one
+      const selectedImg = editorElement.querySelector('img.ProseMirror-selectednode') || images[images.length - 1];
+      if (selectedImg) {
+        selectedImg.style.width = width;
+        selectedImg.style.height = 'auto';
+        selectedImg.setAttribute('width', width);
+      }
+    }
+    
+    // Also try via TipTap command
+    editor.chain().focus().updateAttributes('image', { 
+      width: width,
+      height: 'auto'
+    }).run();
   }, [editor]);
 
   const handleFileUpload = async (event) => {
@@ -991,9 +1022,9 @@ const RichTextEditor = ({ content, onChange, placeholder = "Inhalt eingeben...",
           class: 'text-red-600 underline cursor-pointer hover:text-red-700',
         },
       }),
-      Image.configure({
+      ResizableImage.configure({
         HTMLAttributes: {
-          class: 'max-w-full h-auto rounded-lg my-4',
+          class: 'max-w-full h-auto rounded-lg my-4 cursor-pointer',
         },
         allowBase64: true,
       }),
