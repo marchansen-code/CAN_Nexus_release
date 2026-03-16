@@ -220,6 +220,159 @@ async def export_article_docx(article_id: str, user: User = Depends(get_current_
     )
 
 
+async def generate_pdf_content(article: dict) -> tuple[bytes, str]:
+    """Generate PDF content for an article. Returns (content_bytes, filename)."""
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.units import cm
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
+    from reportlab.lib.enums import TA_JUSTIFY, TA_CENTER
+    
+    category_name = "Keine Kategorie"
+    if article.get("category_id"):
+        cat = await db.categories.find_one({"category_id": article["category_id"]}, {"_id": 0, "name": 1})
+        if cat:
+            category_name = cat["name"]
+    
+    author_name = "Unbekannt"
+    if article.get("created_by"):
+        author = await db.users.find_one({"user_id": article["created_by"]}, {"_id": 0, "name": 1})
+        if author:
+            author_name = author["name"]
+    
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=A4,
+        rightMargin=2*cm,
+        leftMargin=2*cm,
+        topMargin=2*cm,
+        bottomMargin=2*cm
+    )
+    
+    styles = getSampleStyleSheet()
+    
+    title_style = ParagraphStyle(
+        'CustomTitle',
+        parent=styles['Heading1'],
+        fontSize=18,
+        spaceAfter=12,
+        textColor='#1e293b'
+    )
+    
+    meta_style = ParagraphStyle(
+        'Meta',
+        parent=styles['Normal'],
+        fontSize=10,
+        textColor='#64748b',
+        spaceAfter=20
+    )
+    
+    body_style = ParagraphStyle(
+        'CustomBody',
+        parent=styles['Normal'],
+        fontSize=11,
+        leading=16,
+        alignment=TA_JUSTIFY,
+        spaceAfter=12
+    )
+    
+    story = []
+    story.append(Paragraph(article["title"], title_style))
+    
+    created_at = article.get("created_at", "")
+    if isinstance(created_at, str) and created_at:
+        try:
+            dt = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
+            created_at = dt.strftime("%d.%m.%Y")
+        except Exception:
+            pass
+    
+    meta_text = f"Kategorie: {category_name} | Autor: {author_name} | Erstellt: {created_at}"
+    story.append(Paragraph(meta_text, meta_style))
+    
+    content = strip_html(article.get("content", ""))
+    paragraphs = content.split('\n\n')
+    for para in paragraphs:
+        if para.strip():
+            para = para.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+            story.append(Paragraph(para, body_style))
+    
+    story.append(Spacer(1, 30))
+    footer_style = ParagraphStyle('Footer', parent=styles['Normal'], fontSize=8, textColor='#94a3b8', alignment=TA_CENTER)
+    story.append(Paragraph(f"Exportiert aus CANUSA Nexus am {datetime.now().strftime('%d.%m.%Y %H:%M')}", footer_style))
+    
+    doc.build(story)
+    buffer.seek(0)
+    
+    safe_title = "".join(c for c in article["title"] if c.isalnum() or c in (' ', '-', '_')).strip()[:50]
+    filename = f"{safe_title}.pdf"
+    
+    return buffer.read(), filename
+
+
+async def generate_docx_content(article: dict) -> tuple[bytes, str]:
+    """Generate DOCX content for an article. Returns (content_bytes, filename)."""
+    from docx import Document as DocxDocument
+    from docx.shared import Pt, RGBColor
+    from docx.enum.text import WD_ALIGN_PARAGRAPH
+    
+    category_name = "Keine Kategorie"
+    if article.get("category_id"):
+        cat = await db.categories.find_one({"category_id": article["category_id"]}, {"_id": 0, "name": 1})
+        if cat:
+            category_name = cat["name"]
+    
+    author_name = "Unbekannt"
+    if article.get("created_by"):
+        author = await db.users.find_one({"user_id": article["created_by"]}, {"_id": 0, "name": 1})
+        if author:
+            author_name = author["name"]
+    
+    doc = DocxDocument()
+    
+    title = doc.add_heading(article["title"], level=1)
+    title.alignment = WD_ALIGN_PARAGRAPH.LEFT
+    
+    created_at = article.get("created_at", "")
+    if isinstance(created_at, str) and created_at:
+        try:
+            dt = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
+            created_at = dt.strftime("%d.%m.%Y")
+        except Exception:
+            pass
+    
+    meta = doc.add_paragraph()
+    meta_run = meta.add_run(f"Kategorie: {category_name} | Autor: {author_name} | Erstellt: {created_at}")
+    meta_run.font.size = Pt(10)
+    meta_run.font.color.rgb = RGBColor(100, 116, 139)
+    
+    doc.add_paragraph()
+    
+    content = strip_html(article.get("content", ""))
+    paragraphs = content.split('\n\n')
+    for para in paragraphs:
+        if para.strip():
+            p = doc.add_paragraph(para.strip())
+            p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+    
+    doc.add_paragraph()
+    footer = doc.add_paragraph()
+    footer_run = footer.add_run(f"Exportiert aus CANUSA Nexus am {datetime.now().strftime('%d.%m.%Y %H:%M')}")
+    footer_run.font.size = Pt(8)
+    footer_run.font.color.rgb = RGBColor(148, 163, 184)
+    footer.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    
+    buffer = io.BytesIO()
+    doc.save(buffer)
+    buffer.seek(0)
+    
+    safe_title = "".join(c for c in article["title"] if c.isalnum() or c in (' ', '-', '_')).strip()[:50]
+    filename = f"{safe_title}.docx"
+    
+    return buffer.read(), filename
+
+
 # ==================== FAVORITES & VIEWED ====================
 
 @router.post("/articles/{article_id}/favorite")

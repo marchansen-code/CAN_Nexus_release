@@ -79,6 +79,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import DocumentViewer, { FileIcon } from "@/components/DocumentViewer";
+import GoogleDriveImportDialog from "@/components/dialogs/GoogleDriveImportDialog";
 
 const ACCEPTED_FILES = '.pdf,.doc,.docx,.txt,.csv,.xls,.xlsx';
 
@@ -326,6 +327,11 @@ const Documents = () => {
   
   // PDF to Article conversion
   const [converting, setConverting] = useState(false);
+  
+  // Google Drive
+  const [driveStatus, setDriveStatus] = useState({ connected: false });
+  const [driveImportDialog, setDriveImportDialog] = useState(false);
+  const [checkingDrive, setCheckingDrive] = useState(true);
 
   const isAdmin = user?.role === "admin";
   const canEdit = user?.role === "admin" || user?.role === "editor";
@@ -350,6 +356,57 @@ const Documents = () => {
     const interval = setInterval(fetchData, 5000);
     return () => clearInterval(interval);
   }, [fetchData]);
+
+  // Check Google Drive connection status
+  useEffect(() => {
+    const checkDriveStatus = async () => {
+      try {
+        const response = await axios.get(`${API}/drive/status`);
+        setDriveStatus(response.data);
+      } catch (error) {
+        console.error("Failed to check Drive status:", error);
+      } finally {
+        setCheckingDrive(false);
+      }
+    };
+    checkDriveStatus();
+    
+    // Check for drive_connected query param
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('drive_connected') === 'true') {
+      toast.success("Google Drive erfolgreich verbunden!");
+      setDriveStatus({ connected: true });
+      window.history.replaceState({}, '', window.location.pathname);
+    } else if (params.get('drive_error') === 'true') {
+      toast.error("Google Drive Verbindung fehlgeschlagen");
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  }, []);
+
+  const connectGoogleDrive = async () => {
+    try {
+      const response = await axios.get(`${API}/drive/connect`);
+      window.location.href = response.data.authorization_url;
+    } catch (error) {
+      console.error("Failed to connect Drive:", error);
+      toast.error("Fehler beim Verbinden mit Google Drive");
+    }
+  };
+
+  const disconnectGoogleDrive = async () => {
+    try {
+      await axios.post(`${API}/drive/disconnect`);
+      setDriveStatus({ connected: false });
+      toast.success("Google Drive getrennt");
+    } catch (error) {
+      console.error("Failed to disconnect Drive:", error);
+      toast.error("Fehler beim Trennen von Google Drive");
+    }
+  };
+
+  const handleDriveImport = (result) => {
+    fetchData();
+  };
 
   // Get documents for current folder
   const filteredDocuments = documents.filter(doc => {
@@ -724,6 +781,54 @@ const Documents = () => {
                     </SelectContent>
                   </Select>
                   
+                  {/* Google Drive Button */}
+                  {driveStatus.connected ? (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="outline" className="h-9" data-testid="google-drive-menu">
+                          <svg className="w-4 h-4 mr-2" viewBox="0 0 87.3 78" xmlns="http://www.w3.org/2000/svg">
+                            <path d="m6.6 66.85 3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3l13.75-23.8h-27.5c0 1.55.4 3.1 1.2 4.5z" fill="#0066da"/>
+                            <path d="m43.65 25-13.75-23.8c-1.35.8-2.5 1.9-3.3 3.3l-25.4 44a9.06 9.06 0 0 0 -1.2 4.5h27.5z" fill="#00ac47"/>
+                            <path d="m73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l1.6-2.75 7.65-13.25c.8-1.4 1.2-2.95 1.2-4.5h-27.502l5.852 11.5z" fill="#ea4335"/>
+                            <path d="m43.65 25 13.75-23.8c-1.35-.8-2.9-1.2-4.5-1.2h-18.5c-1.6 0-3.15.45-4.5 1.2z" fill="#00832d"/>
+                            <path d="m59.8 53h-32.3l-13.75 23.8c1.35.8 2.9 1.2 4.5 1.2h50.8c1.6 0 3.15-.45 4.5-1.2z" fill="#2684fc"/>
+                            <path d="m73.4 26.5-12.7-22c-.8-1.4-1.95-2.5-3.3-3.3l-13.75 23.8 16.15 28h27.45c0-1.55-.4-3.1-1.2-4.5z" fill="#ffba00"/>
+                          </svg>
+                          Google Drive
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => setDriveImportDialog(true)} data-testid="drive-import-btn">
+                          <ArrowRight className="w-4 h-4 mr-2 rotate-180" />
+                          Von Drive importieren
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={disconnectGoogleDrive} className="text-red-600">
+                          <X className="w-4 h-4 mr-2" />
+                          Drive trennen
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  ) : (
+                    <Button 
+                      variant="outline" 
+                      className="h-9" 
+                      onClick={connectGoogleDrive}
+                      disabled={checkingDrive}
+                      data-testid="connect-google-drive"
+                    >
+                      <svg className="w-4 h-4 mr-2" viewBox="0 0 87.3 78" xmlns="http://www.w3.org/2000/svg">
+                        <path d="m6.6 66.85 3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3l13.75-23.8h-27.5c0 1.55.4 3.1 1.2 4.5z" fill="#0066da"/>
+                        <path d="m43.65 25-13.75-23.8c-1.35.8-2.5 1.9-3.3 3.3l-25.4 44a9.06 9.06 0 0 0 -1.2 4.5h27.5z" fill="#00ac47"/>
+                        <path d="m73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l1.6-2.75 7.65-13.25c.8-1.4 1.2-2.95 1.2-4.5h-27.502l5.852 11.5z" fill="#ea4335"/>
+                        <path d="m43.65 25 13.75-23.8c-1.35-.8-2.9-1.2-4.5-1.2h-18.5c-1.6 0-3.15.45-4.5 1.2z" fill="#00832d"/>
+                        <path d="m59.8 53h-32.3l-13.75 23.8c1.35.8 2.9 1.2 4.5 1.2h50.8c1.6 0 3.15-.45 4.5-1.2z" fill="#2684fc"/>
+                        <path d="m73.4 26.5-12.7-22c-.8-1.4-1.95-2.5-3.3-3.3l-13.75 23.8 16.15 28h27.45c0-1.55-.4-3.1-1.2-4.5z" fill="#ffba00"/>
+                      </svg>
+                      Drive verbinden
+                    </Button>
+                  )}
+                  
                   <label>
                     <input
                       type="file"
@@ -1093,6 +1198,14 @@ const Documents = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Google Drive Import Dialog */}
+      <GoogleDriveImportDialog
+        open={driveImportDialog}
+        onOpenChange={setDriveImportDialog}
+        onImport={handleDriveImport}
+        targetFolderId={selectedFolderId}
+      />
     </div>
   );
 };

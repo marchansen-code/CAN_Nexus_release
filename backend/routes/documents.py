@@ -41,6 +41,42 @@ def is_supported_file(filename: str) -> bool:
     return get_file_extension(filename) in SUPPORTED_EXTENSIONS
 
 
+async def process_document_content(file_path: str, mime_type: str) -> dict:
+    """Process document and return structured content. Used by Google Drive import."""
+    ext_map = {
+        'application/pdf': '.pdf',
+        'application/msword': '.doc',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document': '.docx',
+        'text/plain': '.txt',
+        'text/csv': '.csv',
+        'application/vnd.ms-excel': '.xls',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': '.xlsx',
+    }
+    
+    file_type = ext_map.get(mime_type, '.txt')
+    
+    try:
+        if file_type == '.pdf':
+            result = await process_pdf(file_path)
+        elif file_type in ['.doc', '.docx']:
+            result = await process_word(file_path)
+        elif file_type == '.txt':
+            result = await process_text(file_path)
+        elif file_type in ['.csv', '.xls', '.xlsx']:
+            result = await process_spreadsheet(file_path, file_type)
+        else:
+            result = {"extracted_text": "", "html_content": "", "page_count": 0}
+        
+        return {
+            "extracted_text": result.get("extracted_text", ""),
+            "html_content": result.get("html_content", ""),
+            "page_count": result.get("page_count", 0)
+        }
+    except Exception as e:
+        logger.error(f"Content processing failed: {e}")
+        return {"extracted_text": "", "html_content": "", "page_count": 0}
+
+
 @router.post("/upload")
 async def upload_document(
     file: UploadFile = File(...),

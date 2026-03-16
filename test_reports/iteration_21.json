@@ -1,0 +1,56 @@
+{
+  "summary": "Iteration 21: Google Drive Integration Testing - All tests pass. Tested: 1) /api/drive/status returns connection status (connected: false when not connected), 2) /api/drive/connect returns Google OAuth authorization URL with correct params (client_id, redirect_uri, drive.file scope), 3) Documents page shows 'Drive verbinden' button with Google Drive icon when not connected, 4) Article view export dropdown has PDF and DOCX options, 5) PDF and DOCX exports trigger downloads correctly, 6) Standard document upload functionality preserved.",
+  "mode": "generate",
+  "baseline_commit": "084bc7238938c31afdbba86256520df9324c5cb6",
+  "head_commit": "e64ff7240c1c3eadd92f8ca9f320abd92c3ca4d5",
+  "specs_created": [
+    "/app/tests/e2e/google-drive-integration.spec.ts",
+    "/app/backend/tests/test_iteration21_google_drive.py"
+  ],
+  "specs_updated": [],
+  "quarantined_tests": [],
+  "test_report_links": [
+    "/app/tests/e2e/google-drive-integration.spec.ts",
+    "/app/backend/tests/test_iteration21_google_drive.py",
+    "/app/test_reports/pytest/pytest_results_iter21.xml"
+  ],
+  "regression_results": {
+    "total_specs": 26,
+    "passed": 26,
+    "failed": 0,
+    "skipped": 0
+  },
+  "issues": [],
+  "action_items": [],
+  "updated_files": [
+    "/app/tests/e2e/google-drive-integration.spec.ts",
+    "/app/backend/tests/test_iteration21_google_drive.py"
+  ],
+  "test_results": {
+    "backend": "100% (14/14 pytest tests passed)",
+    "frontend": "100% (12/12 Playwright tests passed)"
+  },
+  "seed_data_creation": "None - used existing admin user marc.hansen@canusa.de and existing articles for testing",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Google Drive integration tested. Note: Full OAuth flow (actual Google login/consent) cannot be tested automatically - only endpoint availability, OAuth redirect URL verification, and UI button visibility were tested. The /api/drive/files and /api/drive/folders endpoints correctly return 400 when Drive is not connected. Article export (PDF/DOCX) works correctly and triggers browser downloads.",
+  "google_drive_testing_notes": {
+    "backend_endpoints_tested": [
+      "GET /api/drive/status - Returns {connected: false} when not connected",
+      "GET /api/drive/connect - Returns OAuth authorization URL to accounts.google.com",
+      "GET /api/drive/files - Returns 400 when not connected (expected)",
+      "GET /api/drive/folders - Returns 400 when not connected (expected)",
+      "POST /api/drive/export/article/{id} - Returns 400 when not connected (expected)",
+      "GET /api/articles/{id}/export/pdf - Returns valid PDF file",
+      "GET /api/articles/{id}/export/docx - Returns valid DOCX file"
+    ],
+    "frontend_elements_tested": [
+      "Drive verbinden button (data-testid='connect-google-drive') - visible with Google Drive icon",
+      "Export dropdown (data-testid='export-dropdown') - visible on article view",
+      "PDF export button (data-testid='export-pdf-btn') - triggers PDF download",
+      "DOCX export button (data-testid='export-docx-btn') - triggers DOCX download",
+      "Documents page elements - folder structure, upload button, header"
+    ],
+    "limitation": "Cannot test complete OAuth flow as it requires actual Google account interaction"
+  }
+}

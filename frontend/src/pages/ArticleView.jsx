@@ -59,6 +59,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
+import GoogleDriveExportDialog from "@/components/dialogs/GoogleDriveExportDialog";
 
 const StatusBadge = ({ status }) => {
   const styles = {
@@ -108,6 +109,10 @@ const ArticleView = () => {
   // Version history state
   const [versions, setVersions] = useState([]);
   const [versionsLoading, setVersionsLoading] = useState(false);
+  
+  // Google Drive export state
+  const [driveExportOpen, setDriveExportOpen] = useState(false);
+  const [driveConnected, setDriveConnected] = useState(false);
 
   const canEdit = user?.role === "admin" || user?.role === "editor";
   const isAdmin = user?.role === "admin";
@@ -116,6 +121,10 @@ const ArticleView = () => {
 
   useEffect(() => {
     fetchData();
+    // Check Google Drive status
+    axios.get(`${API}/drive/status`)
+      .then(res => setDriveConnected(res.data.connected))
+      .catch(() => {});
   }, [id]);
 
   const fetchData = async () => {
@@ -349,6 +358,22 @@ const ArticleView = () => {
                 <FileText className="w-4 h-4 mr-2 text-blue-500" />
                 Als Word exportieren
               </DropdownMenuItem>
+              {driveConnected && (
+                <>
+                  <div className="h-px bg-slate-200 my-1" />
+                  <DropdownMenuItem onClick={() => setDriveExportOpen(true)} data-testid="export-drive-btn">
+                    <svg className="w-4 h-4 mr-2" viewBox="0 0 87.3 78" xmlns="http://www.w3.org/2000/svg">
+                      <path d="m6.6 66.85 3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3l13.75-23.8h-27.5c0 1.55.4 3.1 1.2 4.5z" fill="#0066da"/>
+                      <path d="m43.65 25-13.75-23.8c-1.35.8-2.5 1.9-3.3 3.3l-25.4 44a9.06 9.06 0 0 0 -1.2 4.5h27.5z" fill="#00ac47"/>
+                      <path d="m73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l1.6-2.75 7.65-13.25c.8-1.4 1.2-2.95 1.2-4.5h-27.502l5.852 11.5z" fill="#ea4335"/>
+                      <path d="m43.65 25 13.75-23.8c-1.35-.8-2.9-1.2-4.5-1.2h-18.5c-1.6 0-3.15.45-4.5 1.2z" fill="#00832d"/>
+                      <path d="m59.8 53h-32.3l-13.75 23.8c1.35.8 2.9 1.2 4.5 1.2h50.8c1.6 0 3.15-.45 4.5-1.2z" fill="#2684fc"/>
+                      <path d="m73.4 26.5-12.7-22c-.8-1.4-1.95-2.5-3.3-3.3l-13.75 23.8 16.15 28h27.45c0-1.55-.4-3.1-1.2-4.5z" fill="#ffba00"/>
+                    </svg>
+                    Nach Google Drive
+                  </DropdownMenuItem>
+                </>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
           
@@ -804,6 +829,14 @@ const ArticleView = () => {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Google Drive Export Dialog */}
+      <GoogleDriveExportDialog
+        open={driveExportOpen}
+        onOpenChange={setDriveExportOpen}
+        articleId={article?.article_id}
+        articleTitle={article?.title}
+      />
     </div>
   );
 };

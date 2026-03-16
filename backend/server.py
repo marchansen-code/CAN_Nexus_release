@@ -16,7 +16,7 @@ from database import db, client, DEFAULT_ADMIN_EMAIL, DEFAULT_ADMIN_PASSWORD, DE
 from dependencies import get_password_hash
 
 # Route modules
-from routes import auth, users, groups, categories, articles, search, documents, document_folders, recycle_bin, images, stats, backup, exports, versions, google_auth
+from routes import auth, users, groups, categories, articles, search, documents, document_folders, recycle_bin, images, stats, backup, exports, versions, google_auth, google_drive
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -53,6 +53,7 @@ app.include_router(backup.router, prefix="/api")
 app.include_router(exports.router, prefix="/api")
 app.include_router(versions.router, prefix="/api")
 app.include_router(google_auth.router, prefix="/api")
+app.include_router(google_drive.router, prefix="/api")
 
 # Session middleware for OAuth (required by authlib)
 app.add_middleware(SessionMiddleware, secret_key=secrets.token_urlsafe(32))
