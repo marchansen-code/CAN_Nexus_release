@@ -7,7 +7,7 @@ Wissensmanagement-Plattform für CANUSA Touristik GmbH & Co. KG und CU-Travel.
 - **Frontend**: React 18, TailwindCSS, Shadcn/UI, TipTap Rich Editor
 - **Backend**: FastAPI, Python 3.11, bcrypt, reportlab (PDF), python-docx (Word)
 - **Database**: MongoDB
-- **Auth**: E-Mail/Passwort mit Session-Cookies
+- **Auth**: E-Mail/Passwort mit Session-Cookies, Google OAuth
 
 ## Implemented Features
 
@@ -203,6 +203,16 @@ Wissensmanagement-Plattform für CANUSA Touristik GmbH & Co. KG und CU-Travel.
 - ✅ **Neue API-Endpunkte**:
   - `GET /api/documents/{id}/content` - HTML-Inhalt für Import
 
+### Google OAuth Integration (Iteration 28) - 16.03.2026
+- ✅ **"Mit Google anmelden" Button** - Auf der Login-Seite mit Google-Logo
+- ✅ **OAuth-Endpunkt** - `GET /api/auth/google/login` leitet zu Google weiter
+- ✅ **Callback-Verarbeitung** - `GET /api/auth/google/callback` erstellt/aktualisiert Benutzer
+- ✅ **Session-Cookie** - Wird nach erfolgreicher Google-Anmeldung gesetzt
+- ✅ **HTTPS-Redirect** - Automatische HTTPS-Korrektur für Redirect-URIs
+- ✅ **Neue Benutzer-Erstellung** - Google-Benutzer werden mit Rolle "viewer" angelegt
+- ✅ **Benutzer-Update** - Bestehende Benutzer bekommen Google-ID und Profilbild
+- ✅ **Produktions-Domain** - Konfiguriert für `https://nexus-knows.de`
+
 ## API Endpoints
 
 ### Groups (Admin only)
@@ -235,11 +245,16 @@ Wissensmanagement-Plattform für CANUSA Touristik GmbH & Co. KG und CU-Travel.
 - `GET /api/articles/{id}/export/pdf`
 - `GET /api/articles/{id}/export/docx`
 
+### Google OAuth
+- `GET /api/auth/google/login` - Startet OAuth-Flow
+- `GET /api/auth/google/callback` - Verarbeitet Google-Antwort
+
 ## Default Admin
 - **E-Mail**: marc.hansen@canusa.de
 - **Passwort**: CanusaNexus2024!
 
 ## Test Coverage
+- Iteration 28: Backend 100% (20/20), Frontend 100% (17/17)
 - Iteration 27: Backend 100% (17/17), Frontend 100% (38/38)
 - Iteration 26: Backend 100% (17/17), Frontend 100% (69/69)
 - Iteration 25: Backend 100% (22/22), Frontend 100% (34/34)
@@ -280,5 +295,7 @@ Wissensmanagement-Plattform für CANUSA Touristik GmbH & Co. KG und CU-Travel.
     ├── images.py      # 79 Zeilen - Bilder-Upload
     ├── stats.py       # 118 Zeilen - Statistiken, Widget
     ├── backup.py      # 322 Zeilen - Backup/Export/Import
-    └── exports.py     # 351 Zeilen - PDF/DOCX-Export, Favoriten
+    ├── exports.py     # 351 Zeilen - PDF/DOCX-Export, Favoriten
+    ├── versions.py    # Artikel-Versionierung
+    └── google_auth.py # Google OAuth Integration
 ```
