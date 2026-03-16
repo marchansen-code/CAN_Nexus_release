@@ -163,6 +163,32 @@ Wissensmanagement-Plattform für CANUSA Touristik GmbH & Co. KG und CU-Travel.
 - ✅ **Download-Button** - PDF herunterladen
 - ✅ **PDF-Streaming API** - Neuer Endpunkt `/api/documents/{id}/file`
 
+### Editor-Verbesserungen (Iteration 26) - 16.03.2026
+- ✅ **Vollbild-Editor** - Editor kann in einem Pop-up-Fenster geöffnet werden
+- ✅ **Vollbild über Card-Header** - Button "Vollbild" in der Inhalt-Card
+- ✅ **Vollbild über Toolbar** - Button "Vollbild"/"Beenden" in der Editor-Toolbar
+- ✅ **Escape zum Schließen** - Vollbild-Modus mit Esc beenden
+- ✅ **FullscreenEditor-Komponente** - Separate React-Komponente für modulare Nutzung
+
+### Benutzer-Mentions (Iteration 26) - 16.03.2026
+- ✅ **@@ Trigger für Benutzer** - Unterscheidet von @ für Artikel
+- ✅ **Benutzer-Dropdown** - Zeigt Name, E-Mail und Rolle
+- ✅ **Rollen-Badges** - Admin (rot), Editor (blau)
+- ✅ **Suchfilter** - Suche nach Name oder E-Mail
+- ✅ **Backend-Endpunkt** - `GET /api/users/search/mention`
+
+### Artikel-Versionierung (Iteration 26) - 16.03.2026
+- ✅ **Automatische Versionierung** - Jede Änderung erstellt eine Version
+- ✅ **Versionshistorie-Dialog** - Zeigt alle Versionen mit Datum und Autor
+- ✅ **Vorschau-Funktion** - Öffnet Version in neuem Fenster
+- ✅ **Wiederherstellen** - Stellt alte Version wieder her
+- ✅ **Versionsnummern** - Fortlaufende Nummerierung
+- ✅ **Neue Kollektion** - `article_versions` in MongoDB
+- ✅ **API-Endpunkte**:
+  - `GET /api/versions/articles/{id}` - Versionsliste
+  - `GET /api/versions/articles/{id}/{version_id}` - Einzelne Version
+  - `POST /api/versions/articles/{id}/{version_id}/restore` - Wiederherstellen
+
 ## API Endpoints
 
 ### Groups (Admin only)
@@ -200,18 +226,18 @@ Wissensmanagement-Plattform für CANUSA Touristik GmbH & Co. KG und CU-Travel.
 - **Passwort**: CanusaNexus2024!
 
 ## Test Coverage
+- Iteration 26: Backend 100% (17/17), Frontend 100% (69/69)
 - Iteration 25: Backend 100% (22/22), Frontend 100% (34/34)
 - Iteration 24: Backend 100% (13/13), Frontend 100% (33/33)
 - Iteration 15: Manuell getestet (Tabellen-Dialog, Bearbeitungsoptionen)
-- Iteration 14: Backend 100% (8/8), Frontend 100% (23/23)
 - Last tested: 16.03.2026
 
 ## Backlog
 
 ### P2 (Medium)
+- [x] ~~Benutzer-Suche in @-Mentions~~ (Erledigt in Iteration 26)
+- [x] ~~Artikel-Versionierung~~ (Erledigt in Iteration 26)
 - [ ] Schnellsuche (Strg+K)
-- [ ] Benutzer-Suche in @-Mentions
-- [ ] Artikel-Versionierung
 
 ### P3 (Nice to Have)
 - [ ] OCR für gescannte PDFs
