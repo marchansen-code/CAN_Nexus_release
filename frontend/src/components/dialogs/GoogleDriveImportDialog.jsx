@@ -16,6 +16,7 @@ const GoogleDriveImportDialog = ({ open, onOpenChange, onImport, targetFolderId 
   const [loading, setLoading] = useState(false);
   const [files, setFiles] = useState([]);
   const [folders, setFolders] = useState([]);
+  const [sharedDrives, setSharedDrives] = useState([]);
   const [currentFolderId, setCurrentFolderId] = useState("root");
   const [folderPath, setFolderPath] = useState([{ id: "root", name: "Mein Drive" }]);
   const [selectedFile, setSelectedFile] = useState(null);
@@ -24,9 +25,19 @@ const GoogleDriveImportDialog = ({ open, onOpenChange, onImport, targetFolderId 
   useEffect(() => {
     if (open) {
       loadFiles("root");
+      loadSharedDrives();
       setFolderPath([{ id: "root", name: "Mein Drive" }]);
     }
   }, [open]);
+
+  const loadSharedDrives = async () => {
+    try {
+      const response = await axios.get(`${API}/drive/shared-drives`);
+      setSharedDrives(response.data.drives || []);
+    } catch (error) {
+      console.error("Failed to load shared drives:", error);
+    }
+  };
 
   const loadFiles = async (folderId) => {
     setLoading(true);
@@ -148,6 +159,32 @@ const GoogleDriveImportDialog = ({ open, onOpenChange, onImport, targetFolderId 
             </div>
           ) : (
             <div className="space-y-1">
+              {/* Shared Drives (only show at root level) */}
+              {currentFolderId === "root" && sharedDrives.length > 0 && (
+                <>
+                  <div className="text-xs text-slate-500 font-medium px-3 py-2 border-b mb-1">
+                    Geteilte Ablagen
+                  </div>
+                  {sharedDrives.map((drive) => (
+                    <div
+                      key={drive.id}
+                      onClick={() => {
+                        setFolderPath([{ id: drive.id, name: drive.name }]);
+                        loadFiles(drive.id);
+                      }}
+                      className="flex items-center gap-3 p-3 rounded-lg hover:bg-slate-100 cursor-pointer transition-colors"
+                    >
+                      <Folder className="w-5 h-5 text-blue-500" />
+                      <span className="flex-1 font-medium">{drive.name}</span>
+                      <span className="text-xs text-slate-400">Geteilte Ablage</span>
+                    </div>
+                  ))}
+                  <div className="text-xs text-slate-500 font-medium px-3 py-2 border-b mt-2 mb-1">
+                    Mein Drive
+                  </div>
+                </>
+              )}
+              
               {/* Folders */}
               {folders.map((folder) => (
                 <div

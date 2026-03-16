@@ -238,12 +238,32 @@ async def get_drive_service(user: User):
     return build('drive', 'v3', credentials=creds)
 
 
+@router.get("/shared-drives")
+async def list_shared_drives(user: User = Depends(get_current_user)):
+    """List all shared drives the user has access to."""
+    try:
+        service = await get_drive_service(user)
+        
+        results = service.drives().list(pageSize=50).execute()
+        drives = results.get('drives', [])
+        
+        return {
+            "drives": [{"id": d["id"], "name": d["name"]} for d in drives]
+        }
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.warning(f"Could not list shared drives: {e}")
+        return {"drives": []}
+
+
 @router.get("/files")
 async def list_drive_files(
     folder_id: str = Query(default="root", description="Folder ID to list"),
     user: User = Depends(get_current_user)
 ):
-    """List files and folders from Google Drive."""
+    """List files and folders from Google Drive including shared drives."""
     try:
         service = await get_drive_service(user)
         
@@ -258,7 +278,9 @@ async def list_drive_files(
             q=query,
             pageSize=100,
             fields="nextPageToken, files(id, name, mimeType, size, modifiedTime, iconLink, thumbnailLink)",
-            orderBy="folder,name"
+            orderBy="folder,name",
+            supportsAllDrives=True,
+            includeItemsFromAllDrives=True
         ).execute()
         
         files = results.get('files', [])
@@ -301,7 +323,7 @@ async def list_drive_files(
 
 @router.get("/folders")
 async def list_drive_folders(user: User = Depends(get_current_user)):
-    """List all folders from Google Drive for export folder selection."""
+    """List all folders from Google Drive for export folder selection including shared drives."""
     try:
         service = await get_drive_service(user)
         
@@ -311,7 +333,9 @@ async def list_drive_folders(user: User = Depends(get_current_user)):
             q=query,
             pageSize=200,
             fields="files(id, name, parents)",
-            orderBy="name"
+            orderBy="name",
+            supportsAllDrives=True,
+            includeItemsFromAllDrives=True
         ).execute()
         
         folders = results.get('files', [])
@@ -324,6 +348,19 @@ async def list_drive_folders(user: User = Depends(get_current_user)):
                 "name": f["name"],
                 "parent": f.get("parents", [None])[0]
             })
+        
+        # Also get shared drives
+        try:
+            shared_drives = service.drives().list(pageSize=50).execute()
+            for drive in shared_drives.get('drives', []):
+                folder_list.append({
+                    "id": drive["id"],
+                    "name": f"📁 {drive['name']} (Geteilte Ablage)",
+                    "parent": None,
+                    "isSharedDrive": True
+                })
+        except Exception as e:
+            logger.warning(f"Could not list shared drives: {e}")
         
         return {"folders": folder_list}
     
@@ -347,7 +384,8 @@ async def import_from_drive(
         # Get file metadata
         file_meta = service.files().get(
             fileId=file_id,
-            fields="id, name, mimeType, size"
+            fields="id, name, mimeType, size",
+            supportsAllDrives=True
         ).execute()
         
         file_name = file_meta["name"]
@@ -404,7 +442,9 @@ async def import_from_drive(
             "uploaded_at": datetime.now(timezone.utc).isoformat(),
             "source": "google_drive",
             "drive_file_id": file_id,
-            "structured_content": structured_content
+            "structured_content": structured_content,
+            "status": "completed",
+            "page_count": structured_content.get("page_count", 1) if structured_content else 1
         }
         
         await db.documents.insert_one(document)
