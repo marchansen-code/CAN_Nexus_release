@@ -32,13 +32,17 @@ oauth.register(
 async def google_login(request: Request):
     """
     Initiate Google OAuth login flow.
-    REMINDER: DO NOT HARDCODE THE URL, OR ADD ANY FALLBACKS OR REDIRECT URLS, THIS BREAKS THE AUTH
     """
-    # Get the redirect URI from the request origin
-    # Ensure HTTPS is used (request comes through a proxy)
-    base_url = str(request.base_url).rstrip('/')
-    if base_url.startswith('http://') and 'localhost' not in base_url:
-        base_url = base_url.replace('http://', 'https://', 1)
+    # Use X-Forwarded-Host header if available (behind proxy)
+    forwarded_host = request.headers.get('x-forwarded-host')
+    forwarded_proto = request.headers.get('x-forwarded-proto', 'https')
+    
+    if forwarded_host:
+        base_url = f"{forwarded_proto}://{forwarded_host}"
+    else:
+        base_url = str(request.base_url).rstrip('/')
+        if base_url.startswith('http://') and 'localhost' not in base_url:
+            base_url = base_url.replace('http://', 'https://', 1)
     
     redirect_uri = base_url + '/api/auth/google/callback'
     
