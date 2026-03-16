@@ -107,23 +107,26 @@ async def google_callback(request: Request, response: Response):
         
         # Create session
         session_token = f"sess_{uuid.uuid4().hex}"
+        from datetime import timedelta
+        expires_at = datetime.now(timezone.utc) + timedelta(days=7)
         session = {
             "session_token": session_token,
             "user_id": user_id,
             "created_at": datetime.now(timezone.utc).isoformat(),
-            "expires_at": datetime.now(timezone.utc).isoformat(),  # Will be handled by frontend
+            "expires_at": expires_at.isoformat(),
             "auth_provider": "google"
         }
         await db.user_sessions.insert_one(session)
         
-        # Set session cookie
-        response = RedirectResponse(url="/?google_auth=success", status_code=302)
+        # Redirect to login page which will check session and redirect to dashboard
+        response = RedirectResponse(url="/login?google_auth=success", status_code=302)
         response.set_cookie(
             key="session_token",
             value=session_token,
             httponly=True,
             secure=True,
-            samesite="lax",
+            samesite="none",
+            path="/",
             max_age=86400 * 7  # 7 days
         )
         
