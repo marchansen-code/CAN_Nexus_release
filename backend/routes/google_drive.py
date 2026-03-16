@@ -89,6 +89,22 @@ async def connect_drive(request: Request, user: User = Depends(get_current_user)
             state=user.user_id
         )
         
+        # Store the code verifier for the callback
+        # The flow object generates a code_verifier internally when creating authorization_url
+        code_verifier = flow.code_verifier if hasattr(flow, 'code_verifier') else None
+        
+        # Store pending OAuth state in database
+        await db.drive_oauth_state.update_one(
+            {"user_id": user.user_id},
+            {"$set": {
+                "user_id": user.user_id,
+                "redirect_uri": redirect_uri,
+                "code_verifier": code_verifier,
+                "created_at": datetime.now(timezone.utc).isoformat()
+            }},
+            upsert=True
+        )
+        
         logger.info(f"Drive OAuth initiated for user {user.user_id}, redirect_uri: {redirect_uri}")
         return {"authorization_url": authorization_url}
     
@@ -101,16 +117,27 @@ async def connect_drive(request: Request, user: User = Depends(get_current_user)
 async def drive_callback(request: Request, code: str = Query(...), state: str = Query(...)):
     """Handle Google Drive OAuth callback."""
     try:
-        redirect_uri = get_redirect_uri(request)
+        # Get stored OAuth state
+        oauth_state = await db.drive_oauth_state.find_one({"user_id": state})
+        if not oauth_state:
+            logger.error(f"No OAuth state found for user {state}")
+            return RedirectResponse(url="/documents?drive_error=true", status_code=302)
+        
+        redirect_uri = oauth_state.get("redirect_uri") or get_redirect_uri(request)
+        code_verifier = oauth_state.get("code_verifier")
         
         config = get_oauth_config()
         config["web"]["redirect_uris"] = [redirect_uri]
         
         flow = Flow.from_client_config(
             config,
-            scopes=None,
+            scopes=['https://www.googleapis.com/auth/drive.file'],
             redirect_uri=redirect_uri
         )
+        
+        # Set the code verifier if we have one
+        if code_verifier:
+            flow.code_verifier = code_verifier
         
         flow.fetch_token(code=code)
         credentials = flow.credentials
@@ -135,6 +162,9 @@ async def drive_callback(request: Request, code: str = Query(...), state: str = 
         )
         
         logger.info(f"Drive credentials stored for user {state}")
+        
+        # Clean up OAuth state
+        await db.drive_oauth_state.delete_one({"user_id": state})
         
         # Redirect to documents page with success message
         return RedirectResponse(url="/documents?drive_connected=true", status_code=302)
