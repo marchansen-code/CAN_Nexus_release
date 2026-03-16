@@ -213,6 +213,29 @@ Wissensmanagement-Plattform für CANUSA Touristik GmbH & Co. KG und CU-Travel.
 - ✅ **Benutzer-Update** - Bestehende Benutzer bekommen Google-ID und Profilbild
 - ✅ **Produktions-Domain** - Konfiguriert für `https://nexus-knows.de`
 
+### Google Drive Integration (Iteration 29) - 16.03.2026
+- ✅ **Drive-Verbindung** - OAuth-Flow mit `drive.file` Scope
+- ✅ **Verbindungsstatus** - Button zeigt ob Drive verbunden ist
+- ✅ **Datei-Import** - Dateien aus Google Drive in Dokumentenverwaltung importieren
+  - PDF, DOCX, TXT, CSV, XLSX werden unterstützt
+  - Google Docs werden automatisch zu DOCX konvertiert
+  - Google Sheets werden automatisch zu XLSX konvertiert
+- ✅ **Artikel-Export** - Artikel als PDF oder DOCX nach Google Drive exportieren
+  - Zielordner kann ausgewählt werden
+  - Link zum Öffnen in Drive wird angezeigt
+- ✅ **Neue Dialoge**:
+  - `GoogleDriveImportDialog.jsx` - Ordner durchsuchen und Dateien auswählen
+  - `GoogleDriveExportDialog.jsx` - Format und Zielordner wählen
+- ✅ **Neue API-Endpunkte**:
+  - `GET /api/drive/connect` - OAuth-Flow starten
+  - `GET /api/drive/callback` - OAuth-Callback verarbeiten
+  - `GET /api/drive/status` - Verbindungsstatus prüfen
+  - `POST /api/drive/disconnect` - Verbindung trennen
+  - `GET /api/drive/files` - Dateien in Ordner auflisten
+  - `GET /api/drive/folders` - Alle Ordner auflisten
+  - `POST /api/drive/import/{file_id}` - Datei importieren
+  - `POST /api/drive/export/article/{article_id}` - Artikel exportieren
+
 ## API Endpoints
 
 ### Groups (Admin only)
@@ -249,11 +272,22 @@ Wissensmanagement-Plattform für CANUSA Touristik GmbH & Co. KG und CU-Travel.
 - `GET /api/auth/google/login` - Startet OAuth-Flow
 - `GET /api/auth/google/callback` - Verarbeitet Google-Antwort
 
+### Google Drive
+- `GET /api/drive/connect` - Startet Drive OAuth-Flow
+- `GET /api/drive/callback` - Verarbeitet Drive OAuth-Callback
+- `GET /api/drive/status` - Prüft Verbindungsstatus
+- `POST /api/drive/disconnect` - Trennt Drive-Verbindung
+- `GET /api/drive/files` - Listet Dateien auf
+- `GET /api/drive/folders` - Listet Ordner auf
+- `POST /api/drive/import/{file_id}` - Importiert Datei aus Drive
+- `POST /api/drive/export/article/{article_id}` - Exportiert Artikel nach Drive
+
 ## Default Admin
 - **E-Mail**: marc.hansen@canusa.de
 - **Passwort**: CanusaNexus2024!
 
 ## Test Coverage
+- Iteration 29: Backend 100% (14/14), Frontend 100% (12/12)
 - Iteration 28: Backend 100% (20/20), Frontend 100% (17/17)
 - Iteration 27: Backend 100% (17/17), Frontend 100% (38/38)
 - Iteration 26: Backend 100% (17/17), Frontend 100% (69/69)
@@ -297,5 +331,6 @@ Wissensmanagement-Plattform für CANUSA Touristik GmbH & Co. KG und CU-Travel.
     ├── backup.py      # 322 Zeilen - Backup/Export/Import
     ├── exports.py     # 351 Zeilen - PDF/DOCX-Export, Favoriten
     ├── versions.py    # Artikel-Versionierung
-    └── google_auth.py # Google OAuth Integration
+    ├── google_auth.py # Google OAuth Integration
+    └── google_drive.py # Google Drive Import/Export
 ```
