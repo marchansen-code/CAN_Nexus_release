@@ -129,9 +129,11 @@ async def drive_callback(request: Request, code: str = Query(...), state: str = 
         config = get_oauth_config()
         config["web"]["redirect_uris"] = [redirect_uri]
         
+        # Don't specify scopes - accept whatever Google returns
+        # Google may add openid, userinfo.email, userinfo.profile automatically
         flow = Flow.from_client_config(
             config,
-            scopes=['https://www.googleapis.com/auth/drive.file'],
+            scopes=None,  # Accept all returned scopes
             redirect_uri=redirect_uri
         )
         
