@@ -140,6 +140,19 @@ Wissensmanagement-Plattform für CANUSA Touristik GmbH & Co. KG und CU-Travel.
 - ✅ **Dokumente verschieben** - Per Kontextmenü in anderen Ordner verschieben
 - ✅ **Ordner bearbeiten/löschen** - Für Admins mit Fallback für Inhalte
 
+### Dokument-Aktionen & Responsive Layout (Iteration 24) - 16.03.2026
+- ✅ **Responsive Dokument-Aktionen** - Buttons für Ansehen, Verschieben, Löschen sind bei allen Bildschirmbreiten sichtbar
+- ✅ **Mobile Ordner-Panel** - Kollabierbare Ordnerauswahl auf schmalen Bildschirmen
+- ✅ **Aktionen-Dropdown** - Drei-Punkte-Menü mit "In Ordner verschieben" und "Löschen"
+
+### PDF Import Feature (Iteration 24) - 16.03.2026
+- ✅ **PDF-zu-HTML-Konvertierung** - Neue API `/api/documents/{id}/convert-to-html`
+- ✅ **pymupdf4llm Integration** - Hochwertige PDF-Extraktion mit Layout-Erhaltung
+- ✅ **Tabellen-Erkennung** - Tabellen werden als HTML-Tabellen konvertiert
+- ✅ **"In Artikel umwandeln" Button** - Im Dokumenten-Vorschau-Dialog
+- ✅ **Automatische Artikel-Erstellung** - Weiterleitung zum Editor mit vorausgefülltem Inhalt
+- ✅ **TipTap-kompatibles HTML** - Formatierung für den Rich-Text-Editor optimiert
+
 ## API Endpoints
 
 ### Groups (Admin only)
@@ -177,11 +190,12 @@ Wissensmanagement-Plattform für CANUSA Touristik GmbH & Co. KG und CU-Travel.
 - **Passwort**: CanusaNexus2024!
 
 ## Test Coverage
+- Iteration 24: Backend 100% (13/13), Frontend 100% (33/33)
 - Iteration 15: Manuell getestet (Tabellen-Dialog, Bearbeitungsoptionen)
 - Iteration 14: Backend 100% (8/8), Frontend 100% (23/23)
 - Iteration 13: Backend 100% (11/11), Frontend 100% (14/14)
 - Iteration 12: Backend 100% (19/19), Frontend 100%
-- Last tested: 10.03.2026
+- Last tested: 16.03.2026
 
 ## Backlog
 
@@ -193,7 +207,7 @@ Wissensmanagement-Plattform für CANUSA Touristik GmbH & Co. KG und CU-Travel.
 ### P3 (Nice to Have)
 - [ ] OCR für gescannte PDFs
 - [ ] E-Mail-Benachrichtigungen
-- [ ] Hochwertige PDF-zu-HTML-Konvertierung
+- [x] ~~Hochwertige PDF-zu-HTML-Konvertierung~~ (Erledigt in Iteration 24)
 
 ## Backend Architektur (nach Refactoring)
 
