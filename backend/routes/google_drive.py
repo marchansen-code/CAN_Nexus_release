@@ -78,7 +78,7 @@ async def connect_drive(request: Request, user: User = Depends(get_current_user)
         
         flow = Flow.from_client_config(
             config,
-            scopes=['https://www.googleapis.com/auth/drive.file'],
+            scopes=['https://www.googleapis.com/auth/drive'],
             redirect_uri=redirect_uri
         )
         
