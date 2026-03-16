@@ -2,7 +2,7 @@
 Document upload and processing routes for the CANUSA Knowledge Hub API.
 Supports PDF, DOC/DOCX, TXT, CSV, XLS/XLSX files.
 """
-from fastapi import APIRouter, HTTPException, Depends, File, UploadFile
+from fastapi import APIRouter, HTTPException, Depends, File, UploadFile, Form
 from fastapi.responses import FileResponse, Response
 from typing import Dict, List
 from datetime import datetime, timezone
@@ -44,9 +44,9 @@ def is_supported_file(filename: str) -> bool:
 @router.post("/upload")
 async def upload_document(
     file: UploadFile = File(...),
-    target_language: str = "de",
-    folder_id: str = None,
-    force: bool = False,
+    target_language: str = Form("de"),
+    folder_id: str = Form(None),
+    force: bool = Form(False),
     user: User = Depends(get_current_user)
 ):
     """Upload a document for processing. Supports PDF, DOC/DOCX, TXT, CSV, XLS/XLSX."""

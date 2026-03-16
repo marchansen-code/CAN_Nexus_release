@@ -179,15 +179,29 @@ Wissensmanagement-Plattform für CANUSA Touristik GmbH & Co. KG und CU-Travel.
 
 ### Artikel-Versionierung (Iteration 26) - 16.03.2026
 - ✅ **Automatische Versionierung** - Jede Änderung erstellt eine Version
-- ✅ **Versionshistorie-Dialog** - Zeigt alle Versionen mit Datum und Autor
-- ✅ **Vorschau-Funktion** - Öffnet Version in neuem Fenster
-- ✅ **Wiederherstellen** - Stellt alte Version wieder her
-- ✅ **Versionsnummern** - Fortlaufende Nummerierung
+- ✅ **Versionshistorie-Anzeige** - Timeline unterhalb des Artikels
+- ✅ **Versionsnummern** - Fortlaufende Nummerierung mit Datum/Autor
 - ✅ **Neue Kollektion** - `article_versions` in MongoDB
-- ✅ **API-Endpunkte**:
-  - `GET /api/versions/articles/{id}` - Versionsliste
-  - `GET /api/versions/articles/{id}/{version_id}` - Einzelne Version
-  - `POST /api/versions/articles/{id}/{version_id}/restore` - Wiederherstellen
+
+### Multi-Format-Dokumente (Iteration 27) - 16.03.2026
+- ✅ **Erweiterte Dateiformate** - PDF, DOC/DOCX, TXT, CSV, XLS/XLSX
+- ✅ **Format-spezifische Verarbeitung**:
+  - PDF: `pdfplumber` für Text und Tabellen
+  - DOCX: `python-docx` mit Heading-Erkennung
+  - TXT: UTF-8/Latin-1 Encoding-Support
+  - CSV/Excel: `pandas` + `openpyxl`/`xlrd`
+- ✅ **Multi-Format-Viewer** - Dateityp-spezifische Anzeige
+- ✅ **Dateityp-Icons** - Farbige Icons (PDF=rot, DOC=blau, CSV/XLS=grün)
+- ✅ **Import-Dialog im Editor**:
+  - Tab "Bestehende Dokumente" mit Suche
+  - Tab "Neue Datei hochladen"
+  - Polling für Upload-Completion
+  - Quellenangabe beim Import
+- ✅ **Neue Komponenten**:
+  - `DocumentViewer.jsx` - Multi-Format-Viewer
+  - `DocumentImportDialog.jsx` - Import-Dialog
+- ✅ **Neue API-Endpunkte**:
+  - `GET /api/documents/{id}/content` - HTML-Inhalt für Import
 
 ## API Endpoints
 
@@ -226,10 +240,10 @@ Wissensmanagement-Plattform für CANUSA Touristik GmbH & Co. KG und CU-Travel.
 - **Passwort**: CanusaNexus2024!
 
 ## Test Coverage
+- Iteration 27: Backend 100% (17/17), Frontend 100% (38/38)
 - Iteration 26: Backend 100% (17/17), Frontend 100% (69/69)
 - Iteration 25: Backend 100% (22/22), Frontend 100% (34/34)
 - Iteration 24: Backend 100% (13/13), Frontend 100% (33/33)
-- Iteration 15: Manuell getestet (Tabellen-Dialog, Bearbeitungsoptionen)
 - Last tested: 16.03.2026
 
 ## Backlog
@@ -237,6 +251,7 @@ Wissensmanagement-Plattform für CANUSA Touristik GmbH & Co. KG und CU-Travel.
 ### P2 (Medium)
 - [x] ~~Benutzer-Suche in @-Mentions~~ (Erledigt in Iteration 26)
 - [x] ~~Artikel-Versionierung~~ (Erledigt in Iteration 26)
+- [x] ~~Multi-Format-Dokumente~~ (Erledigt in Iteration 27)
 - [ ] Schnellsuche (Strg+K)
 
 ### P3 (Nice to Have)
