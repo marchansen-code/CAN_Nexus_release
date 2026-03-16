@@ -142,6 +142,7 @@ const ArticleEditor = () => {
   
   // Get pre-selected category from URL
   const preSelectedCategory = searchParams.get("category");
+  const fromPdf = searchParams.get("from_pdf") === "true";
 
   // Article state
   const [article, setArticle] = useState({
@@ -169,6 +170,30 @@ const ArticleEditor = () => {
   const [tagInput, setTagInput] = useState("");
   const [showTagSuggestions, setShowTagSuggestions] = useState(false);
   const [expandedCategoryIds, setExpandedCategoryIds] = useState(new Set());
+  const [pdfImported, setPdfImported] = useState(false);
+
+  // Check for PDF import data on mount
+  useEffect(() => {
+    if (fromPdf && isNew && !pdfImported) {
+      const pdfData = sessionStorage.getItem('pdf_import_data');
+      if (pdfData) {
+        try {
+          const { title, content, source_document_id } = JSON.parse(pdfData);
+          setArticle(prev => ({
+            ...prev,
+            title: title || prev.title,
+            content: content || prev.content,
+          }));
+          setPdfImported(true);
+          // Clear the session storage after import
+          sessionStorage.removeItem('pdf_import_data');
+          toast.success(`PDF "${title}" wurde importiert. Bearbeiten Sie den Artikel nach Bedarf.`);
+        } catch (e) {
+          console.error("Failed to parse PDF import data:", e);
+        }
+      }
+    }
+  }, [fromPdf, isNew, pdfImported]);
 
   // Load data
   useEffect(() => {

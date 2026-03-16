@@ -196,9 +196,9 @@ async def get_document(document_id: str, user: User = Depends(get_current_user))
 
 @router.delete("/{document_id}")
 async def delete_document(document_id: str, user: User = Depends(get_current_user)):
-    """Soft delete a document - moves to trash for 30 days (admin only)."""
-    if user.role != "admin":
-        raise HTTPException(status_code=403, detail="Nur Administratoren können Dokumente löschen")
+    """Soft delete a document - moves to trash for 30 days (admin and editor only)."""
+    if user.role not in ["admin", "editor"]:
+        raise HTTPException(status_code=403, detail="Nur Administratoren und Editoren können Dokumente löschen")
     
     doc = await db.documents.find_one({"document_id": document_id})
     if not doc:
@@ -236,3 +236,90 @@ async def move_document(document_id: str, folder_id: str = None, user: User = De
     )
     
     return {"message": "Dokument verschoben", "folder_id": folder_id}
+
+
+
+@router.get("/{document_id}/convert-to-html")
+async def convert_pdf_to_html(document_id: str, user: User = Depends(get_current_user)):
+    """Convert PDF document to editable HTML content for the TipTap editor."""
+    doc = await db.documents.find_one(
+        {"document_id": document_id, "deleted_at": {"$exists": False}}, 
+        {"_id": 0}
+    )
+    if not doc:
+        raise HTTPException(status_code=404, detail="Dokument nicht gefunden")
+    
+    if doc.get("status") != "completed":
+        raise HTTPException(status_code=400, detail="Dokument muss zuerst verarbeitet werden")
+    
+    file_path = doc.get("file_path")
+    if not file_path or not os.path.exists(file_path):
+        raise HTTPException(status_code=404, detail="PDF-Datei nicht gefunden")
+    
+    try:
+        import pymupdf4llm
+        import markdown
+        
+        # Extract markdown from PDF with table support
+        md_text = pymupdf4llm.to_markdown(file_path)
+        
+        # Convert markdown to HTML
+        html_content = markdown.markdown(
+            md_text,
+            extensions=['tables', 'fenced_code', 'nl2br']
+        )
+        
+        # Post-process HTML for TipTap compatibility
+        html_content = post_process_html_for_tiptap(html_content)
+        
+        return {
+            "document_id": document_id,
+            "filename": doc.get("filename"),
+            "html_content": html_content,
+            "success": True
+        }
+        
+    except Exception as e:
+        logger.error(f"PDF to HTML conversion failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Konvertierung fehlgeschlagen: {str(e)}")
+
+
+def post_process_html_for_tiptap(html: str) -> str:
+    """Post-process HTML to be compatible with TipTap editor."""
+    import re
+    
+    # Wrap tables in a div for better styling
+    html = re.sub(
+        r'<table>',
+        '<table class="w-full border-collapse my-4">',
+        html
+    )
+    
+    # Add styling to table cells
+    html = re.sub(
+        r'<th>',
+        '<th class="border border-slate-400 bg-slate-100 p-2 font-semibold text-left">',
+        html
+    )
+    html = re.sub(
+        r'<td>',
+        '<td class="border border-slate-300 p-2">',
+        html
+    )
+    
+    # Convert h1-h6 headings to proper format
+    for i in range(1, 7):
+        html = re.sub(
+            rf'<h{i}>',
+            f'<h{i} style="margin-top: 1rem; margin-bottom: 0.5rem;">',
+            html
+        )
+    
+    # Ensure paragraphs have proper spacing
+    html = re.sub(
+        r'<p>',
+        '<p style="margin-bottom: 0.75rem;">',
+        html
+    )
+    
+    return html

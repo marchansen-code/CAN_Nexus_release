@@ -1,0 +1,85 @@
+{
+  "summary": "Iteration 15: Successfully tested PDF Import (convert-to-html) feature and Document Actions responsive layout fix. All 13 backend tests and 33 frontend tests passed.",
+  "mode": "generate",
+  "baseline_commit": "2265d5b708c03d53d63c6796ccc56944ecdfb869",
+  "head_commit": "198c7a5da7da8ffefc39e78fc4a8150b504b284e",
+  "specs_created": [
+    "/app/tests/e2e/document-actions.spec.ts"
+  ],
+  "specs_updated": [
+    "/app/tests/e2e/mention-feature.spec.ts"
+  ],
+  "quarantined_tests": [],
+  "test_report_links": [
+    "/app/backend/tests/test_iteration15_pdf_import.py",
+    "/app/test_reports/pytest/pytest_results_iter15.xml"
+  ],
+  "regression_results": {
+    "total_specs": 33,
+    "passed": 33,
+    "failed": 0,
+    "skipped": 0
+  },
+  "issues": [],
+  "action_items": [],
+  "updated_files": [
+    "/app/backend/tests/test_iteration15_pdf_import.py",
+    "/app/tests/e2e/document-actions.spec.ts",
+    "/app/tests/e2e/mention-feature.spec.ts"
+  ],
+  "test_results": {
+    "backend": "100% (13/13 pytest tests passed)",
+    "frontend": "100% (33/33 Playwright tests passed across 5 spec files)"
+  },
+  "seed_data_creation": "Used existing test PDF document (doc_71438fad9dc7) for PDF conversion testing",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "All requested features verified working: 1) Document actions (view, move, delete) are visible on narrow screens (375px-768px) with stacked layout, 2) Dropdown menu shows move and delete options correctly, 3) PDF to HTML conversion API works and returns formatted HTML via pymupdf4llm, 4) 'In Artikel umwandeln' button in document preview navigates to article editor with pre-filled content from PDF, 5) Article editor receives PDF content via sessionStorage (pdf_import_data) with title and HTML content.",
+  "features_verified": {
+    "P1_responsive_document_actions": {
+      "status": "VERIFIED",
+      "notes": "Document view/actions buttons visible on 375px and 768px viewports. Layout uses stacked rows for narrow screens ensuring buttons never get hidden."
+    },
+    "P1_document_actions_dropdown": {
+      "status": "VERIFIED",
+      "notes": "Three-dot menu opens dropdown with 'In Ordner verschieben' and 'Löschen' options. Both open appropriate dialogs."
+    },
+    "P1_pdf_to_html_api": {
+      "status": "VERIFIED",
+      "notes": "GET /api/documents/{document_id}/convert-to-html returns success=true with html_content using pymupdf4llm for markdown extraction and markdown library for HTML conversion."
+    },
+    "P1_pdf_import_flow": {
+      "status": "VERIFIED",
+      "notes": "Full flow tested: Document preview -> Click 'In Artikel umwandeln' -> Navigate to /articles/new?from_pdf=true -> Article editor loads with PDF title and HTML content pre-filled."
+    },
+    "existing_mention_feature": {
+      "status": "VERIFIED",
+      "notes": "@ mention dropdown still works - updated test to use different search query for reliability"
+    },
+    "existing_category_tree": {
+      "status": "VERIFIED",
+      "notes": "Category tree, collapsible folders, and multi-category selection all still working"
+    }
+  },
+  "api_tests_performed": {
+    "pdf_convert_success": "GET /api/documents/{id}/convert-to-html - Returns formatted HTML with success=true",
+    "pdf_convert_styling": "HTML output includes styled tags (style= and class= attributes) for TipTap compatibility",
+    "pdf_convert_404": "Non-existent document returns 404 with error detail",
+    "pdf_convert_auth": "Requires authentication (401 without)",
+    "document_move_to_folder": "PUT /api/documents/{id}/move?folder_id=X - Moves document correctly",
+    "document_move_to_root": "PUT /api/documents/{id}/move?folder_id= - Moves to root (no folder)",
+    "document_move_404": "Non-existent document or folder returns 404",
+    "document_listing": "GET /api/documents - Returns list with document_id, filename, status",
+    "document_folders": "GET /api/document-folders - Returns folder list with hierarchy support"
+  },
+  "ui_tests_performed": {
+    "narrow_screen_actions": "Actions visible at 375px and 768px viewports",
+    "mobile_layout": "Folder panel collapses on mobile, documents list takes full width",
+    "desktop_layout": "Folder tree sidebar visible on desktop (1280px+)",
+    "dropdown_menu": "Three-dot menu opens with move and delete options",
+    "move_dialog": "Move dialog shows folder selector with tree hierarchy",
+    "delete_dialog": "Delete confirmation dialog appears before soft-delete",
+    "pdf_preview_convert_btn": "'In Artikel umwandeln' button visible in document preview dialog",
+    "pdf_import_to_editor": "Clicking convert navigates to editor with PDF content pre-filled"
+  }
+}

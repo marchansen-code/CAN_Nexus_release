@@ -11,7 +11,7 @@ import pytest
 import requests
 import os
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://content-hub-1008.preview.emergentagent.com')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://knowledge-hub-531.preview.emergentagent.com')
 AUTH_TOKEN = "OMDc4lJ2GaPGZzcO7R_78AYC9pVq_izstu5IS8ynxcM"
 
 class TestAuthenticatedAPIs:

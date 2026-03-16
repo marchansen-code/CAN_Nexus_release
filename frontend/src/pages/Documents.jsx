@@ -24,7 +24,11 @@ import {
   MoveRight,
   Check,
   X,
-  Home
+  Home,
+  MoreVertical,
+  PanelLeftOpen,
+  FileEdit,
+  ArrowRight
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -65,6 +69,11 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -299,6 +308,7 @@ const Documents = () => {
   const [folderName, setFolderName] = useState("");
   const [folderDescription, setFolderDescription] = useState("");
   const [deleteFolderDialog, setDeleteFolderDialog] = useState({ open: false, folder: null });
+  const [folderPanelOpen, setFolderPanelOpen] = useState(false);
   
   // Upload dialog state
   const [uploadDialog, setUploadDialog] = useState(false);
@@ -308,6 +318,9 @@ const Documents = () => {
   // Move document dialog
   const [moveDialog, setMoveDialog] = useState({ open: false, doc: null });
   const [moveFolderId, setMoveFolderId] = useState(null);
+  
+  // PDF to Article conversion
+  const [converting, setConverting] = useState(false);
 
   const isAdmin = user?.role === "admin";
   const canEdit = user?.role === "admin" || user?.role === "editor";
@@ -486,6 +499,36 @@ const Documents = () => {
     }
   };
 
+  const handleConvertToArticle = async () => {
+    if (!selectedDoc) return;
+    
+    setConverting(true);
+    try {
+      // Call the PDF-to-HTML conversion API
+      const response = await axios.get(`${API}/documents/${selectedDoc.document_id}/convert-to-html`);
+      
+      if (response.data.success) {
+        // Store the HTML content in sessionStorage for the article editor
+        const articleData = {
+          title: selectedDoc.filename.replace(/\.pdf$/i, ''),
+          content: response.data.html_content,
+          source_document_id: selectedDoc.document_id
+        };
+        sessionStorage.setItem('pdf_import_data', JSON.stringify(articleData));
+        
+        toast.success("PDF erfolgreich konvertiert! Wird zum Editor weitergeleitet...");
+        
+        // Navigate to article editor with the converted content
+        navigate('/articles/new?from_pdf=true');
+      }
+    } catch (error) {
+      console.error("Conversion failed:", error);
+      toast.error(error.response?.data?.detail || "PDF-Konvertierung fehlgeschlagen");
+    } finally {
+      setConverting(false);
+    }
+  };
+
   const formatDate = (dateString) => {
     if (!dateString) return "";
     const date = new Date(dateString);
@@ -539,11 +582,11 @@ const Documents = () => {
 
       {/* Main Content - Split View */}
       <div className="flex-1 grid grid-cols-1 lg:grid-cols-4 gap-4 min-h-0">
-        {/* Left Sidebar - Folder Tree */}
-        <Card className="lg:col-span-1 flex flex-col">
+        {/* Left Sidebar - Folder Tree (hidden on mobile, collapsible) */}
+        <Card className="hidden lg:flex lg:col-span-1 flex-col">
           <CardHeader className="py-3 px-4">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
-              <FolderTree className="w-4 h-4" />
+              <Folder className="w-4 h-4" />
               Ordnerstruktur
             </CardTitle>
           </CardHeader>
@@ -563,6 +606,43 @@ const Documents = () => {
             </ScrollArea>
           </CardContent>
         </Card>
+
+        {/* Mobile Folder Selector - Collapsible on small screens */}
+        <div className="lg:hidden">
+          <Collapsible open={folderPanelOpen} onOpenChange={setFolderPanelOpen}>
+            <Card>
+              <CollapsibleTrigger asChild>
+                <CardHeader className="py-3 px-4 cursor-pointer hover:bg-accent/50 transition-colors">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-sm font-medium flex items-center gap-2">
+                      <PanelLeftOpen className="w-4 h-4" />
+                      {currentFolder ? currentFolder.name : "Alle Dokumente"}
+                    </CardTitle>
+                    <ChevronDown className={cn("w-4 h-4 transition-transform", folderPanelOpen && "rotate-180")} />
+                  </div>
+                </CardHeader>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <CardContent className="p-2 pt-0 max-h-48 overflow-auto">
+                  <FolderTree 
+                    folders={folders}
+                    selectedFolderId={selectedFolderId}
+                    onSelectFolder={(id) => {
+                      setSelectedFolderId(id);
+                      setFolderPanelOpen(false);
+                    }}
+                    onCreateSubfolder={(parentId) => {
+                      setFolderDialog({ open: true, folder: null, parentId });
+                      setFolderName("");
+                      setFolderDescription("");
+                    }}
+                    canEdit={canEdit}
+                  />
+                </CardContent>
+              </CollapsibleContent>
+            </Card>
+          </Collapsible>
+        </div>
 
         {/* Right Side - Documents */}
         <div className="lg:col-span-3 flex flex-col min-h-0 space-y-4">
@@ -657,85 +737,87 @@ const Documents = () => {
 
           {/* Documents List */}
           <Card className="flex-1 flex flex-col min-h-0">
-            <CardContent className="flex-1 p-0 overflow-hidden">
-              <ScrollArea className="h-full">
-                {filteredDocuments.length > 0 ? (
-                  <div className="p-4 space-y-2">
-                    {filteredDocuments.map((doc) => (
-                      <div
-                        key={doc.document_id}
-                        className="flex items-center justify-between p-3 rounded-lg border hover:bg-accent/50 transition-colors"
-                      >
-                        <div className="flex items-center gap-3 flex-1 min-w-0">
-                          <StatusIcon status={doc.status} />
-                          <div className="min-w-0">
-                            <p className="font-medium truncate">{doc.filename}</p>
-                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                              <span>{formatDate(doc.created_at)}</span>
-                              {doc.page_count > 0 && <span>• {doc.page_count} Seiten</span>}
-                            </div>
+            <CardContent className="flex-1 p-0 overflow-auto">
+              {filteredDocuments.length > 0 ? (
+                <div className="p-4 space-y-3">
+                  {filteredDocuments.map((doc) => (
+                    <div
+                      key={doc.document_id}
+                      className="p-3 rounded-lg border hover:bg-accent/50 transition-colors"
+                      data-testid={`document-item-${doc.document_id}`}
+                    >
+                      {/* Document Info Row */}
+                      <div className="flex items-start gap-3 mb-2">
+                        <StatusIcon status={doc.status} />
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium break-words" title={doc.filename}>{doc.filename}</p>
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
+                            <span>{formatDate(doc.created_at)}</span>
+                            {doc.page_count > 0 && <span>• {doc.page_count} Seiten</span>}
                           </div>
                         </div>
-                        
-                        <div className="flex items-center gap-2 shrink-0">
-                          <StatusBadge status={doc.status} />
-                          
-                          {doc.status === "completed" && (
-                            <Button 
-                              variant="outline" 
-                              size="sm"
-                              onClick={() => setSelectedDoc(doc)}
-                            >
-                              <Eye className="w-4 h-4" />
-                            </Button>
-                          )}
-                          
-                          {canEdit && (
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="sm">
-                                  <MoveRight className="w-4 h-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem onClick={() => {
-                                  setMoveDialog({ open: true, doc });
-                                  setMoveFolderId(doc.folder_id || null);
-                                }}>
-                                  <MoveRight className="w-4 h-4 mr-2" />
-                                  Verschieben
-                                </DropdownMenuItem>
-                                {isAdmin && (
-                                  <>
-                                    <DropdownMenuSeparator />
-                                    <DropdownMenuItem 
-                                      onClick={() => setDeleteDialog({ open: true, doc })}
-                                      className="text-red-600"
-                                    >
-                                      <Trash2 className="w-4 h-4 mr-2" />
-                                      Löschen
-                                    </DropdownMenuItem>
-                                  </>
-                                )}
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          )}
-                        </div>
                       </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="flex flex-col items-center justify-center h-full p-8 text-center">
-                    <FileText className="w-16 h-16 text-muted-foreground/30 mb-4" />
-                    <h3 className="font-semibold mb-2">Keine Dokumente</h3>
-                    <p className="text-muted-foreground text-sm">
-                      {currentFolder 
-                        ? "Dieser Ordner ist leer. Laden Sie ein PDF hoch."
-                        : "Laden Sie Ihr erstes PDF-Dokument hoch."}
-                    </p>
-                  </div>
-                )}
-              </ScrollArea>
+                      
+                      {/* Actions Row */}
+                      <div className="flex items-center gap-2 justify-end">
+                        <StatusBadge status={doc.status} />
+                        
+                        {doc.status === "completed" && (
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => setSelectedDoc(doc)}
+                            data-testid={`doc-view-${doc.document_id}`}
+                          >
+                            <Eye className="w-4 h-4" />
+                          </Button>
+                        )}
+                        
+                        {canEdit && (
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                data-testid={`doc-actions-${doc.document_id}`}
+                              >
+                                <MoreVertical className="w-4 h-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => {
+                                setMoveDialog({ open: true, doc });
+                                setMoveFolderId(doc.folder_id || null);
+                              }}>
+                                <MoveRight className="w-4 h-4 mr-2" />
+                                In Ordner verschieben
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem 
+                                onClick={() => setDeleteDialog({ open: true, doc })}
+                                className="text-red-600"
+                              >
+                                <Trash2 className="w-4 h-4 mr-2" />
+                                Löschen
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center h-full p-8 text-center">
+                  <FileText className="w-16 h-16 text-muted-foreground/30 mb-4" />
+                  <h3 className="font-semibold mb-2">Keine Dokumente</h3>
+                  <p className="text-muted-foreground text-sm">
+                    {currentFolder 
+                      ? "Dieser Ordner ist leer. Laden Sie ein PDF hoch."
+                      : "Laden Sie Ihr erstes PDF-Dokument hoch."}
+                  </p>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
@@ -904,9 +986,35 @@ const Documents = () => {
             </DialogHeader>
             
             <div className="space-y-6">
+              {/* Action Buttons */}
+              <div className="flex flex-wrap gap-2 pb-4 border-b">
+                <Button
+                  onClick={handleConvertToArticle}
+                  disabled={converting}
+                  className="bg-indigo-600 hover:bg-indigo-700"
+                  data-testid="convert-to-article-btn"
+                >
+                  {converting ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Konvertiere...
+                    </>
+                  ) : (
+                    <>
+                      <FileEdit className="w-4 h-4 mr-2" />
+                      In Artikel umwandeln
+                    </>
+                  )}
+                </Button>
+                <p className="text-sm text-muted-foreground flex items-center">
+                  <ArrowRight className="w-4 h-4 mr-1" />
+                  Erstellt einen bearbeitbaren Artikel aus dem PDF
+                </p>
+              </div>
+              
               {selectedDoc.extracted_text && (
                 <div>
-                  <h4 className="font-semibold mb-2">Extrahierter Text</h4>
+                  <h4 className="font-semibold mb-2">Extrahierter Text (Vorschau)</h4>
                   <div className="bg-muted p-4 rounded-lg max-h-60 overflow-auto">
                     <pre className="whitespace-pre-wrap text-sm text-muted-foreground">
                       {selectedDoc.extracted_text.substring(0, 3000)}
