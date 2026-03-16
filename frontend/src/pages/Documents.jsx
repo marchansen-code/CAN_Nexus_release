@@ -78,17 +78,20 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import PdfViewer from "@/components/PdfViewer";
+import DocumentViewer, { FileIcon } from "@/components/DocumentViewer";
+
+const ACCEPTED_FILES = '.pdf,.doc,.docx,.txt,.csv,.xls,.xlsx';
 
 // Status components
-const StatusIcon = ({ status }) => {
+const StatusIcon = ({ status, fileType }) => {
+  if (status === "completed") {
+    return <FileIcon fileType={fileType || '.pdf'} />;
+  }
   switch (status) {
     case "pending":
       return <Clock className="w-5 h-5 text-slate-500" />;
     case "processing":
       return <Loader2 className="w-5 h-5 text-indigo-500 animate-spin" />;
-    case "completed":
-      return <CheckCircle2 className="w-5 h-5 text-emerald-500" />;
     case "failed":
       return <XCircle className="w-5 h-5 text-red-500" />;
     default:
@@ -720,7 +723,7 @@ const Documents = () => {
                   <label>
                     <input
                       type="file"
-                      accept=".pdf"
+                      accept={ACCEPTED_FILES}
                       onChange={handleFileSelect}
                       className="hidden"
                       disabled={uploading}
@@ -728,7 +731,7 @@ const Documents = () => {
                     <Button asChild className="bg-indigo-600 hover:bg-indigo-700 cursor-pointer">
                       <span>
                         <Upload className="w-4 h-4 mr-2" />
-                        PDF hochladen
+                        Datei hochladen
                       </span>
                     </Button>
                   </label>
@@ -750,7 +753,7 @@ const Documents = () => {
                     >
                       {/* Document Info Row */}
                       <div className="flex items-start gap-3 mb-2">
-                        <StatusIcon status={doc.status} />
+                        <StatusIcon status={doc.status} fileType={doc.file_type} />
                         <div className="flex-1 min-w-0">
                           <p className="font-medium break-words" title={doc.filename}>{doc.filename}</p>
                           <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
@@ -1023,9 +1026,11 @@ const Documents = () => {
               </div>
               
               <TabsContent value="viewer" className="flex-1 m-0 min-h-0">
-                <PdfViewer 
+                <DocumentViewer 
+                  documentId={selectedDoc.document_id}
                   url={`${API}/documents/${selectedDoc.document_id}/file`}
                   filename={selectedDoc.filename}
+                  fileType={selectedDoc.file_type || '.pdf'}
                   className="h-full"
                 />
               </TabsContent>

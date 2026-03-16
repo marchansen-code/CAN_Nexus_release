@@ -1,8 +1,9 @@
 """
 Document upload and processing routes for the CANUSA Knowledge Hub API.
+Supports PDF, DOC/DOCX, TXT, CSV, XLS/XLSX files.
 """
 from fastapi import APIRouter, HTTPException, Depends, File, UploadFile
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 from typing import Dict, List
 from datetime import datetime, timezone
 import asyncio
@@ -10,6 +11,7 @@ import uuid
 import os
 import logging
 import pdfplumber
+import json
 
 from database import db
 from models import User, Document
@@ -17,6 +19,26 @@ from dependencies import get_current_user
 
 router = APIRouter(prefix="/documents", tags=["Documents"])
 logger = logging.getLogger(__name__)
+
+# Supported file extensions
+SUPPORTED_EXTENSIONS = {
+    '.pdf': 'application/pdf',
+    '.doc': 'application/msword',
+    '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    '.txt': 'text/plain',
+    '.csv': 'text/csv',
+    '.xls': 'application/vnd.ms-excel',
+    '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+}
+
+def get_file_extension(filename: str) -> str:
+    """Get lowercase file extension."""
+    return os.path.splitext(filename.lower())[1]
+
+
+def is_supported_file(filename: str) -> bool:
+    """Check if file type is supported."""
+    return get_file_extension(filename) in SUPPORTED_EXTENSIONS
 
 
 @router.post("/upload")
@@ -27,9 +49,15 @@ async def upload_document(
     force: bool = False,
     user: User = Depends(get_current_user)
 ):
-    """Upload a PDF document for processing."""
-    if not file.filename.lower().endswith('.pdf'):
-        raise HTTPException(status_code=400, detail="Nur PDF-Dateien sind erlaubt")
+    """Upload a document for processing. Supports PDF, DOC/DOCX, TXT, CSV, XLS/XLSX."""
+    ext = get_file_extension(file.filename)
+    
+    if not is_supported_file(file.filename):
+        supported = ", ".join(SUPPORTED_EXTENSIONS.keys())
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Dateityp nicht unterstützt. Erlaubte Formate: {supported}"
+        )
     
     existing_doc = await db.documents.find_one({"filename": file.filename})
     if existing_doc and not force:
@@ -52,9 +80,9 @@ async def upload_document(
     
     content = await file.read()
     doc_id = f"doc_{uuid.uuid4().hex[:12]}"
-    permanent_path = f"/tmp/pdfs/{doc_id}.pdf"
+    permanent_path = f"/tmp/docs/{doc_id}{ext}"
     
-    os.makedirs("/tmp/pdfs", exist_ok=True)
+    os.makedirs("/tmp/docs", exist_ok=True)
     
     with open(permanent_path, "wb") as f:
         f.write(content)
@@ -71,33 +99,70 @@ async def upload_document(
     doc_dict["file_path"] = permanent_path
     doc_dict["file_size"] = len(content)
     doc_dict["folder_id"] = folder_id
+    doc_dict["file_type"] = ext
     
     await db.documents.insert_one(doc_dict)
     
-    asyncio.create_task(process_document(doc_id, permanent_path, target_language))
+    asyncio.create_task(process_document(doc_id, permanent_path, target_language, ext))
     
     return {
         "document_id": doc_id,
         "filename": doc.filename,
         "folder_id": folder_id,
+        "file_type": ext,
         "status": "pending",
         "message": "Dokument wird verarbeitet"
     }
 
 
-async def process_document(document_id: str, file_path: str, target_language: str):
-    """Process PDF document: extract text and tables."""
+async def process_document(document_id: str, file_path: str, target_language: str, file_type: str):
+    """Process document based on file type."""
     try:
         await db.documents.update_one(
             {"document_id": document_id},
             {"$set": {"status": "processing"}}
         )
         
-        extracted_text = ""
-        html_content = ""
-        page_count = 0
-        extracted_tables = []
+        if file_type == '.pdf':
+            result = await process_pdf(file_path)
+        elif file_type in ['.doc', '.docx']:
+            result = await process_word(file_path)
+        elif file_type == '.txt':
+            result = await process_text(file_path)
+        elif file_type in ['.csv', '.xls', '.xlsx']:
+            result = await process_spreadsheet(file_path, file_type)
+        else:
+            result = {"extracted_text": "", "html_content": "", "page_count": 0}
         
+        await db.documents.update_one(
+            {"document_id": document_id},
+            {"$set": {
+                "status": "completed",
+                "extracted_text": result.get("extracted_text", ""),
+                "html_content": result.get("html_content", ""),
+                "page_count": result.get("page_count", 0),
+                "processed_at": datetime.now(timezone.utc).isoformat()
+            }}
+        )
+        
+    except Exception as e:
+        logger.error(f"Document processing failed: {e}")
+        await db.documents.update_one(
+            {"document_id": document_id},
+            {"$set": {
+                "status": "failed",
+                "error": str(e)
+            }}
+        )
+
+
+async def process_pdf(file_path: str) -> dict:
+    """Process PDF document: extract text and tables."""
+    extracted_text = ""
+    html_content = ""
+    page_count = 0
+    
+    try:
         with pdfplumber.open(file_path) as pdf:
             page_count = len(pdf.pages)
             for page_num, page in enumerate(pdf.pages, 1):
@@ -120,57 +185,158 @@ async def process_document(document_id: str, file_path: str, target_language: st
                         table_html = "<table class='w-full border-collapse my-4 text-sm'>"
                         for row_idx, row in enumerate(table):
                             if row:
+                                tag = 'th' if row_idx == 0 else 'td'
+                                cell_class = 'border border-slate-300 p-2 bg-slate-50 font-medium' if row_idx == 0 else 'border border-slate-300 p-2'
                                 table_html += "<tr>"
                                 for cell in row:
-                                    cell_content = cell if cell else ""
-                                    if row_idx == 0:
-                                        table_html += f"<th class='border border-slate-400 bg-slate-100 p-2 font-semibold text-left'>{cell_content}</th>"
-                                    else:
-                                        table_html += f"<td class='border border-slate-300 p-2'>{cell_content}</td>"
+                                    cell_text = str(cell) if cell else ""
+                                    table_html += f"<{tag} class='{cell_class}'>{cell_text}</{tag}>"
                                 table_html += "</tr>"
                         table_html += "</table>"
-                        extracted_tables.append({
-                            "page": page_num,
-                            "index": table_idx,
-                            "html": table_html
-                        })
                         html_content += table_html
                 
                 html_content += "</div>"
+    except Exception as e:
+        logger.error(f"PDF processing error: {e}")
+    
+    return {"extracted_text": extracted_text, "html_content": html_content, "page_count": page_count}
+
+
+async def process_word(file_path: str) -> dict:
+    """Process Word document (DOC/DOCX)."""
+    from docx import Document as DocxDocument
+    
+    extracted_text = ""
+    html_content = ""
+    
+    try:
+        doc = DocxDocument(file_path)
         
-        if not extracted_text.strip():
-            raise Exception("Kein Text konnte aus dem PDF extrahiert werden")
+        for para in doc.paragraphs:
+            text = para.text.strip()
+            if text:
+                extracted_text += text + "\n\n"
+                
+                # Check style for headings
+                if para.style.name.startswith('Heading'):
+                    level = para.style.name[-1] if para.style.name[-1].isdigit() else '2'
+                    html_content += f"<h{level}>{text}</h{level}>"
+                else:
+                    html_content += f"<p>{text}</p>"
         
-        structured_content = {
-            "headlines": [],
-            "bulletpoints": [],
-            "tables": extracted_tables,
-            "images": [],
-            "html_content": html_content
-        }
+        # Process tables
+        for table in doc.tables:
+            table_html = "<table class='w-full border-collapse my-4 text-sm'>"
+            for row_idx, row in enumerate(table.rows):
+                tag = 'th' if row_idx == 0 else 'td'
+                cell_class = 'border border-slate-300 p-2 bg-slate-50 font-medium' if row_idx == 0 else 'border border-slate-300 p-2'
+                table_html += "<tr>"
+                for cell in row.cells:
+                    cell_text = cell.text.strip()
+                    table_html += f"<{tag} class='{cell_class}'>{cell_text}</{tag}>"
+                table_html += "</tr>"
+            table_html += "</table>"
+            html_content += table_html
+            extracted_text += "[Tabelle]\n\n"
         
-        await db.documents.update_one(
-            {"document_id": document_id},
-            {"$set": {
-                "status": "completed",
-                "page_count": page_count,
-                "extracted_text": extracted_text,
-                "structured_content": structured_content,
-                "processed_at": datetime.now(timezone.utc).isoformat()
-            }}
-        )
-        
-        logger.info(f"Document {document_id} processed successfully")
+        page_count = max(1, len(doc.paragraphs) // 30)  # Estimate pages
         
     except Exception as e:
-        logger.error(f"Document processing failed: {e}")
-        await db.documents.update_one(
-            {"document_id": document_id},
-            {"$set": {
-                "status": "failed",
-                "error_message": str(e)
-            }}
-        )
+        logger.error(f"Word processing error: {e}")
+        return {"extracted_text": "", "html_content": "", "page_count": 0}
+    
+    return {"extracted_text": extracted_text, "html_content": html_content, "page_count": page_count}
+
+
+async def process_text(file_path: str) -> dict:
+    """Process plain text file."""
+    extracted_text = ""
+    html_content = ""
+    
+    try:
+        with open(file_path, 'r', encoding='utf-8', errors='replace') as f:
+            content = f.read()
+        
+        extracted_text = content
+        
+        # Convert to HTML with paragraph breaks
+        paragraphs = content.split('\n\n')
+        for para in paragraphs:
+            if para.strip():
+                # Check if it looks like a heading (short, possibly uppercase)
+                lines = para.strip().split('\n')
+                for line in lines:
+                    if line.strip():
+                        if len(line.strip()) < 80 and (line.strip().isupper() or line.strip().startswith('#')):
+                            clean_line = line.strip().lstrip('#').strip()
+                            html_content += f"<h3>{clean_line}</h3>"
+                        else:
+                            html_content += f"<p>{line.strip()}</p>"
+        
+        page_count = max(1, len(content) // 3000)  # Estimate pages
+        
+    except Exception as e:
+        logger.error(f"Text processing error: {e}")
+        return {"extracted_text": "", "html_content": "", "page_count": 0}
+    
+    return {"extracted_text": extracted_text, "html_content": html_content, "page_count": page_count}
+
+
+async def process_spreadsheet(file_path: str, file_type: str) -> dict:
+    """Process spreadsheet (CSV, XLS, XLSX)."""
+    import pandas as pd
+    
+    extracted_text = ""
+    html_content = ""
+    page_count = 0
+    
+    try:
+        if file_type == '.csv':
+            # Try different encodings
+            for encoding in ['utf-8', 'latin-1', 'cp1252']:
+                try:
+                    df = pd.read_csv(file_path, encoding=encoding)
+                    break
+                except Exception:
+                    continue
+            else:
+                df = pd.read_csv(file_path, encoding='utf-8', errors='replace')
+        elif file_type == '.xls':
+            df = pd.read_excel(file_path, engine='xlrd')
+        else:  # xlsx
+            df = pd.read_excel(file_path, engine='openpyxl')
+        
+        # Build HTML table
+        table_html = "<table class='w-full border-collapse my-4 text-sm'>"
+        
+        # Header
+        table_html += "<thead><tr>"
+        for col in df.columns:
+            table_html += f"<th class='border border-slate-300 p-2 bg-slate-100 font-medium text-left'>{col}</th>"
+        table_html += "</tr></thead>"
+        
+        # Body
+        table_html += "<tbody>"
+        for idx, row in df.iterrows():
+            table_html += "<tr>"
+            for val in row:
+                cell_val = str(val) if pd.notna(val) else ""
+                table_html += f"<td class='border border-slate-300 p-2'>{cell_val}</td>"
+            table_html += "</tr>"
+        table_html += "</tbody></table>"
+        
+        html_content = table_html
+        
+        # Build text representation
+        extracted_text = df.to_string(index=False)
+        
+        page_count = max(1, len(df) // 50)  # Estimate pages
+        
+    except Exception as e:
+        logger.error(f"Spreadsheet processing error: {e}")
+        return {"extracted_text": "", "html_content": "", "page_count": 0}
+    
+    return {"extracted_text": extracted_text, "html_content": html_content, "page_count": page_count}
 
 
 @router.get("", response_model=List[Dict])
@@ -217,7 +383,7 @@ async def delete_document(document_id: str, user: User = Depends(get_current_use
 
 @router.get("/{document_id}/file")
 async def get_document_file(document_id: str, user: User = Depends(get_current_user)):
-    """Get the actual PDF file for viewing."""
+    """Get the actual file for viewing."""
     doc = await db.documents.find_one(
         {"document_id": document_id, "deleted_at": {"$exists": False}},
         {"_id": 0}
@@ -227,13 +393,39 @@ async def get_document_file(document_id: str, user: User = Depends(get_current_u
     
     file_path = doc.get("file_path")
     if not file_path or not os.path.exists(file_path):
-        raise HTTPException(status_code=404, detail="PDF-Datei nicht gefunden")
+        raise HTTPException(status_code=404, detail="Datei nicht gefunden")
+    
+    # Get file type and appropriate media type
+    file_type = doc.get("file_type", ".pdf")
+    media_type = SUPPORTED_EXTENSIONS.get(file_type, "application/octet-stream")
     
     return FileResponse(
         path=file_path,
-        media_type="application/pdf",
-        filename=doc.get("filename", "document.pdf")
+        media_type=media_type,
+        filename=doc.get("filename", "document")
     )
+
+
+@router.get("/{document_id}/content")
+async def get_document_content(document_id: str, user: User = Depends(get_current_user)):
+    """Get the processed HTML content of a document for embedding in articles."""
+    doc = await db.documents.find_one(
+        {"document_id": document_id, "deleted_at": {"$exists": False}},
+        {"_id": 0}
+    )
+    if not doc:
+        raise HTTPException(status_code=404, detail="Dokument nicht gefunden")
+    
+    if doc.get("status") != "completed":
+        raise HTTPException(status_code=400, detail="Dokument muss zuerst verarbeitet werden")
+    
+    return {
+        "document_id": document_id,
+        "filename": doc.get("filename"),
+        "file_type": doc.get("file_type"),
+        "html_content": doc.get("html_content") or (doc.get("structured_content") or {}).get("html_content", ""),
+        "extracted_text": doc.get("extracted_text", "")
+    }
 
 
 @router.put("/{document_id}/move")

@@ -24,7 +24,8 @@ import {
   FolderOpen,
   FileEdit,
   MessageSquare,
-  Maximize2
+  Maximize2,
+  FileUp
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -56,6 +57,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import RichTextEditor from "@/components/RichTextEditor";
 import FullscreenEditor from "@/components/FullscreenEditor";
+import DocumentImportDialog from "@/components/DocumentImportDialog";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -174,6 +176,7 @@ const ArticleEditor = () => {
   const [expandedCategoryIds, setExpandedCategoryIds] = useState(new Set());
   const [pdfImported, setPdfImported] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [showImportDialog, setShowImportDialog] = useState(false);
 
   // Check for PDF import data on mount
   useEffect(() => {
@@ -316,6 +319,17 @@ const ArticleEditor = () => {
     setArticle(prev => ({ ...prev, tags: prev.tags.filter(t => t !== tag) }));
   };
 
+  // Document import handler
+  const handleDocumentImport = ({ html, text, filename, fileType }) => {
+    // Append imported content to existing content
+    const separator = article.content ? '<hr class="my-6 border-slate-300" />' : '';
+    const importHeader = `<p class="text-sm text-muted-foreground mb-2"><em>Importiert aus: ${filename}</em></p>`;
+    const newContent = article.content + separator + importHeader + html;
+    
+    setArticle(prev => ({ ...prev, content: newContent }));
+    setShowImportDialog(false);
+  };
+
   const filteredTags = allTags.filter(
     t => t.toLowerCase().includes(tagInput.toLowerCase()) && !article.tags.includes(t)
   );
@@ -429,15 +443,26 @@ const ArticleEditor = () => {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>Inhalt</CardTitle>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setIsFullscreen(true)}
-                data-testid="fullscreen-editor-btn"
-              >
-                <Maximize2 className="w-4 h-4 mr-1" />
-                Vollbild
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowImportDialog(true)}
+                  data-testid="import-document-btn"
+                >
+                  <FileUp className="w-4 h-4 mr-1" />
+                  Importieren
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsFullscreen(true)}
+                  data-testid="fullscreen-editor-btn"
+                >
+                  <Maximize2 className="w-4 h-4 mr-1" />
+                  Vollbild
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               <RichTextEditor
@@ -748,6 +773,13 @@ const ArticleEditor = () => {
         onChange={(html) => setArticle(prev => ({ ...prev, content: html }))}
         onImageUpload={handleImageUpload}
         title={article.title || "Neuer Artikel"}
+      />
+
+      {/* Document Import Dialog */}
+      <DocumentImportDialog
+        open={showImportDialog}
+        onClose={() => setShowImportDialog(false)}
+        onImport={handleDocumentImport}
       />
     </div>
   );
