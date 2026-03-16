@@ -16,19 +16,35 @@ import {
   User,
   Download,
   FileText,
-  FileDown
+  FileDown,
+  MessageSquare,
+  Send,
+  Trash2,
+  Loader2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Textarea } from "@/components/ui/textarea";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const StatusBadge = ({ status }) => {
   const styles = {
@@ -62,8 +78,16 @@ const ArticleView = () => {
   const [loading, setLoading] = useState(true);
   const [isFavorite, setIsFavorite] = useState(false);
   const [activeEditors, setActiveEditors] = useState([]);
+  
+  // Comments state
+  const [comments, setComments] = useState([]);
+  const [commentsEnabled, setCommentsEnabled] = useState(true);
+  const [newComment, setNewComment] = useState("");
+  const [submittingComment, setSubmittingComment] = useState(false);
+  const [deleteCommentDialog, setDeleteCommentDialog] = useState({ open: false, commentId: null });
 
   const canEdit = user?.role === "admin" || user?.role === "editor";
+  const isAdmin = user?.role === "admin";
 
   useEffect(() => {
     fetchData();
@@ -107,12 +131,55 @@ const ArticleView = () => {
       } catch (e) {
         console.error("Presence error:", e);
       }
+      
+      // Load comments
+      fetchComments();
     } catch (error) {
       console.error("Failed to fetch data:", error);
       toast.error("Artikel konnte nicht geladen werden");
       navigate("/articles");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchComments = async () => {
+    try {
+      const response = await axios.get(`${API}/articles/${id}/comments`);
+      setComments(response.data.comments || []);
+      setCommentsEnabled(response.data.comments_enabled !== false);
+    } catch (error) {
+      console.error("Failed to fetch comments:", error);
+    }
+  };
+
+  const handleSubmitComment = async (e) => {
+    e.preventDefault();
+    if (!newComment.trim()) return;
+    
+    setSubmittingComment(true);
+    try {
+      await axios.post(`${API}/articles/${id}/comments`, { content: newComment });
+      setNewComment("");
+      fetchComments();
+      toast.success("Kommentar hinzugefügt");
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Fehler beim Erstellen des Kommentars");
+    } finally {
+      setSubmittingComment(false);
+    }
+  };
+
+  const handleDeleteComment = async () => {
+    const { commentId } = deleteCommentDialog;
+    try {
+      await axios.delete(`${API}/articles/${id}/comments/${commentId}`);
+      fetchComments();
+      toast.success("Kommentar gelöscht");
+    } catch (error) {
+      toast.error("Fehler beim Löschen des Kommentars");
+    } finally {
+      setDeleteCommentDialog({ open: false, commentId: null });
     }
   };
 
@@ -361,7 +428,129 @@ const ArticleView = () => {
             )}
           </div>
         </div>
+
+        {/* Comments Section */}
+        {article.status === "published" && (
+          <div className="mt-12 pt-8 border-t">
+            <h2 className="text-2xl font-bold mb-6 flex items-center gap-2">
+              <MessageSquare className="w-6 h-6" />
+              Kommentare
+              {comments.length > 0 && (
+                <Badge variant="secondary" className="ml-2">{comments.length}</Badge>
+              )}
+            </h2>
+            
+            {commentsEnabled ? (
+              <>
+                {/* Comment Form */}
+                <Card className="mb-6">
+                  <CardContent className="pt-6">
+                    <form onSubmit={handleSubmitComment}>
+                      <Textarea
+                        placeholder="Schreiben Sie einen Kommentar..."
+                        value={newComment}
+                        onChange={(e) => setNewComment(e.target.value)}
+                        className="mb-3 min-h-[100px]"
+                        data-testid="comment-input"
+                      />
+                      <div className="flex justify-end">
+                        <Button 
+                          type="submit" 
+                          disabled={submittingComment || !newComment.trim()}
+                          data-testid="submit-comment-btn"
+                        >
+                          {submittingComment ? (
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          ) : (
+                            <Send className="w-4 h-4 mr-2" />
+                          )}
+                          Kommentar absenden
+                        </Button>
+                      </div>
+                    </form>
+                  </CardContent>
+                </Card>
+
+                {/* Comments List */}
+                {comments.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <MessageSquare className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                    <p>Noch keine Kommentare vorhanden.</p>
+                    <p className="text-sm">Seien Sie der Erste, der diesen Artikel kommentiert!</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {comments.map((comment) => (
+                      <Card key={comment.comment_id} className="group" data-testid="comment-card">
+                        <CardContent className="pt-4">
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="flex gap-3 flex-1">
+                              <Avatar className="w-10 h-10 shrink-0">
+                                <AvatarFallback className="bg-slate-100 text-slate-700 text-sm">
+                                  {comment.author_name?.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2) || "??"}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <span className="font-medium">{comment.author_name}</span>
+                                  <span className="text-xs text-muted-foreground">
+                                    {new Date(comment.created_at).toLocaleDateString("de-DE", {
+                                      day: "2-digit",
+                                      month: "short",
+                                      year: "numeric",
+                                      hour: "2-digit",
+                                      minute: "2-digit"
+                                    })}
+                                  </span>
+                                </div>
+                                <p className="text-sm whitespace-pre-wrap">{comment.content}</p>
+                              </div>
+                            </div>
+                            {isAdmin && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="opacity-0 group-hover:opacity-100 transition-opacity text-red-500 hover:text-red-600 hover:bg-red-50 shrink-0"
+                                onClick={() => setDeleteCommentDialog({ open: true, commentId: comment.comment_id })}
+                                data-testid="delete-comment-btn"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            )}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="text-center py-8 text-muted-foreground bg-slate-50 dark:bg-slate-900 rounded-lg">
+                <MessageSquare className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                <p>Kommentare sind für diesen Artikel deaktiviert.</p>
+              </div>
+            )}
+          </div>
+        )}
       </article>
+
+      {/* Delete Comment Dialog */}
+      <AlertDialog open={deleteCommentDialog.open} onOpenChange={(open) => !open && setDeleteCommentDialog({ open: false, commentId: null })}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Kommentar löschen?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Dieser Kommentar wird unwiderruflich gelöscht.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteComment} className="bg-red-500 hover:bg-red-600">
+              Löschen
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

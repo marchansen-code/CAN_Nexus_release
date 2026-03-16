@@ -22,7 +22,8 @@ import {
   ChevronDown,
   Folder,
   FolderOpen,
-  FileEdit
+  FileEdit,
+  MessageSquare
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -154,7 +155,8 @@ const ArticleEditor = () => {
     expiry_date: null,
     review_date: null,
     is_important: false,
-    important_until: null
+    important_until: null,
+    comments_enabled: true
   });
 
   // UI state
@@ -636,6 +638,33 @@ const ArticleEditor = () => {
                   Keine Gruppen vorhanden. Admins können Gruppen erstellen.
                 </p>
               )}
+            </CardContent>
+          </Card>
+
+          {/* Comments */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <MessageSquare className="w-4 h-4" />
+                Kommentare
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="comments-enabled"
+                  checked={article.comments_enabled}
+                  onCheckedChange={(checked) => setArticle(prev => ({ ...prev, comments_enabled: checked }))}
+                />
+                <label htmlFor="comments-enabled" className="text-sm cursor-pointer">
+                  Kommentare erlauben
+                </label>
+              </div>
+              <p className="text-xs text-muted-foreground mt-2">
+                {article.comments_enabled 
+                  ? "Benutzer können diesen Artikel kommentieren" 
+                  : "Kommentarfunktion ist deaktiviert"}
+              </p>
             </CardContent>
           </Card>
 

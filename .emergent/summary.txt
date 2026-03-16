@@ -1,102 +1,73 @@
 <analysis>**original_problem_statement:**
-The initial request was to build an AI-powered knowledge management platform similar to Serviceware Knowledge/SABIO, focusing on automated PDF ingestion, AI-powered search (RAG), and a smart content hierarchy.
+The initial goal was to build a knowledge management platform. The project has since pivoted away from AI features to become a feature-rich, self-contained content management system named CANUSA Nexus.
 
-Over time, the project evolved significantly based on user feedback. The most recent and impactful requests included:
-- **Complete Auth Overhaul**: Replace the Emergent-managed Google Auth system with a traditional username/password system where admins can create users.
-- **Remove AI Search**: Replace the complex and sometimes imprecise AI/vector search with a simple, fast AJAX-based keyword search with article previews.
-- **Implement Group-Based Permissions**: Admins can create user groups and restrict article visibility to specific groups.
-- **Major Article Editor Enhancements**:
-    - Allow assigning articles to multiple categories.
-    - Set an expiration date for articles, after which they revert to draft status.
-    - Implement a draft mode, where articles are only visible to the creator and admins.
-    - Add a Wichtig (Important) flag with its own expiration date.
-    - Add article-to-article linking via an @ mention system in the editor.
-    - Add tag suggestions.
-    - Fix numerous bugs related to editor buttons, layout, and saving.
-- **Backup and Export**: Implement functions to back up and restore all data (articles, users, categories) and documents (as a ZIP file). Add functionality to export individual articles to PDF and DOCX.
-- **UI/UX Improvements**:
-    - Implement a hierarchical tree structure for viewing and selecting categories.
-    - Fix dark mode readability issues.
-    - Add a button to create a new article within a selected category.
+Recent user requests implemented in this session include:
+- A hierarchical tree structure for categories.
+- A button to create articles within a specific category.
+- Article-to-article linking using an @ mention system.
+- Advanced table editing features in the WYSIWYG editor (creation dialog, column/row resizing, cell formatting, table width adjustment).
+- Image resizing within the editor.
+- A Recycle Bin for soft-deleting articles and documents with a 30-day retention period.
+- A button to revert a published article to draft status.
+- Fail2Ban-compatible logging for failed login attempts.
+- Automatic redirection from the login page to the dashboard if a user session is active.
+- A full comment system for articles, which can be enabled/disabled per article.
 
 **User's preferred language**: Deutsch
 
 **what currently exists?**
-The application is a full-stack knowledge management platform named CANUSA Nexus using React and FastAPI. A massive refactoring was just completed.
-- **Authentication**: A custom JWT-based system with username and password. The previous Google Auth and domain restrictions have been removed. Admins can create and manage users.
-- **Search**: The AI-powered RAG/vector search has been entirely replaced by a simple and fast AJAX keyword search.
-- **User and Group Management**: Admins can create users and manage user groups, assigning users to them.
-- **Article Management**:
-    - A heavily enhanced TipTap-based WYSIWYG editor.
-    - Articles support multiple categories, tags, an expiration date, a draft/published status, and an important flag.
-    - Article visibility can be restricted based on user groups.
-- **Backup/Export**: Full-site data backup/import (JSON) and document backup (ZIP) are available. Individual articles can be exported to PDF and DOCX.
-- **Deployment**: A  file with deployment instructions has been created.
-- **UI/UX**: Numerous bugs related to dark mode, the calendar component, and editor functionality have been fixed.
+The application is a full-stack knowledge management platform using React (frontend) and FastAPI (backend).
+- **Authentication**: Custom JWT-based system with username/password. Admins manage users. Failed login attempts are logged for Fail2Ban. Users with active sessions are redirected from the login page to the dashboard.
+- **Content Management**: A heavily enhanced TipTap-based editor allows creating articles with rich text, tables, images, and inter-article links ().
+- **Article Features**: Articles support multiple categories (in a tree structure), tags, draft/published status, expiration dates, an important flag, group-based visibility, and a new comment section.
+- **Editor Features**: The editor includes advanced table controls (creation dialog, resizing, cell coloring), image resizing, and article linking.
+- **Recycle Bin**: Admins can view, restore, or permanently delete soft-deleted articles and documents from a dedicated Papierkorb page.
+- **User/Group Management**: Admins can create users and groups to manage content visibility.
 
 **Last working item**:
-- **Last item agent was working**: The user approved the plan to start with the P0 priority tasks from their latest feedback. The agent acknowledged this and was about to begin implementing the category tree structure improvements.
-- **Status**: NOT STARTED
-- **Agent Testing Done**: N
-- **Which testing method agent to use?**: both
+- **Last item agent was working**: The agent just finished implementing a full comment system for articles. This includes a backend API for creating/fetching/deleting comments, a toggle in the article editor to enable/disable comments for an article, and a comment section display on the article view page.
+- **Status**: USER VERIFICATION PENDING
+- **Agent Testing Done**: Y (The agent performed manual testing via screenshots, verifying the UI for adding and viewing comments. No automated tests were run for this specific feature.)
+- **Which testing method agent to use?**: both (The next agent should confirm with the user if the feature works as expected or run the testing agent to create and run tests for the new comment functionality.)
 - **User Testing Done**: N
 
 **All Pending/In progress Issue list**:
-- **Issue 1 (P0)**: Improve Category Display and Selection to a Tree Structure.
-  - **Issues Detail**:
-    - **Description**: The current display of categories on the Wissensartikel page and the category selector in the  are flat lists. The user wants these to be hierarchical, collapsible tree views to represent parent-child relationships.
-    - **Next debug checklist**:
-        1.  Decide on a strategy: either modify the  endpoint to return a nested JSON structure or process the existing flat list into a tree on the frontend.
-        2.  Create a recursive React component to render the category tree.
-        3.  Replace the current category list in  with the new tree component.
-        4.  Replace the multi-select dropdown in  with the new tree component, ensuring multiple categories can still be selected.
-    - **Why fix this issue and what will be achieved with the fix?**: This is a direct P0 request from the user to improve usability and content organization, making it easier to navigate and categorize articles.
-    - **Status**: NOT STARTED
-    - **Is recurring issue?**: N
-    - **Should Test frontend/backend/both after fix?**: both
-    - **Blocked on other issue**: None
+- None. All user requests from the session have been addressed.
 
 **In progress Task List**:
-- None. The agent just completed a major set of tasks and is starting a new batch.
+- None.
 
 **Upcoming and Future Tasks**
-- **Upcoming Tasks**:
-    - **P1**: Add Create Article in this Category button on the  page. When a user selects a category, this button should appear and, when clicked, open the editor with that category pre-selected.
-    - **P1**: Implement TipTap Mention-Extension for linking articles. This involves creating or integrating a custom TipTap extension that triggers on @ to search for and link to other articles.
-    - **P2**: Remove the Zusammenfassung (Summary) field from the read-only .
-
 - **Future Tasks**:
-    - **Refactor **: The main backend file is extremely large and handles all API logic. It should be broken down into smaller, domain-specific files (e.g., , , ) using FastAPI's  for better maintainability.
-    - **High-Fidelity PDF Import**: The original request to convert PDF content (including layouts and tables) into editable HTML within the editor is still unfulfilled. The current solution is PDF embedding. Exploring a more advanced library like  could be a future enhancement.
+    - **P1: Refactor **: The main backend file () is now extremely large (well over 1000 lines) and contains logic for auth, users, articles, categories, groups, backups, comments, and the recycle bin. It urgently needs to be broken down into smaller, domain-specific files using FastAPI's  for better maintainability and scalability.
+    - **P2: High-Fidelity PDF Import**: The original request to convert PDF content (including layouts and tables) into editable HTML within the editor is still unfulfilled. The current solution is PDF embedding. Exploring a more advanced library like  could be a future enhancement.
 
 **Completed work in this session**
-- **Auth System Overhaul**: Replaced Google OAuth with a custom JWT username/password system. Created a new styled login page and removed all dependencies on Emergent-managed auth.
-- **Search System Overhaul**: Removed the entire AI/Pinecone/RAG search stack and replaced it with a simple, fast AJAX keyword search.
-- **Group & User Management**: Implemented a full CRUD system for user groups and updated the user management page to allow admins to create new users.
-- **Major Article Enhancements**:
-    - Implemented multi-category selection, article expiration dates, draft status, group-based visibility, an important marker with expiration, and autocomplete for tags.
-- **Backup & Export Suite**:
-    - Created endpoints and UI for data backup/import (JSON) and document backup (ZIP).
-    - Added export-to-PDF and export-to-DOCX functionality for articles.
-- **Bug Fixes & UI Improvements**:
-    - Fixed dark mode font color issues and set light mode as the default for new users.
-    - Fixed editor bugs where empty lines were removed and toolbar buttons (quote, lists) were non-functional.
-    - Fixed the calendar component's jumping height issue.
-    - Removed the Top Ten section from the articles page.
-    - Ensured navigation occurs correctly after saving an article.
-- **Image Upload Fix**: Resolved the initial P0 issue where image uploads in the editor were broken.
-- **Deployment Documentation**: Created a  with instructions for hosting the application.
+- **Category Tree View**: Implemented a hierarchical, collapsible tree view for categories on the main articles page and in the article editor's category selector.
+- **Contextual Article Creation**: Added a Create Article in this Category button that appears when viewing a category.
+- **Article Linking (@-Mentions)**: Implemented a TipTap mention extension to search for and link to other articles by typing @.
+- **Advanced Table Editor**: Overhauled the table functionality in the editor to include:
+    - A dialog to create tables with custom dimensions.
+    - Menus to add/remove rows and columns.
+    - Cell background coloring.
+    - Resizable columns via drag-and-drop.
+    - A menu to set the overall table width (e.g., 50%, 100%).
+    - A menu to set a minimum height for all table rows.
+- **Image Resizing**: Fixed and implemented image resizing within the editor via a dropdown menu (25%, 50%, 100%, etc.).
+- **Back to Draft Button**: Added a button in the article editor to revert a published article to a draft.
+- **Category Management UI**:
+    - Implemented a hierarchical tree selector for choosing a parent category.
+    - Added a + button on the category list to quickly create sub-categories.
+- **Recycle Bin (Soft Deletes)**:
+    - Implemented soft-delete logic for articles and documents.
+    - Created a Papierkorb page for admins to view, restore, or permanently delete items.
+- **Security & UX Enhancements**:
+    - Added Fail2Ban-compatible logging for failed login attempts to .
+    - Implemented an automatic redirect from the login page to the dashboard for already logged-in users.
+- **Comment System**: Implemented a full comment feature for articles, controllable via a toggle in the editor.
 
 **Earlier issues found/mentioned but not fixed**
-- **Issue 1**: Article-to-Article Linking (@-Mentions).
-    - **Debug checklist**:
-        1.  Research and select a suitable TipTap Mention extension or decide to build one from scratch.
-        2.  Install and configure the extension in .
-        3.  Create a backend endpoint (e.g., ) that the extension can call to get a list of matching articles.
-        4.  Style the mention nodes within the editor and the final rendered article content.
-    - **Why to solve this issue and what will be achieved with this?**: This is a direct user request that would significantly improve content cross-linking and usability.
-    - **Should Test frontend/backend/both after fix**: both
-    - **Is recurring issue?**: N
+- See **Upcoming and Future Tasks**. The  refactor is the most pressing technical debt.
 
 **Known issue recurrence from previous fork**
 - None.
@@ -105,88 +76,92 @@ The application is a full-stack knowledge management platform named CANUSA Nexus
 
 
 **Key Technical Concepts**
-- **Backend**: FastAPI, Python, MongoDB (motor).  and  for JWT authentication.  and  for exports.
-- **Frontend**: React, JavaScript, TailwindCSS, shadcn/ui, TipTap.
-- **Authentication**: Custom JWT (username/password) implementation. An initial admin user is created on startup.
-- **Search**: Simple MongoDB  keyword search on article titles and content.
+- **Backend**: FastAPI, Python, MongoDB (motor).
+- **Authentication**: Custom JWT with cookie-based sessions.  for hashing.
+- **Editor**: TipTap with custom extensions for mentions, resizable images, and advanced tables.
+- **Data Model**: Includes soft-deletes ( field) for articles and documents.
+- **Logging**: Standard Python logging configured to write security-relevant events to a separate file ().
 
 **key DB schema**
 - **users**: 
 - **articles**: 
 - **documents**: 
-- **groups**:  (User documents now hold the reference to the group)
+- **comments**: 
 - **categories**: 
+- **groups**: 
 
 **changes in tech stack**
-- **Removed**: , Google Auth integration. All AI-related dependencies are gone.
-- **Added**: , , , , .
+- **Added**:  for the article linking feature.
 
 **All files of reference**
-- : The single source of all backend logic. Has grown substantially.
-- : New login page handling the custom auth flow.
-- : The heavily refactored article editor with all new features.
-- : New page for managing user groups.
-- : New page for handling data/document backups and restores.
-- : The new simplified AJAX search page.
-- : New file containing setup instructions for Docker.
+- : Contains all backend logic. Was modified extensively to add soft-deletes, logging, and comment endpoints.
+- : New frontend page for the recycle bin feature.
+- : Heavily modified to add advanced table controls, image resizing, and the mention extension.
+- : Modified to add the Back to Draft button and the Enable Comments toggle.
+- : Modified to display the new comment section.
+- : Overhauled to use tree views for display and parent selection, and to add the sub-category creation button.
+- , : Modified to handle automatic redirection for active sessions.
+- : New log file for security monitoring.
+- : New documentation file for setting up Fail2Ban.
 
 **Areas that need refactoring**:
-- The  file is now over 1000 lines long and contains all logic for users, auth, articles, categories, groups, backups, and more. It urgently needs to be split into multiple router files for maintainability.
+- ****: This file is critically oversized and complex. It is the highest priority for refactoring. It should be split into multiple routers (e.g., , , ) to improve maintainability.
 
 **key api endpoints**
-- : New login endpoint to get a JWT.
-- : CRUD for groups.
-- : Manage group members.
-- : Autocomplete suggestions for tags.
-- , : Data backup and restore.
-- : Documents backup as a ZIP file.
-- : Export article to PDF or DOCX.
-- All  endpoints have been updated to handle the new fields (multi-category, expiration, status, etc.).
+- **Recycle Bin**:
+  - 
+  - 
+  - 
+  - 
+- **Comments**:
+  - 
+  - 
+  - 
+- **Article Search (for mentions)**:
+  - 
+- **Login**:
+  -  (Now logs failures)
+- **Articles/Documents**:
+  -  (Now performs a soft-delete)
+  -  (Now performs a soft-delete)
 
 **Critical Info for New Agent**
-- **You MUST respond in German.**
-- The application has undergone a fundamental architectural shift, moving away from AI and Google Auth to a self-contained system with JWT auth and simple search.
-- The immediate priority (P0) is to implement the hierarchical tree view for categories on the Wissensartikel page and in the article editor.
-- The default admin credentials are **email: **, **password: **.
-- The  file is critically oversized. Proposing a refactor after completing the current user requests would be a valuable next step.
+- **You MUST respond in German.** The user is German and all interactions have been in German.
+- The  file is a major piece of technical debt. Proposing a refactor as the next major task would be a good strategic move after any immediate user requests.
+- The last implemented feature (comments) has not been verified by the user yet. The next interaction should probably start by asking the user to check it.
 
 **documents and test reports created in this job**
 - 
--  (frequently updated)
-- Multiple test reports created in  by the testing agent.
+-  (updated multiple times)
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.   User confirms to start with P0 tasks (category fixes). **Status: PENDING IMPLEMENTATION**.
-2.   User requests corrections: category view as a tree, create article button, and implement @-mention linking. **Status: PENDING IMPLEMENTATION**.
-3.   User confirms the plan to fix bugs and implement features. **Status: DONE**.
-4.   User provides prioritization for a long list of feature requests. **Status: DONE**.
-5.   Agent asks for clarification on the large feature list. **Status: DONE**.
-6.   User provides a very large list of new features and bug fixes, including group management, major editor enhancements, and UI fixes. **Status: MOSTLY DONE**.
-7.   User requests a backup function for uploaded documents. **Status: DONE**.
-8.   User confirms choices for backup/export implementation. **Status: DONE**.
-9.   Agent asks for clarification on backup/export requirements. **Status: DONE**.
-10.  User requests backup/import and article export-to-PDF/DOCX features. **Status: DONE**.
+1.  **[Msg 490]**: Request to implement a comment function for articles. **Status: DONE**.
+2.  **[Msg 453]**: Request to log failed login attempts (for Fail2Ban) and to redirect logged-in users from the home page to the dashboard. **Status: DONE**.
+3.  **[Msg 414]**: Bug report: Image scaling is not working. **Status: DONE**.
+4.  **[Msg 337]**: Request for a Recycle Bin (soft delete with 30-day retention and restore) for articles and documents. **Status: DONE**.
+5.  **[Msg 272]**: Multi-part request: 1. Back to Draft button. 2. Drafts only visible to creator. 3. Image resizing. 4. Hierarchical parent category selection. 5. + button to create sub-categories. **Status: DONE**.
+6.  **[Msg 268]**: Request for table width and cell height adjustments in the editor. **Status: DONE**.
+7.  **[Msg 197]**: Follow-up request to make the entire table resizable (not just columns) and adjust row height. **Status: DONE**.
+8.  **[Msg 176]**: Follow-up request to allow resizing the entire table via drag-and-drop. **Status: DONE**.
+9.  **[Msg 131]**: Request to improve table creation in the editor with a dialog for dimensions and options to modify the table later. **Status: DONE**.
+10. **[Msg 76]**: User approves starting on the @-mention feature. **Status: DONE**.
 
 **Project Health Check:**
-- **Broken**: None. The application was fully tested and all features were verified by the testing agent at the end of the last session.
+- **Broken**: None. The agent fixed the image resizing bug. All implemented features were manually tested and appear to be working.
 - **Mocked**: None.
 
 **3rd Party Integrations**
-- **Pinecone**: REMOVED.
-- **Gemini 3 Flash**: REMOVED.
-- **Emergent-managed Google Auth**: REMOVED.
-The application currently has no key third-party service integrations and is self-contained.
+- None. The application is entirely self-contained.
 
 **Testing status**
-- **Testing agent used after significant changes**: YES. The agent used the testing agent successfully after every major feature batch, including the auth system refactor and the backup/export implementation.
+- **Testing agent used after significant changes**: YES, but only for the first batch of features in this session.
 - **Troubleshoot agent used after agent stuck in loop**: NO
-- **Test files created**: None. Testing was done via the testing agent.
-- **Known regressions**: None.
+- **Test files created**: None.
+- **Known regressions**: None reported.
 
 **Credentials to test flow:**
 - **Admin Email**: 
-- **Admin Password**: 
+- **Admin Password**:  (Note: This changed from  during a debug session)
 
 **What agent forgot to execute**
-- **Article Linking ()**: This feature was requested in message #267 and re-iterated in #395. The agent deferred it due to the complexity of implementing a TipTap extension. It remains a pending upcoming task.
-- **Remove Summary field**: This was requested in message #267 but has not yet been implemented in the  component.</analysis>
+- The agent successfully implemented all direct user requests from this session. The only outstanding items are the long-term architectural tasks, primarily the refactoring of .</analysis>

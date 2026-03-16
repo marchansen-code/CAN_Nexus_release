@@ -125,6 +125,7 @@ class Article(BaseModel):
     visible_to_groups: List[str] = []  # Empty = visible to all, otherwise only to these groups
     is_important: bool = False
     important_until: Optional[datetime] = None  # Important marking expires
+    comments_enabled: bool = True  # Allow comments on this article
     created_by: str
     updated_by: str
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
@@ -142,6 +143,18 @@ class ArticleCreate(BaseModel):
     expiry_date: Optional[datetime] = None
     is_important: bool = False
     important_until: Optional[datetime] = None
+    comments_enabled: bool = True
+
+class Comment(BaseModel):
+    comment_id: str = Field(default_factory=lambda: f"cmt_{uuid.uuid4().hex[:12]}")
+    article_id: str
+    content: str
+    author_id: str
+    author_name: str
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class CommentCreate(BaseModel):
+    content: str
 
 class ArticleUpdate(BaseModel):
     title: Optional[str] = None
@@ -851,6 +864,66 @@ async def search_linkable_articles(q: str, limit: int = 10, user: User = Depends
     ).limit(limit).to_list(limit)
     
     return {"results": articles}
+
+# ==================== COMMENTS ====================
+
+@api_router.get("/articles/{article_id}/comments")
+async def get_article_comments(article_id: str, user: User = Depends(get_current_user)):
+    """Get all comments for an article"""
+    # Check if article exists and has comments enabled
+    article = await db.articles.find_one({"article_id": article_id}, {"_id": 0, "comments_enabled": 1})
+    if not article:
+        raise HTTPException(status_code=404, detail="Artikel nicht gefunden")
+    
+    if not article.get("comments_enabled", True):
+        return {"comments": [], "comments_enabled": False}
+    
+    comments = await db.comments.find(
+        {"article_id": article_id},
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(100)
+    
+    return {"comments": comments, "comments_enabled": True}
+
+@api_router.post("/articles/{article_id}/comments")
+async def create_comment(article_id: str, comment_data: CommentCreate, user: User = Depends(get_current_user)):
+    """Create a comment on an article"""
+    # Check if article exists and has comments enabled
+    article = await db.articles.find_one({"article_id": article_id}, {"_id": 0, "comments_enabled": 1, "status": 1})
+    if not article:
+        raise HTTPException(status_code=404, detail="Artikel nicht gefunden")
+    
+    if not article.get("comments_enabled", True):
+        raise HTTPException(status_code=403, detail="Kommentare sind für diesen Artikel deaktiviert")
+    
+    if article.get("status") != "published":
+        raise HTTPException(status_code=403, detail="Kommentare nur für veröffentlichte Artikel möglich")
+    
+    if not comment_data.content or len(comment_data.content.strip()) < 1:
+        raise HTTPException(status_code=400, detail="Kommentar darf nicht leer sein")
+    
+    comment = Comment(
+        article_id=article_id,
+        content=comment_data.content.strip(),
+        author_id=user.user_id,
+        author_name=user.name
+    )
+    
+    await db.comments.insert_one(comment.model_dump())
+    
+    return {"message": "Kommentar erstellt", "comment": comment.model_dump()}
+
+@api_router.delete("/articles/{article_id}/comments/{comment_id}")
+async def delete_comment(article_id: str, comment_id: str, user: User = Depends(get_current_user)):
+    """Delete a comment (admin only)"""
+    if user.role != "admin":
+        raise HTTPException(status_code=403, detail="Nur Administratoren können Kommentare löschen")
+    
+    result = await db.comments.delete_one({"comment_id": comment_id, "article_id": article_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Kommentar nicht gefunden")
+    
+    return {"message": "Kommentar gelöscht"}
 
 # ==================== SEARCH ====================
 
