@@ -330,6 +330,10 @@ async def list_drive_folders(
     try:
         service = await get_drive_service(user)
         
+        # First get the root folder ID
+        root_info = service.files().get(fileId='root', fields='id').execute()
+        root_id = root_info['id']
+        
         # Query only user's own folders (not shared with them)
         query = "mimeType='application/vnd.google-apps.folder' and trashed=false and 'me' in owners"
         
@@ -343,12 +347,17 @@ async def list_drive_folders(
         folders = results.get('files', [])
         
         # Build folder tree for user's own folders
+        # Map the actual root folder ID to "root" for our tree structure
         folder_list = [{"id": "root", "name": "Meine Ablage", "parent": None}]
         for f in folders:
+            parent = f.get("parents", [None])[0]
+            # If parent is the actual root folder, map it to "root"
+            if parent == root_id:
+                parent = "root"
             folder_list.append({
                 "id": f["id"],
                 "name": f["name"],
-                "parent": f.get("parents", [None])[0]
+                "parent": parent
             })
         
         return {"folders": folder_list}
@@ -545,7 +554,8 @@ async def export_article_to_drive(
         uploaded_file = service.files().create(
             body=file_metadata,
             media_body=media,
-            fields="id, name, webViewLink"
+            fields="id, name, webViewLink",
+            supportsAllDrives=True
         ).execute()
         
         logger.info(f"Exported article {article_id} to Google Drive for user {user.user_id}")

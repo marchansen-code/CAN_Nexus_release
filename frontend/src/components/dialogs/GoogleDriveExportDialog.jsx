@@ -153,6 +153,14 @@ const GoogleDriveExportDialog = ({ open, onOpenChange, articleId, articleTitle }
     const isExpanded = expandedFolders.has(folder.id);
     const isSelected = selectedFolder === folder.id;
 
+    const handleClick = () => {
+      setSelectedFolder(folder.id);
+      // Also expand/collapse if has children
+      if (hasChildren) {
+        toggleExpanded(folder.id);
+      }
+    };
+
     return (
       <div key={folder.id}>
         <div
@@ -161,27 +169,19 @@ const GoogleDriveExportDialog = ({ open, onOpenChange, articleId, articleTitle }
             isSelected ? "bg-blue-50 border border-blue-200" : "hover:bg-slate-100"
           )}
           style={{ paddingLeft: `${depth * 16 + 8}px` }}
-          onClick={() => setSelectedFolder(folder.id)}
+          onClick={handleClick}
         >
           {hasChildren ? (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                toggleExpanded(folder.id);
-              }}
-              className="p-0.5 hover:bg-slate-200 rounded"
-            >
-              <ChevronRight
-                className={cn(
-                  "w-4 h-4 text-slate-500 transition-transform",
-                  isExpanded && "rotate-90"
-                )}
-              />
-            </button>
+            <ChevronRight
+              className={cn(
+                "w-4 h-4 text-slate-500 transition-transform flex-shrink-0",
+                isExpanded && "rotate-90"
+              )}
+            />
           ) : (
-            <span className="w-5" />
+            <span className="w-5 flex-shrink-0" />
           )}
-          <Folder className={cn("w-4 h-4", isSelected ? "text-blue-600" : "text-amber-500")} />
+          <Folder className={cn("w-4 h-4 flex-shrink-0", isSelected ? "text-blue-600" : "text-amber-500")} />
           <span className={cn("text-sm truncate", isSelected && "font-medium text-blue-700")}>
             {folder.name}
           </span>
