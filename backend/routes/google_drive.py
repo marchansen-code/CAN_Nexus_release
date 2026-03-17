@@ -531,3 +531,64 @@ async def export_article_to_drive(
     except Exception as e:
         logger.error(f"Failed to export to Drive: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Export-Fehler: {str(e)}")
+
+
+@router.post("/export/document/{document_id}")
+async def export_document_to_drive(
+    document_id: str,
+    folder_id: str = Query(default="root", description="Target folder ID in Google Drive"),
+    user: User = Depends(get_current_user)
+):
+    """Export a document to Google Drive."""
+    try:
+        # Get document
+        document = await db.documents.find_one({"document_id": document_id}, {"_id": 0})
+        if not document:
+            raise HTTPException(status_code=404, detail="Dokument nicht gefunden")
+        
+        service = await get_drive_service(user)
+        
+        # Read the file
+        file_path = document.get("file_path")
+        if not file_path or not os.path.exists(file_path):
+            raise HTTPException(status_code=404, detail="Datei nicht gefunden")
+        
+        with open(file_path, "rb") as f:
+            file_content = f.read()
+        
+        filename = document.get("filename", "document")
+        mime_type = document.get("mime_type", "application/octet-stream")
+        
+        # Upload to Google Drive
+        file_metadata = {
+            "name": filename,
+            "parents": [folder_id] if folder_id != "root" else []
+        }
+        
+        media = MediaIoBaseUpload(
+            io.BytesIO(file_content),
+            mimetype=mime_type,
+            resumable=True
+        )
+        
+        uploaded_file = service.files().create(
+            body=file_metadata,
+            media_body=media,
+            fields="id, name, webViewLink",
+            supportsAllDrives=True
+        ).execute()
+        
+        logger.info(f"Exported document {document_id} to Google Drive for user {user.user_id}")
+        
+        return {
+            "file_id": uploaded_file["id"],
+            "filename": uploaded_file["name"],
+            "webViewLink": uploaded_file.get("webViewLink"),
+            "message": f"Dokument wurde erfolgreich nach Google Drive exportiert"
+        }
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to export document to Drive: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Export-Fehler: {str(e)}")
