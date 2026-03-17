@@ -105,6 +105,8 @@ const DocumentImportDialog = ({ open, onClose, onImport }) => {
       setDriveConnected(response.data.connected);
       if (response.data.connected) {
         loadSharedDrives();
+        // Load initial files for "Meine Ablage"
+        loadDriveFiles("root");
       }
     } catch (error) {
       console.error('Failed to check drive status:', error);
@@ -490,7 +492,7 @@ const DocumentImportDialog = ({ open, onClose, onImport }) => {
 
           <TabsContent value="drive" className="flex-1 flex flex-col min-h-0 mt-4">
             {!driveConnected ? (
-              <div className="flex-1 flex items-center justify-center">
+              <div className="flex-1 flex items-center justify-center min-h-[300px]">
                 <div className="text-center">
                   <GoogleDriveLogo className="w-16 h-16 mx-auto mb-4" />
                   <h3 className="font-semibold text-lg mb-2">Google Drive verbinden</h3>
@@ -505,27 +507,33 @@ const DocumentImportDialog = ({ open, onClose, onImport }) => {
               </div>
             ) : (
               <>
-                {/* Drive Sub-Tabs */}
-                <TabsList className="grid w-full grid-cols-2 mb-4">
-                  <TabsTrigger 
-                    value="my-drive" 
+                {/* Drive Sub-Tabs - Using buttons instead of TabsTrigger to avoid parent tab interference */}
+                <div className="grid w-full grid-cols-2 gap-1 p-1 bg-muted rounded-lg mb-4">
+                  <button
                     onClick={() => handleDriveSubTabChange("my-drive")}
-                    data-state={driveSubTab === "my-drive" ? "active" : "inactive"}
-                    className="gap-2 focus:ring-0 focus:outline-none focus-visible:ring-0"
+                    className={cn(
+                      "flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium rounded-md transition-colors",
+                      driveSubTab === "my-drive"
+                        ? "bg-background shadow text-foreground"
+                        : "text-muted-foreground hover:text-foreground"
+                    )}
                   >
                     <HardDrive className="w-4 h-4" />
                     Meine Ablage
-                  </TabsTrigger>
-                  <TabsTrigger 
-                    value="shared-drives"
+                  </button>
+                  <button
                     onClick={() => handleDriveSubTabChange("shared-drives")}
-                    data-state={driveSubTab === "shared-drives" ? "active" : "inactive"}
-                    className="gap-2 focus:ring-0 focus:outline-none focus-visible:ring-0"
+                    className={cn(
+                      "flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium rounded-md transition-colors",
+                      driveSubTab === "shared-drives"
+                        ? "bg-background shadow text-foreground"
+                        : "text-muted-foreground hover:text-foreground"
+                    )}
                   >
                     <Users className="w-4 h-4" />
                     Geteilte Ablagen
-                  </TabsTrigger>
-                </TabsList>
+                  </button>
+                </div>
                 
                 {/* Breadcrumb */}
                 {(driveSubTab === "my-drive" || isInSharedDrive) && driveFolderPath.length > 0 && (
@@ -545,7 +553,7 @@ const DocumentImportDialog = ({ open, onClose, onImport }) => {
                 )}
 
                 {/* Drive Content */}
-                <ScrollArea className="flex-1 border rounded-lg">
+                <ScrollArea className="flex-1 border rounded-lg min-h-[280px]">
                   {driveLoading ? (
                     <div className="flex items-center justify-center py-8">
                       <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
