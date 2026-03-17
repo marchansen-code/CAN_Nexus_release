@@ -553,7 +553,7 @@ const DocumentImportDialog = ({ open, onClose, onImport }) => {
                 )}
 
                 {/* Drive Content */}
-                <ScrollArea className="flex-1 border rounded-lg min-h-[280px]">
+                <ScrollArea className="h-[300px] border rounded-lg">
                   {driveLoading ? (
                     <div className="flex items-center justify-center py-8">
                       <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
