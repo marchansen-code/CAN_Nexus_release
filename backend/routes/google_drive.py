@@ -459,6 +459,7 @@ async def import_from_drive(
         
         return {
             "doc_id": doc_id,
+            "document_id": doc_id,
             "filename": file_name,
             "message": f"Datei '{file_name}' wurde erfolgreich importiert"
         }

@@ -240,11 +240,11 @@ const GoogleDriveImportDialog = ({ open, onOpenChange, onImport, targetFolderId 
 
         <Tabs value={activeTab} onValueChange={handleTabChange} className="flex-1">
           <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="my-drive" className="gap-2">
+            <TabsTrigger value="my-drive" className="gap-2 focus:ring-0 focus:outline-none focus-visible:ring-0">
               <HardDrive className="w-4 h-4" />
               Meine Ablage
             </TabsTrigger>
-            <TabsTrigger value="shared-drives" className="gap-2">
+            <TabsTrigger value="shared-drives" className="gap-2 focus:ring-0 focus:outline-none focus-visible:ring-0">
               <Users className="w-4 h-4" />
               Geteilte Ablagen
             </TabsTrigger>
