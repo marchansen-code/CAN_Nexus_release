@@ -129,6 +129,7 @@ const StatusBadge = ({ status }) => {
     pending: "bg-slate-100 text-slate-700 border-slate-200",
     processing: "bg-indigo-50 text-indigo-700 border-indigo-200",
     completed: "bg-emerald-50 text-emerald-700 border-emerald-200",
+    active: "bg-emerald-50 text-emerald-700 border-emerald-200",
     failed: "bg-red-50 text-red-700 border-red-200"
   };
   
@@ -136,12 +137,13 @@ const StatusBadge = ({ status }) => {
     pending: "Wartend",
     processing: "Verarbeitung",
     completed: "Abgeschlossen",
+    active: "Abgeschlossen",
     failed: "Fehlgeschlagen"
   };
 
   return (
-    <Badge variant="outline" className={`${styles[status]} border`}>
-      {labels[status]}
+    <Badge variant="outline" className={`${styles[status] || styles.completed} border`}>
+      {labels[status] || "Abgeschlossen"}
     </Badge>
   );
 };
@@ -981,18 +983,80 @@ const Documents = () => {
                           {imageDocuments.map((doc) => (
                             <div
                               key={doc.document_id}
-                              className="group relative aspect-square rounded-lg overflow-hidden bg-muted cursor-pointer border hover:border-primary transition-colors"
-                              onClick={() => setImagePreview(doc)}
+                              className="group relative aspect-square rounded-lg overflow-hidden bg-muted border hover:border-primary transition-colors"
                               data-testid={`gallery-image-${doc.document_id}`}
                             >
                               <img
                                 src={`${API}/images/${doc.image_id}`}
                                 alt={doc.title || doc.filename}
-                                className="w-full h-full object-cover"
+                                className="w-full h-full object-cover cursor-pointer"
+                                onClick={() => setImagePreview(doc)}
                               />
-                              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center">
-                                <ZoomIn className="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                              
+                              {/* Hover overlay with actions */}
+                              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 transition-colors flex flex-col">
+                                {/* Top action bar */}
+                                <div className="flex-1 flex items-start justify-end p-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                  <div className="flex gap-1">
+                                    <Button
+                                      variant="secondary"
+                                      size="icon"
+                                      className="h-7 w-7 bg-white/90 hover:bg-white"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        window.open(`${API}/images/${doc.image_id}`, '_blank');
+                                      }}
+                                      title="Herunterladen"
+                                    >
+                                      <Download className="w-3.5 h-3.5" />
+                                    </Button>
+                                    {driveStatus.connected && (
+                                      <Button
+                                        variant="secondary"
+                                        size="icon"
+                                        className="h-7 w-7 bg-white/90 hover:bg-white"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setDriveExportDialog({ open: true, doc });
+                                        }}
+                                        title="Nach Google Drive"
+                                      >
+                                        <svg className="w-3.5 h-3.5" viewBox="0 0 87.3 78" xmlns="http://www.w3.org/2000/svg">
+                                          <path d="m6.6 66.85 3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3l13.75-23.8h-27.5c0 1.55.4 3.1 1.2 4.5z" fill="#0066da"/>
+                                          <path d="m43.65 25-13.75-23.8c-1.35.8-2.5 1.9-3.3 3.3l-25.4 44a9.06 9.06 0 0 0 -1.2 4.5h27.5z" fill="#00ac47"/>
+                                          <path d="m73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l1.6-2.75 7.65-13.25c.8-1.4 1.2-2.95 1.2-4.5h-27.502l5.852 11.5z" fill="#ea4335"/>
+                                          <path d="m43.65 25 13.75-23.8c-1.35-.8-2.9-1.2-4.5-1.2h-18.5c-1.6 0-3.15.45-4.5 1.2z" fill="#00832d"/>
+                                          <path d="m59.8 53h-32.3l-13.75 23.8c1.35.8 2.9 1.2 4.5 1.2h50.8c1.6 0 3.15-.45 4.5-1.2z" fill="#2684fc"/>
+                                          <path d="m73.4 26.5-12.7-22c-.8-1.4-1.95-2.5-3.3-3.3l-13.75 23.8 16.15 28h27.45c0-1.55-.4-3.1-1.2-4.5z" fill="#ffba00"/>
+                                        </svg>
+                                      </Button>
+                                    )}
+                                    <Button
+                                      variant="secondary"
+                                      size="icon"
+                                      className="h-7 w-7 bg-white/90 hover:bg-white"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setMoveDialog({ open: true, doc });
+                                        setMoveFolderId(doc.folder_id || null);
+                                      }}
+                                      title="Verschieben"
+                                    >
+                                      <MoveRight className="w-3.5 h-3.5" />
+                                    </Button>
+                                  </div>
+                                </div>
+                                
+                                {/* Center zoom icon */}
+                                <div 
+                                  className="absolute inset-0 flex items-center justify-center cursor-pointer"
+                                  onClick={() => setImagePreview(doc)}
+                                >
+                                  <ZoomIn className="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                                </div>
                               </div>
+                              
+                              {/* Bottom info */}
                               <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-2">
                                 <p className="text-white text-xs truncate">
                                   {doc.title || doc.filename}
@@ -1069,7 +1133,8 @@ const Documents = () => {
                         
                         {/* Actions Row */}
                         <div className="flex items-center gap-2 justify-end">
-                          <StatusBadge status={doc.status} />
+                          {/* Status badge - show "active" for images as completed */}
+                          <StatusBadge status={doc.is_image ? (doc.status || "active") : doc.status} />
                           
                           {/* View button - different for images vs documents */}
                           {doc.is_image && doc.image_id ? (
@@ -1493,7 +1558,7 @@ const Documents = () => {
               </div>
               
               {/* Actions */}
-              <DialogFooter className="flex-shrink-0">
+              <DialogFooter className="flex-shrink-0 flex-wrap gap-2">
                 <Button
                   variant="outline"
                   onClick={() => {
@@ -1502,6 +1567,36 @@ const Documents = () => {
                 >
                   <Download className="w-4 h-4 mr-2" />
                   Herunterladen
+                </Button>
+                {driveStatus.connected && (
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setImagePreview(null);
+                      setDriveExportDialog({ open: true, doc: imagePreview });
+                    }}
+                  >
+                    <svg className="w-4 h-4 mr-2" viewBox="0 0 87.3 78" xmlns="http://www.w3.org/2000/svg">
+                      <path d="m6.6 66.85 3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3l13.75-23.8h-27.5c0 1.55.4 3.1 1.2 4.5z" fill="#0066da"/>
+                      <path d="m43.65 25-13.75-23.8c-1.35.8-2.5 1.9-3.3 3.3l-25.4 44a9.06 9.06 0 0 0 -1.2 4.5h27.5z" fill="#00ac47"/>
+                      <path d="m73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l1.6-2.75 7.65-13.25c.8-1.4 1.2-2.95 1.2-4.5h-27.502l5.852 11.5z" fill="#ea4335"/>
+                      <path d="m43.65 25 13.75-23.8c-1.35-.8-2.9-1.2-4.5-1.2h-18.5c-1.6 0-3.15.45-4.5 1.2z" fill="#00832d"/>
+                      <path d="m59.8 53h-32.3l-13.75 23.8c1.35.8 2.9 1.2 4.5 1.2h50.8c1.6 0 3.15-.45 4.5-1.2z" fill="#2684fc"/>
+                      <path d="m73.4 26.5-12.7-22c-.8-1.4-1.95-2.5-3.3-3.3l-13.75 23.8 16.15 28h27.45c0-1.55-.4-3.1-1.2-4.5z" fill="#ffba00"/>
+                    </svg>
+                    Google Drive
+                  </Button>
+                )}
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setImagePreview(null);
+                    setMoveDialog({ open: true, doc: imagePreview });
+                    setMoveFolderId(imagePreview.folder_id || null);
+                  }}
+                >
+                  <MoveRight className="w-4 h-4 mr-2" />
+                  Verschieben
                 </Button>
                 <Button onClick={() => setImagePreview(null)}>
                   Schließen
