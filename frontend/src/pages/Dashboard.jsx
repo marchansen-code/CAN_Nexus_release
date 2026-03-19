@@ -205,6 +205,42 @@ const Dashboard = () => {
         </CardContent>
       </Card>
 
+      {/* Recent Articles - MOVED TO TOP */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle className="text-lg">Neueste Artikel</CardTitle>
+          <Button variant="ghost" size="sm" onClick={() => navigate("/articles")} data-testid="view-all-articles-btn">
+            Alle anzeigen
+            <ChevronRight className="w-4 h-4 ml-1" />
+          </Button>
+        </CardHeader>
+        <CardContent>
+          {stats?.recent_articles?.length > 0 ? (
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {stats.recent_articles.map((article) => (
+                <ArticleCard
+                  key={article.article_id}
+                  article={article}
+                  onClick={() => navigate(`/articles/${article.article_id}`)}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <FileText className="w-12 h-12 text-muted-foreground/50 mx-auto mb-3" />
+              <p className="text-muted-foreground">Noch keine Artikel vorhanden</p>
+              <Button 
+                variant="outline" 
+                className="mt-4"
+                onClick={() => navigate("/articles/new")}
+              >
+                Ersten Artikel erstellen
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Content Grid */}
       <div className="grid lg:grid-cols-3 gap-6">
         {/* Favorites */}
@@ -313,42 +349,6 @@ const Dashboard = () => {
           </CardContent>
         </Card>
       </div>
-
-      {/* Recent Articles */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="text-lg">Neueste Artikel</CardTitle>
-          <Button variant="ghost" size="sm" onClick={() => navigate("/articles")} data-testid="view-all-articles-btn">
-            Alle anzeigen
-            <ChevronRight className="w-4 h-4 ml-1" />
-          </Button>
-        </CardHeader>
-        <CardContent>
-          {stats?.recent_articles?.length > 0 ? (
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {stats.recent_articles.map((article) => (
-                <ArticleCard
-                  key={article.article_id}
-                  article={article}
-                  onClick={() => navigate(`/articles/${article.article_id}`)}
-                />
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-8">
-              <FileText className="w-12 h-12 text-muted-foreground/50 mx-auto mb-3" />
-              <p className="text-muted-foreground">Noch keine Artikel vorhanden</p>
-              <Button 
-                variant="outline" 
-                className="mt-4"
-                onClick={() => navigate("/articles/new")}
-              >
-                Ersten Artikel erstellen
-              </Button>
-            </div>
-          )}
-        </CardContent>
-      </Card>
 
       {/* Most Popular Articles */}
       <Card>

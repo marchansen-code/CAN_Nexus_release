@@ -32,7 +32,8 @@ import {
   Image as ImageIcon,
   Download,
   ZoomIn,
-  Info
+  Info,
+  LayoutGrid as Grid
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -85,8 +86,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import DocumentViewer, { FileIcon } from "@/components/DocumentViewer";
 import GoogleDriveImportDialog from "@/components/dialogs/GoogleDriveImportDialog";
 import DocumentDriveExportDialog from "@/components/dialogs/DocumentDriveExportDialog";
+import MultiImageUploadDialog from "@/components/dialogs/MultiImageUploadDialog";
 
-const ACCEPTED_FILES = '.pdf,.doc,.docx,.txt,.csv,.xls,.xlsx';
+const ACCEPTED_FILES = '.pdf,.doc,.docx,.txt,.csv,.xls,.xlsx,.jpg,.jpeg,.png,.gif,.webp';
 
 // Status components
 const StatusIcon = ({ status, fileType, isImage, imageId }) => {
@@ -356,6 +358,12 @@ const Documents = () => {
   const [driveImportDialog, setDriveImportDialog] = useState(false);
   const [driveExportDialog, setDriveExportDialog] = useState({ open: false, doc: null });
   const [checkingDrive, setCheckingDrive] = useState(true);
+  
+  // Sorting and View Mode
+  const [sortBy, setSortBy] = useState("created_at");
+  const [sortOrder, setSortOrder] = useState("desc");
+  const [viewMode, setViewMode] = useState("list"); // "list" or "gallery"
+  const [imageUploadDialog, setImageUploadDialog] = useState(false);
 
   const isAdmin = user?.role === "admin";
   const canEdit = user?.role === "admin" || user?.role === "editor";
@@ -521,6 +529,33 @@ const Documents = () => {
       toast.error(error.response?.data?.detail || "Ordner konnte nicht erstellt werden");
     }
   };
+
+  // Sort documents
+  const sortedDocuments = React.useMemo(() => {
+    const sorted = [...documents].sort((a, b) => {
+      let aVal, bVal;
+      switch (sortBy) {
+        case "title":
+          aVal = (a.title || a.filename || "").toLowerCase();
+          bVal = (b.title || b.filename || "").toLowerCase();
+          return sortOrder === "asc" ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+        case "file_size":
+          aVal = a.file_size || 0;
+          bVal = b.file_size || 0;
+          return sortOrder === "asc" ? aVal - bVal : bVal - aVal;
+        case "created_at":
+        default:
+          aVal = new Date(a.created_at || 0);
+          bVal = new Date(b.created_at || 0);
+          return sortOrder === "asc" ? aVal - bVal : bVal - aVal;
+      }
+    });
+    return sorted;
+  }, [documents, sortBy, sortOrder]);
+
+  // Filter images for gallery
+  const imageDocuments = sortedDocuments.filter(doc => doc.is_image);
+  const nonImageDocuments = sortedDocuments.filter(doc => !doc.is_image);
 
   const handleUpdateFolder = async () => {
     if (!folderName.trim() || !folderDialog.folder) return;
@@ -868,124 +903,252 @@ const Documents = () => {
                       </span>
                     </Button>
                   </label>
+                  
+                  {/* Image Upload Button */}
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setImageUploadDialog(true)}
+                    className="h-9"
+                    data-testid="image-upload-btn"
+                  >
+                    <ImageIcon className="w-4 h-4 mr-2" />
+                    Bilder
+                  </Button>
+                </div>
+              </div>
+              
+              {/* Sorting and View Mode Toolbar */}
+              <div className="flex items-center justify-between mt-3 pt-3 border-t">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground">Sortieren:</span>
+                  <Select value={sortBy} onValueChange={setSortBy}>
+                    <SelectTrigger className="w-[140px] h-8">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="created_at">Datum</SelectItem>
+                      <SelectItem value="title">Name</SelectItem>
+                      <SelectItem value="file_size">Größe</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
+                    className="h-8 px-2"
+                  >
+                    {sortOrder === "asc" ? "↑ Aufst." : "↓ Abst."}
+                  </Button>
+                </div>
+                
+                <div className="flex items-center gap-1 border rounded-md p-1">
+                  <Button
+                    variant={viewMode === "list" ? "secondary" : "ghost"}
+                    size="sm"
+                    onClick={() => setViewMode("list")}
+                    className="h-7 px-2"
+                    title="Listenansicht"
+                  >
+                    <FileText className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    variant={viewMode === "gallery" ? "secondary" : "ghost"}
+                    size="sm"
+                    onClick={() => setViewMode("gallery")}
+                    className="h-7 px-2"
+                    title="Galerieansicht"
+                  >
+                    <Grid className="w-4 h-4" />
+                  </Button>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          {/* Documents List */}
+          {/* Documents List / Gallery */}
           <Card className="flex-1 flex flex-col min-h-0">
             <CardContent className="flex-1 p-0 overflow-auto">
-              {filteredDocuments.length > 0 ? (
-                <div className="p-4 space-y-3">
-                  {filteredDocuments.map((doc) => (
-                    <div
-                      key={doc.document_id}
-                      className="p-3 rounded-lg border hover:bg-accent/50 transition-colors"
-                      data-testid={`document-item-${doc.document_id}`}
-                    >
-                      {/* Document Info Row */}
-                      <div className="flex items-start gap-3 mb-2">
-                        <StatusIcon 
-                          status={doc.status} 
-                          fileType={doc.file_type} 
-                          isImage={doc.is_image}
-                          imageId={doc.image_id}
-                        />
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium break-words" title={doc.filename}>{doc.filename || doc.title}</p>
-                          <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
-                            <span>{formatDate(doc.created_at)}</span>
-                            {doc.page_count > 0 && <span>• {doc.page_count} Seiten</span>}
-                            {doc.file_size && (
-                              <span>• {(doc.file_size / 1024).toFixed(1)} KB</span>
-                            )}
-                            {doc.is_image && <span>• Bild</span>}
-                          </div>
+              {sortedDocuments.length > 0 ? (
+                viewMode === "gallery" ? (
+                  /* Gallery View for Images */
+                  <div className="p-4">
+                    {imageDocuments.length > 0 && (
+                      <div className="mb-6">
+                        <h3 className="text-sm font-medium text-muted-foreground mb-3">
+                          Bilder ({imageDocuments.length})
+                        </h3>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+                          {imageDocuments.map((doc) => (
+                            <div
+                              key={doc.document_id}
+                              className="group relative aspect-square rounded-lg overflow-hidden bg-muted cursor-pointer border hover:border-primary transition-colors"
+                              onClick={() => setImagePreview(doc)}
+                              data-testid={`gallery-image-${doc.document_id}`}
+                            >
+                              <img
+                                src={`${API}/images/${doc.image_id}`}
+                                alt={doc.title || doc.filename}
+                                className="w-full h-full object-cover"
+                              />
+                              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center">
+                                <ZoomIn className="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                              </div>
+                              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-2">
+                                <p className="text-white text-xs truncate">
+                                  {doc.title || doc.filename}
+                                </p>
+                              </div>
+                            </div>
+                          ))}
                         </div>
                       </div>
-                      
-                      {/* Actions Row */}
-                      <div className="flex items-center gap-2 justify-end">
-                        <StatusBadge status={doc.status} />
-                        
-                        {/* View button - different for images vs documents */}
-                        {doc.is_image && doc.image_id ? (
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            onClick={() => setImagePreview(doc)}
-                            data-testid={`image-view-${doc.document_id}`}
-                            title="Bild ansehen"
-                          >
-                            <ZoomIn className="w-4 h-4" />
-                          </Button>
-                        ) : doc.status === "completed" && (
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            onClick={() => setSelectedDoc(doc)}
-                            data-testid={`doc-view-${doc.document_id}`}
-                          >
-                            <Eye className="w-4 h-4" />
-                          </Button>
-                        )}
-                        
-                        {canEdit && (
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button 
-                                variant="outline" 
-                                size="sm" 
-                                data-testid={`doc-actions-${doc.document_id}`}
-                              >
-                                <MoreVertical className="w-4 h-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => {
-                                setMoveDialog({ open: true, doc });
-                                setMoveFolderId(doc.folder_id || null);
-                              }}>
-                                <MoveRight className="w-4 h-4 mr-2" />
-                                In Ordner verschieben
-                              </DropdownMenuItem>
-                              {driveStatus.connected && (
-                                <DropdownMenuItem onClick={() => setDriveExportDialog({ open: true, doc })}>
-                                  <svg className="w-4 h-4 mr-2" viewBox="0 0 87.3 78" xmlns="http://www.w3.org/2000/svg">
-                                    <path d="m6.6 66.85 3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3l13.75-23.8h-27.5c0 1.55.4 3.1 1.2 4.5z" fill="#0066da"/>
-                                    <path d="m43.65 25-13.75-23.8c-1.35.8-2.5 1.9-3.3 3.3l-25.4 44a9.06 9.06 0 0 0 -1.2 4.5h27.5z" fill="#00ac47"/>
-                                    <path d="m73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l1.6-2.75 7.65-13.25c.8-1.4 1.2-2.95 1.2-4.5h-27.502l5.852 11.5z" fill="#ea4335"/>
-                                    <path d="m43.65 25 13.75-23.8c-1.35-.8-2.9-1.2-4.5-1.2h-18.5c-1.6 0-3.15.45-4.5 1.2z" fill="#00832d"/>
-                                    <path d="m59.8 53h-32.3l-13.75 23.8c1.35.8 2.9 1.2 4.5 1.2h50.8c1.6 0 3.15-.45 4.5-1.2z" fill="#2684fc"/>
-                                    <path d="m73.4 26.5-12.7-22c-.8-1.4-1.95-2.5-3.3-3.3l-13.75 23.8 16.15 28h27.45c0-1.55-.4-3.1-1.2-4.5z" fill="#ffba00"/>
-                                  </svg>
-                                  Nach Google Drive
-                                </DropdownMenuItem>
-                              )}
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem 
-                                onClick={() => setDeleteDialog({ open: true, doc })}
-                                className="text-red-600"
-                              >
-                                <Trash2 className="w-4 h-4 mr-2" />
-                                Löschen
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        )}
+                    )}
+                    
+                    {nonImageDocuments.length > 0 && (
+                      <div>
+                        <h3 className="text-sm font-medium text-muted-foreground mb-3">
+                          Dokumente ({nonImageDocuments.length})
+                        </h3>
+                        <div className="space-y-2">
+                          {nonImageDocuments.map((doc) => (
+                            <div
+                              key={doc.document_id}
+                              className="p-3 rounded-lg border hover:bg-accent/50 transition-colors flex items-center gap-3"
+                              data-testid={`document-item-${doc.document_id}`}
+                            >
+                              <StatusIcon status={doc.status} fileType={doc.file_type} />
+                              <div className="flex-1 min-w-0">
+                                <p className="font-medium truncate">{doc.filename || doc.title}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  {formatDate(doc.created_at)} • {(doc.file_size / 1024).toFixed(1)} KB
+                                </p>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <StatusBadge status={doc.status} />
+                                {doc.status === "completed" && (
+                                  <Button variant="outline" size="sm" onClick={() => setSelectedDoc(doc)}>
+                                    <Eye className="w-4 h-4" />
+                                  </Button>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
+                    )}
+                  </div>
+                ) : (
+                  /* List View */
+                  <div className="p-4 space-y-3">
+                    {sortedDocuments.map((doc) => (
+                      <div
+                        key={doc.document_id}
+                        className="p-3 rounded-lg border hover:bg-accent/50 transition-colors"
+                        data-testid={`document-item-${doc.document_id}`}
+                      >
+                        {/* Document Info Row */}
+                        <div className="flex items-start gap-3 mb-2">
+                          <StatusIcon 
+                            status={doc.status} 
+                            fileType={doc.file_type} 
+                            isImage={doc.is_image}
+                            imageId={doc.image_id}
+                          />
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium break-words" title={doc.filename}>{doc.filename || doc.title}</p>
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
+                              <span>{formatDate(doc.created_at)}</span>
+                              {doc.page_count > 0 && <span>• {doc.page_count} Seiten</span>}
+                              {doc.file_size && (
+                                <span>• {(doc.file_size / 1024).toFixed(1)} KB</span>
+                              )}
+                              {doc.is_image && <span>• Bild</span>}
+                            </div>
+                          </div>
+                        </div>
+                        
+                        {/* Actions Row */}
+                        <div className="flex items-center gap-2 justify-end">
+                          <StatusBadge status={doc.status} />
+                          
+                          {/* View button - different for images vs documents */}
+                          {doc.is_image && doc.image_id ? (
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => setImagePreview(doc)}
+                              data-testid={`image-view-${doc.document_id}`}
+                              title="Bild ansehen"
+                            >
+                              <ZoomIn className="w-4 h-4" />
+                            </Button>
+                          ) : doc.status === "completed" && (
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => setSelectedDoc(doc)}
+                              data-testid={`doc-view-${doc.document_id}`}
+                            >
+                              <Eye className="w-4 h-4" />
+                            </Button>
+                          )}
+                          
+                          {canEdit && (
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button 
+                                  variant="outline" 
+                                  size="sm" 
+                                  data-testid={`doc-actions-${doc.document_id}`}
+                                >
+                                  <MoreVertical className="w-4 h-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => {
+                                  setMoveDialog({ open: true, doc });
+                                  setMoveFolderId(doc.folder_id || null);
+                                }}>
+                                  <MoveRight className="w-4 h-4 mr-2" />
+                                  In Ordner verschieben
+                                </DropdownMenuItem>
+                                {driveStatus.connected && (
+                                  <DropdownMenuItem onClick={() => setDriveExportDialog({ open: true, doc })}>
+                                    <svg className="w-4 h-4 mr-2" viewBox="0 0 87.3 78" xmlns="http://www.w3.org/2000/svg">
+                                      <path d="m6.6 66.85 3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3l13.75-23.8h-27.5c0 1.55.4 3.1 1.2 4.5z" fill="#0066da"/>
+                                      <path d="m43.65 25-13.75-23.8c-1.35.8-2.5 1.9-3.3 3.3l-25.4 44a9.06 9.06 0 0 0 -1.2 4.5h27.5z" fill="#00ac47"/>
+                                      <path d="m73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l1.6-2.75 7.65-13.25c.8-1.4 1.2-2.95 1.2-4.5h-27.502l5.852 11.5z" fill="#ea4335"/>
+                                      <path d="m43.65 25 13.75-23.8c-1.35-.8-2.9-1.2-4.5-1.2h-18.5c-1.6 0-3.15.45-4.5 1.2z" fill="#00832d"/>
+                                      <path d="m59.8 53h-32.3l-13.75 23.8c1.35.8 2.9 1.2 4.5 1.2h50.8c1.6 0 3.15-.45 4.5-1.2z" fill="#2684fc"/>
+                                      <path d="m73.4 26.5-12.7-22c-.8-1.4-1.95-2.5-3.3-3.3l-13.75 23.8 16.15 28h27.45c0-1.55-.4-3.1-1.2-4.5z" fill="#ffba00"/>
+                                    </svg>
+                                    Nach Google Drive
+                                  </DropdownMenuItem>
+                                )}
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem 
+                                  onClick={() => setDeleteDialog({ open: true, doc })}
+                                  className="text-red-600"
+                                >
+                                  <Trash2 className="w-4 h-4 mr-2" />
+                                  Löschen
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )
               ) : (
                 <div className="flex flex-col items-center justify-center h-full p-8 text-center">
                   <FileText className="w-16 h-16 text-muted-foreground/30 mb-4" />
                   <h3 className="font-semibold mb-2">Keine Dokumente</h3>
                   <p className="text-muted-foreground text-sm">
                     {currentFolder 
-                      ? "Dieser Ordner ist leer. Laden Sie ein PDF hoch."
-                      : "Laden Sie Ihr erstes PDF-Dokument hoch."}
+                      ? "Dieser Ordner ist leer. Laden Sie Dateien hoch."
+                      : "Laden Sie Ihr erstes Dokument hoch."}
                   </p>
                 </div>
               )}
@@ -1348,6 +1511,18 @@ const Documents = () => {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Multi-Image Upload Dialog */}
+      <MultiImageUploadDialog
+        open={imageUploadDialog}
+        onClose={() => {
+          setImageUploadDialog(false);
+          fetchData();
+        }}
+        onImagesUploaded={() => {
+          fetchData();
+        }}
+      />
     </div>
   );
 };

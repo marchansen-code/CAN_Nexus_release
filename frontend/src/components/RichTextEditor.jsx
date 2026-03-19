@@ -1235,6 +1235,46 @@ const RichTextEditor = ({ content, onChange, placeholder = "Inhalt eingeben...",
         class: 'prose prose-slate max-w-none focus:outline-none min-h-[400px] px-6 py-4 prose-headings:font-bold prose-h1:text-3xl prose-h2:text-2xl prose-h3:text-xl prose-h4:text-lg prose-p:my-2 prose-ul:my-2 prose-ol:my-2 prose-li:my-0.5 prose-blockquote:border-l-4 prose-blockquote:border-red-500 prose-blockquote:pl-4 prose-blockquote:italic prose-img:rounded-lg prose-table:border-collapse prose-a:text-red-600 prose-a:no-underline hover:prose-a:underline',
       },
       handlePaste: (view, event) => {
+        // Handle pasted images - upload and save to Bilder folder
+        const items = event.clipboardData?.items;
+        if (items) {
+          for (const item of items) {
+            if (item.type.startsWith('image/')) {
+              event.preventDefault();
+              const file = item.getAsFile();
+              if (file && onImageUpload) {
+                // Upload image and save to Bilder folder
+                const formData = new FormData();
+                formData.append('files', file);
+                
+                axios.post(`${API}/images/upload-multiple?save_to_documents=true`, formData, {
+                  headers: { 'Content-Type': 'multipart/form-data' }
+                }).then(response => {
+                  if (response.data?.uploaded?.length > 0) {
+                    const imgUrl = response.data.uploaded[0].url;
+                    const { schema } = view.state;
+                    const node = schema.nodes.image.create({ src: imgUrl });
+                    const transaction = view.state.tr.replaceSelectionWith(node);
+                    view.dispatch(transaction);
+                  }
+                }).catch(err => {
+                  console.error('Failed to upload pasted image:', err);
+                  // Fallback to base64 if upload fails
+                  const reader = new FileReader();
+                  reader.onload = () => {
+                    const { schema } = view.state;
+                    const node = schema.nodes.image.create({ src: reader.result });
+                    const transaction = view.state.tr.replaceSelectionWith(node);
+                    view.dispatch(transaction);
+                  };
+                  reader.readAsDataURL(file);
+                });
+                return true;
+              }
+            }
+          }
+        }
+        
         const html = event.clipboardData?.getData('text/html');
         if (html) {
           return false;

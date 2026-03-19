@@ -17,7 +17,8 @@ import {
   FolderTree,
   TrendingUp,
   Folder,
-  FolderOpen
+  FolderOpen,
+  ArrowUpDown
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -25,6 +26,13 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -126,6 +134,8 @@ const Articles = () => {
   const [selectedCategoryId, setSelectedCategoryId] = useState(null);
   const [expandedCategories, setExpandedCategories] = useState(new Set());
   const [deleteDialog, setDeleteDialog] = useState({ open: false, article: null });
+  const [sortBy, setSortBy] = useState("updated_at");
+  const [sortOrder, setSortOrder] = useState("desc");
 
   const canEdit = user?.role === "admin" || user?.role === "editor";
 
@@ -186,6 +196,33 @@ const Articles = () => {
       articleCategoryIds.includes(selectedCategoryId);
     return matchesSearch && matchesCategory;
   });
+
+  // Sort articles
+  const sortedArticles = React.useMemo(() => {
+    const sorted = [...filteredArticles].sort((a, b) => {
+      let aVal, bVal;
+      switch (sortBy) {
+        case "title":
+          aVal = (a.title || "").toLowerCase();
+          bVal = (b.title || "").toLowerCase();
+          return sortOrder === "asc" ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+        case "view_count":
+          aVal = a.view_count || 0;
+          bVal = b.view_count || 0;
+          return sortOrder === "asc" ? aVal - bVal : bVal - aVal;
+        case "created_at":
+          aVal = new Date(a.created_at || 0);
+          bVal = new Date(b.created_at || 0);
+          return sortOrder === "asc" ? aVal - bVal : bVal - aVal;
+        case "updated_at":
+        default:
+          aVal = new Date(a.updated_at || a.created_at || 0);
+          bVal = new Date(b.updated_at || b.created_at || 0);
+          return sortOrder === "asc" ? aVal - bVal : bVal - aVal;
+      }
+    });
+    return sorted;
+  }, [filteredArticles, sortBy, sortOrder]);
 
   // Get subcategories for selected category
   const childCategories = selectedCategoryId 
@@ -281,9 +318,9 @@ const Articles = () => {
 
         {/* Right: Content Area */}
         <div className="flex-1 flex flex-col min-w-0">
-          {/* Search */}
-          <div className="mb-4">
-            <div className="relative">
+          {/* Search and Sort */}
+          <div className="mb-4 flex flex-col sm:flex-row gap-3">
+            <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
                 placeholder="Artikel suchen..."
@@ -292,6 +329,29 @@ const Articles = () => {
                 className="pl-10"
                 data-testid="search-articles-input"
               />
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground whitespace-nowrap">Sortieren:</span>
+              <Select value={sortBy} onValueChange={setSortBy}>
+                <SelectTrigger className="w-[140px] h-9">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="updated_at">Aktualisiert</SelectItem>
+                  <SelectItem value="created_at">Erstellt</SelectItem>
+                  <SelectItem value="title">Titel</SelectItem>
+                  <SelectItem value="view_count">Aufrufe</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
+                className="h-9 px-2"
+              >
+                {sortOrder === "asc" ? "↑ Aufst." : "↓ Abst."}
+              </Button>
             </div>
           </div>
 
@@ -341,9 +401,9 @@ const Articles = () => {
 
           {/* Articles List */}
           <ScrollArea className="flex-1">
-            {filteredArticles.length > 0 ? (
+            {sortedArticles.length > 0 ? (
               <div className="space-y-3 pr-2">
-                {filteredArticles.map((article) => (
+                {sortedArticles.map((article) => (
                   <Card
                     key={article.article_id}
                     className="hover:shadow-md transition-all duration-200"

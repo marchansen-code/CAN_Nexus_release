@@ -312,6 +312,15 @@ Wissensmanagement-Plattform für CANUSA Touristik GmbH & Co. KG und CU-Travel.
   - Google Drive Import Dialog Button-Overflow behoben
   - Multi-Image Upload fügt jetzt ALLE Bilder in den Artikel ein (nicht nur eines)
 
+## UI/UX Improvements (Iteration 24) - 19.03.2026
+- ✅ **Dashboard neu angeordnet** - "Neueste Artikel" jetzt oben auf der Seite
+- ✅ **Galerieansicht für Bilder** - Grid-Ansicht mit großen Thumbnails wie Google Fotos
+- ✅ **Bilder-Upload in Dokumenten** - Direkt Bilder hochladen über "Bilder"-Button
+- ✅ **Auto-Save eingefügter Bilder** - Per Copy & Paste eingefügte Bilder werden automatisch im Bilder-Ordner gespeichert
+- ✅ **Sortierung Artikel** - Nach Aktualisiert, Erstellt, Titel, Aufrufe (auf-/absteigend)
+- ✅ **Sortierung Dokumente** - Nach Datum, Name, Größe (auf-/absteigend)
+- ✅ **Ansichtsmodus-Toggle** - Umschaltbar zwischen Liste und Galerie für Dokumente
+
 ## Backlog
 
 ### P2 (Medium)
