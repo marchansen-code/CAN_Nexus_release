@@ -246,8 +246,33 @@ input:focus, textarea:focus, select:focus {
     @apply mb-4 pl-6;
 }
 
+.prose-knowledge ul {
+    list-style-type: disc;
+}
+
+.prose-knowledge ol {
+    list-style-type: decimal;
+}
+
 .prose-knowledge li {
     @apply mb-2;
+}
+
+/* Ensure lists are visible in prose content */
+.prose ul {
+    list-style-type: disc;
+    padding-left: 1.5rem;
+    margin: 0.75rem 0;
+}
+
+.prose ol {
+    list-style-type: decimal;
+    padding-left: 1.5rem;
+    margin: 0.75rem 0;
+}
+
+.prose li {
+    margin: 0.25rem 0;
 }
 
 .prose-knowledge code {

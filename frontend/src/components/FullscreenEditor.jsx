@@ -35,11 +35,11 @@ const FullscreenEditor = ({
 
   return (
     <div 
-      className="fixed inset-0 z-50 bg-background/95 backdrop-blur-sm"
+      className="fixed inset-0 z-50 bg-background/95 backdrop-blur-sm flex flex-col"
       data-testid="fullscreen-editor"
     >
-      {/* Header */}
-      <div className="flex items-center justify-between px-4 py-2 border-b bg-background">
+      {/* Header - Fixed at top */}
+      <div className="flex-shrink-0 flex items-center justify-between px-4 py-2 border-b bg-background">
         <div className="flex items-center gap-3">
           <h2 className="font-semibold text-lg">{title}</h2>
           <span className="text-sm text-muted-foreground">Vollbild-Editor</span>
@@ -51,12 +51,12 @@ const FullscreenEditor = ({
           className="gap-2"
         >
           <X className="h-4 w-4" />
-          <span className="hidden sm:inline">Schließen (Esc)</span>
+          <span className="hidden sm:inline">Beenden</span>
         </Button>
       </div>
 
-      {/* Editor */}
-      <div className="p-4 h-[calc(100vh-60px)]">
+      {/* Editor - Takes remaining space */}
+      <div className="flex-1 overflow-hidden p-4">
         <RichTextEditor
           content={content}
           onChange={onChange}

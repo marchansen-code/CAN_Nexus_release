@@ -23,6 +23,7 @@ import axios from 'axios';
 import { API } from '@/App';
 import { MentionList } from './MentionSuggestion';
 import { UserMentionList } from './UserMentionList';
+import MultiImageUploadDialog from './dialogs/MultiImageUploadDialog';
 import {
   Bold,
   Italic,
@@ -73,7 +74,9 @@ import {
   ImagePlus,
   ZoomIn,
   ZoomOut,
-  Minimize2
+  Minimize2,
+  Code2,
+  Images
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Toggle } from '@/components/ui/toggle';
@@ -104,6 +107,7 @@ import {
 } from '@/components/ui/popover';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 
 const COLORS = [
@@ -200,7 +204,7 @@ const ResizableImage = Image.extend({
   },
 });
 
-const EditorToolbar = ({ editor, onImageUpload, isFullscreen, onToggleFullscreen }) => {
+const EditorToolbar = ({ editor, onImageUpload, isFullscreen, onToggleFullscreen, onMultiImageUpload, showHtmlEditor, onToggleHtmlEditor }) => {
   const [linkUrl, setLinkUrl] = React.useState('');
   const [imageUrl, setImageUrl] = React.useState('');
   const [youtubeUrl, setYoutubeUrl] = React.useState('');
@@ -654,6 +658,19 @@ const EditorToolbar = ({ editor, onImageUpload, isFullscreen, onToggleFullscreen
         </DropdownMenuContent>
       </DropdownMenu>
 
+      {/* Multi-Image Upload */}
+      {onMultiImageUpload && (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-8 w-8 p-0"
+          title="Mehrere Bilder hochladen"
+          onClick={onMultiImageUpload}
+        >
+          <Images className="h-4 w-4" />
+        </Button>
+      )}
+
       {/* YouTube */}
       <Popover>
         <PopoverTrigger asChild>
@@ -863,6 +880,20 @@ const EditorToolbar = ({ editor, onImageUpload, isFullscreen, onToggleFullscreen
         </>
       )}
 
+      {/* HTML Editor Toggle */}
+      {onToggleHtmlEditor && (
+        <Button
+          variant={showHtmlEditor ? "secondary" : "ghost"}
+          size="sm"
+          onClick={onToggleHtmlEditor}
+          className="h-8 gap-1 px-2"
+          title="HTML-Editor"
+        >
+          <Code2 className="h-4 w-4" />
+          <span className="text-xs hidden sm:inline">HTML</span>
+        </Button>
+      )}
+
       {/* Table Creation Dialog */}
       <Dialog open={showTableDialog} onOpenChange={setShowTableDialog}>
         <DialogContent className="sm:max-w-md">
@@ -960,6 +991,10 @@ const EditorToolbar = ({ editor, onImageUpload, isFullscreen, onToggleFullscreen
 };
 
 const RichTextEditor = ({ content, onChange, placeholder = "Inhalt eingeben...", className, onImageUpload, isFullscreen = false, onToggleFullscreen }) => {
+  const [showHtmlEditor, setShowHtmlEditor] = useState(false);
+  const [htmlContent, setHtmlContent] = useState('');
+  const [showMultiImageDialog, setShowMultiImageDialog] = useState(false);
+  
   // Mention suggestion configuration for articles (@)
   const mentionSuggestion = {
     char: '@',
@@ -1234,12 +1269,80 @@ const RichTextEditor = ({ content, onChange, placeholder = "Inhalt eingeben...",
     }
   }, [content, editor]);
 
+  // Sync HTML editor content
+  React.useEffect(() => {
+    if (showHtmlEditor && editor) {
+      setHtmlContent(editor.getHTML());
+    }
+  }, [showHtmlEditor, editor]);
+
+  const handleHtmlChange = (e) => {
+    setHtmlContent(e.target.value);
+  };
+
+  const applyHtmlChanges = () => {
+    if (editor) {
+      editor.commands.setContent(htmlContent);
+      onChange(htmlContent);
+      setShowHtmlEditor(false);
+    }
+  };
+
+  const handleMultiImageUpload = (uploadedImages) => {
+    if (editor && uploadedImages?.length > 0) {
+      uploadedImages.forEach(img => {
+        editor.chain().focus().setImage({ src: img.url }).run();
+      });
+    }
+  };
+
   return (
-    <div className={cn("border rounded-lg overflow-hidden bg-white shadow-sm", className)}>
-      <EditorToolbar editor={editor} onImageUpload={onImageUpload} isFullscreen={isFullscreen} onToggleFullscreen={onToggleFullscreen} />
-      <div className={cn("overflow-auto", isFullscreen ? "h-[calc(100vh-120px)]" : "max-h-[600px]")}>
-        <EditorContent editor={editor} />
-      </div>
+    <div className={cn("border rounded-lg overflow-hidden bg-white shadow-sm flex flex-col", className)}>
+      <EditorToolbar 
+        editor={editor} 
+        onImageUpload={onImageUpload} 
+        isFullscreen={isFullscreen} 
+        onToggleFullscreen={onToggleFullscreen}
+        onMultiImageUpload={() => setShowMultiImageDialog(true)}
+        showHtmlEditor={showHtmlEditor}
+        onToggleHtmlEditor={() => setShowHtmlEditor(!showHtmlEditor)}
+      />
+      
+      {showHtmlEditor ? (
+        <div className="flex-1 flex flex-col p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <Label className="text-sm font-medium">HTML-Quellcode</Label>
+            <div className="flex gap-2">
+              <Button size="sm" variant="outline" onClick={() => setShowHtmlEditor(false)}>
+                Abbrechen
+              </Button>
+              <Button size="sm" onClick={applyHtmlChanges} className="bg-red-500 hover:bg-red-600">
+                Änderungen übernehmen
+              </Button>
+            </div>
+          </div>
+          <Textarea
+            value={htmlContent}
+            onChange={handleHtmlChange}
+            className={cn(
+              "flex-1 font-mono text-sm resize-none",
+              isFullscreen ? "min-h-0" : "min-h-[500px]"
+            )}
+            placeholder="HTML-Code hier eingeben..."
+          />
+        </div>
+      ) : (
+        <div className={cn("overflow-auto flex-1", isFullscreen ? "min-h-0" : "max-h-[600px]")}>
+          <EditorContent editor={editor} />
+        </div>
+      )}
+
+      {/* Multi-Image Upload Dialog */}
+      <MultiImageUploadDialog
+        open={showMultiImageDialog}
+        onClose={() => setShowMultiImageDialog(false)}
+        onImagesUploaded={handleMultiImageUpload}
+      />
     </div>
   );
 };
