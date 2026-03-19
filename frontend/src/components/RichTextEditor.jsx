@@ -1290,9 +1290,16 @@ const RichTextEditor = ({ content, onChange, placeholder = "Inhalt eingeben...",
 
   const handleMultiImageUpload = (uploadedImages) => {
     if (editor && uploadedImages?.length > 0) {
-      uploadedImages.forEach(img => {
-        editor.chain().focus().setImage({ src: img.url }).run();
+      // Insert each image with a line break between them
+      let chain = editor.chain().focus();
+      uploadedImages.forEach((img, index) => {
+        chain = chain.setImage({ src: img.url });
+        // Add a paragraph after each image (except the last one) to allow text between images
+        if (index < uploadedImages.length - 1) {
+          chain = chain.createParagraphNear();
+        }
       });
+      chain.run();
     }
   };
 

@@ -222,8 +222,8 @@ const GoogleDriveImportDialog = ({ open, onOpenChange, onImport, targetFolderId 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl max-h-[80vh] overflow-hidden w-[calc(100vw-2rem)]">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-2xl max-h-[80vh] flex flex-col overflow-hidden">
+        <DialogHeader className="flex-shrink-0">
           <DialogTitle className="flex items-center gap-2">
             <svg className="w-5 h-5 flex-shrink-0" viewBox="0 0 87.3 78" xmlns="http://www.w3.org/2000/svg">
               <path d="m6.6 66.85 3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3l13.75-23.8h-27.5c0 1.55.4 3.1 1.2 4.5z" fill="#0066da"/>
@@ -238,7 +238,7 @@ const GoogleDriveImportDialog = ({ open, onOpenChange, onImport, targetFolderId 
         </DialogHeader>
 
         {/* Tab Buttons */}
-        <div className="grid w-full grid-cols-2 gap-1 p-1 bg-muted rounded-lg">
+        <div className="grid w-full grid-cols-2 gap-1 p-1 bg-muted rounded-lg flex-shrink-0">
           <button
             onClick={() => handleTabChange("my-drive")}
             className={`flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium rounded-md transition-colors ${
@@ -263,7 +263,8 @@ const GoogleDriveImportDialog = ({ open, onOpenChange, onImport, targetFolderId 
           </button>
         </div>
 
-        {/* Content */}
+        {/* Content - Scrollable area */}
+        <div className="flex-1 min-h-0 overflow-hidden">
         {activeTab === "my-drive" ? (
           <div className="mt-4">
             {renderBreadcrumb()}
@@ -327,8 +328,9 @@ const GoogleDriveImportDialog = ({ open, onOpenChange, onImport, targetFolderId 
             )}
           </div>
         )}
+        </div>
 
-        <div className="flex justify-end gap-2 pt-4 border-t">
+        <div className="flex justify-end gap-2 pt-4 border-t flex-shrink-0">
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Abbrechen
           </Button>

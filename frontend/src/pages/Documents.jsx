@@ -28,7 +28,11 @@ import {
   MoreVertical,
   PanelLeftOpen,
   FileEdit,
-  ArrowRight
+  ArrowRight,
+  Image as ImageIcon,
+  Download,
+  ZoomIn,
+  Info
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -85,7 +89,24 @@ import DocumentDriveExportDialog from "@/components/dialogs/DocumentDriveExportD
 const ACCEPTED_FILES = '.pdf,.doc,.docx,.txt,.csv,.xls,.xlsx';
 
 // Status components
-const StatusIcon = ({ status, fileType }) => {
+const StatusIcon = ({ status, fileType, isImage, imageId }) => {
+  // Show thumbnail for images
+  if (isImage && imageId) {
+    return (
+      <div className="w-12 h-12 rounded-md overflow-hidden bg-muted flex-shrink-0">
+        <img 
+          src={`${API}/images/${imageId}`} 
+          alt="Vorschau"
+          className="w-full h-full object-cover"
+          onError={(e) => {
+            e.target.style.display = 'none';
+            e.target.parentElement.innerHTML = '<div class="w-full h-full flex items-center justify-center"><svg class="w-5 h-5 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg></div>';
+          }}
+        />
+      </div>
+    );
+  }
+  
   if (status === "completed") {
     return <FileIcon fileType={fileType || '.pdf'} />;
   }
@@ -308,6 +329,7 @@ const Documents = () => {
   const [targetLanguage, setTargetLanguage] = useState("de");
   const [selectedDoc, setSelectedDoc] = useState(null);
   const [deleteDialog, setDeleteDialog] = useState({ open: false, doc: null });
+  const [imagePreview, setImagePreview] = useState(null);
   
   // Folder state
   const [selectedFolderId, setSelectedFolderId] = useState(null);
@@ -864,12 +886,21 @@ const Documents = () => {
                     >
                       {/* Document Info Row */}
                       <div className="flex items-start gap-3 mb-2">
-                        <StatusIcon status={doc.status} fileType={doc.file_type} />
+                        <StatusIcon 
+                          status={doc.status} 
+                          fileType={doc.file_type} 
+                          isImage={doc.is_image}
+                          imageId={doc.image_id}
+                        />
                         <div className="flex-1 min-w-0">
-                          <p className="font-medium break-words" title={doc.filename}>{doc.filename}</p>
+                          <p className="font-medium break-words" title={doc.filename}>{doc.filename || doc.title}</p>
                           <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
                             <span>{formatDate(doc.created_at)}</span>
                             {doc.page_count > 0 && <span>• {doc.page_count} Seiten</span>}
+                            {doc.file_size && (
+                              <span>• {(doc.file_size / 1024).toFixed(1)} KB</span>
+                            )}
+                            {doc.is_image && <span>• Bild</span>}
                           </div>
                         </div>
                       </div>
@@ -878,7 +909,18 @@ const Documents = () => {
                       <div className="flex items-center gap-2 justify-end">
                         <StatusBadge status={doc.status} />
                         
-                        {doc.status === "completed" && (
+                        {/* View button - different for images vs documents */}
+                        {doc.is_image && doc.image_id ? (
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => setImagePreview(doc)}
+                            data-testid={`image-view-${doc.document_id}`}
+                            title="Bild ansehen"
+                          >
+                            <ZoomIn className="w-4 h-4" />
+                          </Button>
+                        ) : doc.status === "completed" && (
                           <Button 
                             variant="outline" 
                             size="sm"
@@ -1229,6 +1271,83 @@ const Documents = () => {
         documentId={driveExportDialog.doc?.document_id}
         documentName={driveExportDialog.doc?.filename}
       />
+
+      {/* Image Preview Dialog */}
+      <Dialog open={!!imagePreview} onOpenChange={(open) => !open && setImagePreview(null)}>
+        <DialogContent className="sm:max-w-3xl max-h-[90vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ImageIcon className="w-5 h-5" />
+              {imagePreview?.title || imagePreview?.filename || "Bildvorschau"}
+            </DialogTitle>
+          </DialogHeader>
+          
+          {imagePreview && (
+            <div className="flex-1 min-h-0 flex flex-col gap-4 overflow-hidden">
+              {/* Image */}
+              <div className="flex-1 min-h-0 flex items-center justify-center bg-muted rounded-lg overflow-hidden">
+                <img
+                  src={`${API}/images/${imagePreview.image_id}`}
+                  alt={imagePreview.title || "Bild"}
+                  className="max-w-full max-h-full object-contain"
+                />
+              </div>
+              
+              {/* Metadata */}
+              <div className="flex-shrink-0 p-3 bg-muted rounded-lg space-y-2">
+                <h4 className="font-medium flex items-center gap-2 text-sm">
+                  <Info className="w-4 h-4" />
+                  Bild-Informationen
+                </h4>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
+                  <div>
+                    <p className="text-muted-foreground text-xs">Dateiname</p>
+                    <p className="font-medium truncate" title={imagePreview.title}>
+                      {imagePreview.title || imagePreview.filename}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground text-xs">Dateigröße</p>
+                    <p className="font-medium">
+                      {imagePreview.file_size 
+                        ? `${(imagePreview.file_size / 1024).toFixed(1)} KB`
+                        : "Unbekannt"}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground text-xs">Typ</p>
+                    <p className="font-medium uppercase">
+                      {imagePreview.file_type || "Bild"}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground text-xs">Hochgeladen</p>
+                    <p className="font-medium">
+                      {formatDate(imagePreview.created_at)}
+                    </p>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Actions */}
+              <DialogFooter className="flex-shrink-0">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    window.open(`${API}/images/${imagePreview.image_id}`, '_blank');
+                  }}
+                >
+                  <Download className="w-4 h-4 mr-2" />
+                  Herunterladen
+                </Button>
+                <Button onClick={() => setImagePreview(null)}>
+                  Schließen
+                </Button>
+              </DialogFooter>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

@@ -3,7 +3,7 @@ Image upload routes for the CANUSA Knowledge Hub API.
 """
 from fastapi import APIRouter, HTTPException, Depends, File, UploadFile
 from fastapi.responses import Response
-from typing import List
+from typing import List, Optional
 from datetime import datetime, timezone
 import uuid
 import os
@@ -80,17 +80,18 @@ async def upload_image(file: UploadFile = File(...), user: User = Depends(get_cu
 async def upload_multiple_images(
     files: List[UploadFile] = File(...),
     save_to_documents: bool = True,
+    folder_id: Optional[str] = None,
     user: User = Depends(get_current_user)
 ):
-    """Upload multiple images at once, optionally saving them to the 'Bilder' document folder."""
+    """Upload multiple images at once, optionally saving them to a document folder."""
     allowed_types = ["image/jpeg", "image/png", "image/gif", "image/webp"]
     results = []
     errors = []
     
-    # Get or create images folder if saving to documents
-    folder_id = None
-    if save_to_documents:
-        folder_id = await ensure_images_folder(user.user_id)
+    # Get or create images folder if saving to documents and no specific folder given
+    target_folder_id = folder_id
+    if save_to_documents and not folder_id:
+        target_folder_id = await ensure_images_folder(user.user_id)
     
     images_dir = "/tmp/images"
     os.makedirs(images_dir, exist_ok=True)
@@ -128,7 +129,7 @@ async def upload_multiple_images(
             await db.images.insert_one(image_doc)
             
             # Also save as a document if requested
-            if save_to_documents and folder_id:
+            if save_to_documents and target_folder_id:
                 doc_id = f"doc_{uuid.uuid4().hex[:12]}"
                 document_doc = {
                     "document_id": doc_id,
@@ -137,7 +138,7 @@ async def upload_multiple_images(
                     "file_type": ext.lower(),
                     "file_size": len(content),
                     "file_path": file_path,
-                    "folder_id": folder_id,
+                    "folder_id": target_folder_id,
                     "status": "active",
                     "uploaded_by": user.user_id,
                     "created_at": datetime.now(timezone.utc).isoformat(),
@@ -163,7 +164,7 @@ async def upload_multiple_images(
         "total": len(files),
         "success_count": len(results),
         "error_count": len(errors),
-        "folder_id": folder_id
+        "folder_id": target_folder_id
     }
 
 

@@ -302,10 +302,15 @@ Wissensmanagement-Plattform für CANUSA Touristik GmbH & Co. KG und CU-Travel.
 - ✅ **Vollbild-Editor Bug behoben** - Toolbar überlappt nicht mehr mit dem Editorbereich
 - ✅ **Multi-Bilder-Upload** - Mehrere Bilder gleichzeitig hochladen, automatisch im Ordner "Bilder" speichern
 - ✅ **HTML-Editor Modus** - Umschaltbar zwischen WYSIWYG und HTML-Code für erfahrene Benutzer
+- ✅ **Ordnerauswahl beim Bild-Upload** - Benutzer können Zielordner auswählen oder neu erstellen
+- ✅ **Bildvorschau in Dokumenten** - Bilder zeigen Thumbnails, Vorschau-Dialog mit Metadaten
 - **Neue Komponenten**:
-  - `MultiImageUploadDialog.jsx` - Dialog für Mehrfach-Bilder-Upload
+  - `MultiImageUploadDialog.jsx` - Dialog für Mehrfach-Bilder-Upload mit Ordnerauswahl
 - **Neue API-Endpunkte**:
-  - `POST /api/images/upload-multiple` - Mehrere Bilder hochladen
+  - `POST /api/images/upload-multiple` - Mehrere Bilder hochladen mit optionaler Ordner-ID
+- **Bugfixes**:
+  - Google Drive Import Dialog Button-Overflow behoben
+  - Multi-Image Upload fügt jetzt ALLE Bilder in den Artikel ein (nicht nur eines)
 
 ## Backlog
 
