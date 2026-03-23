@@ -328,12 +328,35 @@ Wissensmanagement-Plattform für CANUSA Touristik GmbH & Co. KG und CU-Travel.
 - [x] ~~Artikel-Versionierung~~ (Erledigt in Iteration 26)
 - [x] ~~Multi-Format-Dokumente~~ (Erledigt in Iteration 27)
 - [ ] Schnellsuche (Strg+K)
+- [ ] Multi-Select in Galerie-Ansicht
+- [ ] Drag & Drop für Ordner-Neuordnung
 
 ### P3 (Nice to Have)
 - [ ] OCR für gescannte PDFs
 - [x] ~~E-Mail-Benachrichtigungen~~ (Erledigt in Iteration 22 - 17.03.2026)
 - [x] ~~Hochwertige PDF-zu-HTML-Konvertierung~~ (Erledigt in Iteration 24)
 - [x] ~~Vollwertiger PDF-Viewer~~ (Erledigt in Iteration 25)
+
+## Pinnwand & Dashboard-Umbau (Iteration 25) - 23.03.2026
+- ✅ **Dashboard-Tabs** - Zwei Tabs: "Pinnwand" und "Dashboard"
+- ✅ **Pinnwand-Ansicht** - Zeigt Artikel aus als Pinnwand markierten Kategorien mit Amber-Akzentfarbe
+- ✅ **Dashboard-Reihenfolge** - Neuer Aufbau: Favoriten → Zuletzt angesehen → Neueste Artikel → Statistiken
+- ✅ **Schnellzugriff entfernt** - Bereich wurde aus Dashboard entfernt
+- ✅ **Pinnwand-Kategorien** - Kategorien können als "Pinnwand" markiert werden
+- ✅ **Pinnwand-Badge** - Kategorien mit Pinnwand-Flag zeigen Badge in Baumansicht
+- ✅ **Gruppen-@-Mentions** - `@@@Gruppenname` erwähnt alle Mitglieder einer Gruppe
+- ✅ **Gruppen-E-Mail-Benachrichtigung** - Alle Gruppenmitglieder erhalten E-Mail bei Gruppen-Mention
+- ✅ **BUG FIX: Ordner-Navigation** - Klicken auf Ordner filtert Dokumente jetzt korrekt
+- **Neue Komponenten**:
+  - `GroupMentionList.jsx` - Autocomplete-Liste für Gruppen-Mentions im Editor
+- **Neue API-Endpunkte**:
+  - `GET /api/categories/pinnwand/articles` - Artikel aus Pinnwand-Kategorien abrufen
+  - `GET /api/groups/search/mention` - Gruppen mit Mitgliederzahl für Mentions suchen
+- **Modell-Änderungen**:
+  - `Category.is_pinnwand: bool` - Flag für Pinnwand-Kategorien
+- **Editor-Änderungen**:
+  - Gruppen-Mention Extension mit `@@@` Trigger (User-Mentions bleiben `@@`)
+  - Grüne Styling für Gruppen-Mentions, blaue für User-Mentions
 
 ## Benachrichtigungssystem (Iteration 22) - 17.03.2026
 - ✅ **@-Mentions Benachrichtigungen** - Benutzer werden per E-Mail benachrichtigt, wenn sie in einem Artikel erwähnt werden
@@ -383,3 +406,14 @@ Wissensmanagement-Plattform für CANUSA Touristik GmbH & Co. KG und CU-Travel.
     ├── google_drive.py # Google Drive Import/Export
     └── notifications.py # E-Mail-Benachrichtigungssystem
 ```
+
+## Bekannte offene Probleme (Backlog)
+
+### Google Drive Integration (P2)
+- **Export zu Shared Drives**: Fehlender `supportsAllDrives=True` Parameter in `exports.py`
+- **Falsche Dateiliste im Export-Dialog**: API-Aufruf in `google_drive.py` prüfen
+
+### Geplante Features (P2)
+- Multi-Select in Galerie-Ansicht (Documents.jsx)
+- Drag & Drop für Ordner-Neuordnung (react-beautiful-dnd)
+- Schnellsuche (Strg+K)
