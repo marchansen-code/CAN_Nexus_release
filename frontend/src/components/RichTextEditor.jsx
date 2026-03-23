@@ -1782,6 +1782,60 @@ const EditorToolbar = ({ editor, onImageUpload, isFullscreen, onToggleFullscreen
   );
 };
 
+// Simple HTML formatter for well-formed, indented output
+const formatHtml = (html) => {
+  if (!html) return '';
+  // Self-closing / void tags
+  const voidTags = new Set(['br', 'hr', 'img', 'input', 'meta', 'link', 'area', 'base', 'col', 'embed', 'source', 'track', 'wbr']);
+  // Inline tags that should not cause line breaks
+  const inlineTags = new Set(['a', 'abbr', 'b', 'bdi', 'bdo', 'cite', 'code', 'em', 'i', 'kbd', 'mark', 'q', 's', 'samp', 'small', 'span', 'strong', 'sub', 'sup', 'time', 'u', 'var']);
+
+  let result = '';
+  let indent = 0;
+  const tab = '  ';
+
+  // Split into tags and text
+  const tokens = html.replace(/>\s*</g, '>\n<').split('\n');
+
+  tokens.forEach(token => {
+    const trimmed = token.trim();
+    if (!trimmed) return;
+
+    // Closing tag
+    const closingMatch = trimmed.match(/^<\/(\w+)/);
+    // Opening tag
+    const openingMatch = trimmed.match(/^<(\w+)/);
+
+    if (closingMatch) {
+      const tagName = closingMatch[1].toLowerCase();
+      if (!inlineTags.has(tagName)) {
+        indent = Math.max(0, indent - 1);
+        result += tab.repeat(indent) + trimmed + '\n';
+      } else {
+        result += trimmed;
+      }
+    } else if (openingMatch) {
+      const tagName = openingMatch[1].toLowerCase();
+      const isSelfClosing = voidTags.has(tagName) || trimmed.endsWith('/>');
+      const hasClosingInSameLine = trimmed.includes(`</${tagName}>`);
+
+      if (inlineTags.has(tagName)) {
+        result += trimmed;
+      } else if (hasClosingInSameLine || isSelfClosing) {
+        result += tab.repeat(indent) + trimmed + '\n';
+      } else {
+        result += tab.repeat(indent) + trimmed + '\n';
+        indent++;
+      }
+    } else {
+      // Text node
+      result += tab.repeat(indent) + trimmed + '\n';
+    }
+  });
+
+  return result.trim();
+};
+
 const RichTextEditor = ({ content, onChange, placeholder = "Inhalt eingeben...", className, onImageUpload, isFullscreen = false, onToggleFullscreen }) => {
   const [showHtmlEditor, setShowHtmlEditor] = useState(false);
   const [htmlContent, setHtmlContent] = useState('');
@@ -2207,15 +2261,44 @@ const RichTextEditor = ({ content, onChange, placeholder = "Inhalt eingeben...",
     }
   }, [content, editor]);
 
-  // Sync HTML editor content
+  // Sync HTML editor content with pretty formatting
   React.useEffect(() => {
     if (showHtmlEditor && editor) {
-      setHtmlContent(editor.getHTML());
+      setHtmlContent(formatHtml(editor.getHTML()));
     }
   }, [showHtmlEditor, editor]);
 
   const handleHtmlChange = (e) => {
     setHtmlContent(e.target.value);
+  };
+
+  // Reference to the HTML textarea for cursor-based insertion
+  const htmlTextareaRef = React.useRef(null);
+
+  // Insert HTML tag at cursor position in textarea
+  const insertHtmlTag = (tag, selfClosing = false) => {
+    const textarea = htmlTextareaRef.current;
+    if (!textarea) return;
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const selected = htmlContent.substring(start, end);
+    let insertion;
+    if (selfClosing) {
+      insertion = `<${tag} />`;
+    } else {
+      insertion = selected ? `<${tag}>${selected}</${tag}>` : `<${tag}>\n  \n</${tag}>`;
+    }
+    const newContent = htmlContent.substring(0, start) + insertion + htmlContent.substring(end);
+    setHtmlContent(newContent);
+    // Set cursor position after insertion
+    setTimeout(() => {
+      textarea.focus();
+      const cursorPos = selfClosing
+        ? start + insertion.length
+        : selected ? start + insertion.length : start + `<${tag}>\n  `.length;
+      textarea.selectionStart = cursorPos;
+      textarea.selectionEnd = cursorPos;
+    }, 0);
   };
 
   const applyHtmlChanges = () => {
@@ -2266,7 +2349,82 @@ const RichTextEditor = ({ content, onChange, placeholder = "Inhalt eingeben...",
               </Button>
             </div>
           </div>
+          {/* HTML5 Tag Toolbar */}
+          <div className="flex flex-wrap gap-1 p-2 bg-slate-50 dark:bg-slate-900 rounded-md border" data-testid="html-tag-toolbar">
+            <span className="text-xs text-muted-foreground self-center mr-1 font-medium">Tags:</span>
+            {[
+              { tag: 'div', label: 'div' },
+              { tag: 'section', label: 'section' },
+              { tag: 'article', label: 'article' },
+              { tag: 'header', label: 'header' },
+              { tag: 'footer', label: 'footer' },
+              { tag: 'nav', label: 'nav' },
+              { tag: 'aside', label: 'aside' },
+              { tag: 'main', label: 'main' },
+              { tag: 'figure', label: 'figure' },
+              { tag: 'figcaption', label: 'figcaption' },
+              { tag: 'details', label: 'details' },
+              { tag: 'summary', label: 'summary' },
+              { tag: 'p', label: 'p' },
+              { tag: 'h1', label: 'h1' },
+              { tag: 'h2', label: 'h2' },
+              { tag: 'h3', label: 'h3' },
+              { tag: 'ul', label: 'ul' },
+              { tag: 'ol', label: 'ol' },
+              { tag: 'li', label: 'li' },
+              { tag: 'table', label: 'table' },
+              { tag: 'tr', label: 'tr' },
+              { tag: 'td', label: 'td' },
+              { tag: 'th', label: 'th' },
+              { tag: 'span', label: 'span' },
+              { tag: 'a href=""', label: 'a', closeTag: 'a' },
+              { tag: 'img src="" alt=""', label: 'img', selfClosing: true },
+              { tag: 'br', label: 'br', selfClosing: true },
+              { tag: 'hr', label: 'hr', selfClosing: true },
+              { tag: 'strong', label: 'b' },
+              { tag: 'em', label: 'i' },
+              { tag: 'blockquote', label: 'quote' },
+              { tag: 'pre', label: 'pre' },
+              { tag: 'code', label: 'code' },
+            ].map(({ tag, label, selfClosing, closeTag }) => (
+              <Button
+                key={label}
+                variant="outline"
+                size="sm"
+                className="h-6 px-1.5 text-xs font-mono bg-white dark:bg-slate-800 hover:bg-slate-100"
+                onClick={() => {
+                  const textarea = htmlTextareaRef.current;
+                  if (!textarea) return;
+                  const start = textarea.selectionStart;
+                  const end = textarea.selectionEnd;
+                  const selected = htmlContent.substring(start, end);
+                  const ct = closeTag || tag;
+                  let insertion;
+                  if (selfClosing) {
+                    insertion = `<${tag} />`;
+                  } else {
+                    insertion = selected ? `<${tag}>${selected}</${ct}>` : `<${tag}></${ct}>`;
+                  }
+                  const newContent = htmlContent.substring(0, start) + insertion + htmlContent.substring(end);
+                  setHtmlContent(newContent);
+                  setTimeout(() => {
+                    textarea.focus();
+                    const cursorPos = selfClosing
+                      ? start + insertion.length
+                      : selected ? start + insertion.length : start + `<${tag}>`.length;
+                    textarea.selectionStart = cursorPos;
+                    textarea.selectionEnd = cursorPos;
+                  }, 0);
+                }}
+                title={`<${tag}>`}
+                data-testid={`html-tag-${label}`}
+              >
+                &lt;{label}&gt;
+              </Button>
+            ))}
+          </div>
           <Textarea
+            ref={htmlTextareaRef}
             value={htmlContent}
             onChange={handleHtmlChange}
             className={cn(
@@ -2274,6 +2432,7 @@ const RichTextEditor = ({ content, onChange, placeholder = "Inhalt eingeben...",
               isFullscreen ? "min-h-0" : "min-h-[500px]"
             )}
             placeholder="HTML-Code hier eingeben..."
+            data-testid="html-editor-textarea"
           />
         </div>
       ) : (
