@@ -21,7 +21,7 @@ async def get_groups(user: User = Depends(get_current_user)):
 
 @router.get("/search/mention")
 async def search_groups_for_mention(q: str = "", limit: int = 10, user: User = Depends(get_current_user)):
-    """Search groups for @@ mentions."""
+    """Search groups for @@@ mentions."""
     query = {}
     if q:
         query["name"] = {"$regex": q, "$options": "i"}

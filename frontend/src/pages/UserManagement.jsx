@@ -16,7 +16,9 @@ import {
   UserX,
   Trash2,
   Lock,
-  Loader2
+  Loader2,
+  Clock,
+  Palette
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -212,6 +214,16 @@ const UserManagement = () => {
     }
   };
 
+  const handleResetTheme = async (user) => {
+    try {
+      await axios.put(`${API}/users/${user.user_id}/reset-theme`);
+      toast.success(`Theme für ${user.name} auf Standard zurückgesetzt`);
+    } catch (error) {
+      console.error("Failed to reset theme:", error);
+      toast.error("Theme konnte nicht zurückgesetzt werden");
+    }
+  };
+
   const filteredUsers = users.filter(user => 
     user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     user.email?.toLowerCase().includes(searchTerm.toLowerCase())
@@ -234,6 +246,35 @@ const UserManagement = () => {
       month: "2-digit",
       year: "numeric"
     });
+  };
+
+  const formatLastActive = (dateString) => {
+    if (!dateString) return "Nie";
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now - date;
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+    
+    if (diffMins < 1) return "Gerade eben";
+    if (diffMins < 60) return `vor ${diffMins} Min.`;
+    if (diffHours < 24) return `vor ${diffHours} Std.`;
+    if (diffDays < 7) return `vor ${diffDays} Tag${diffDays > 1 ? 'en' : ''}`;
+    
+    return date.toLocaleDateString("de-DE", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric"
+    });
+  };
+
+  const isOnline = (dateString) => {
+    if (!dateString) return false;
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMins = (now - date) / 60000;
+    return diffMins < 5; // Consider online if active in last 5 minutes
   };
 
   const isAdmin = currentUser?.role === "admin";
@@ -347,6 +388,7 @@ const UserManagement = () => {
                   <TableHead>Benutzer</TableHead>
                   <TableHead>E-Mail</TableHead>
                   <TableHead>Rolle</TableHead>
+                  <TableHead>Zuletzt online</TableHead>
                   <TableHead>Registriert</TableHead>
                   {isAdmin && <TableHead className="text-right">Aktionen</TableHead>}
                 </TableRow>
@@ -381,6 +423,17 @@ const UserManagement = () => {
                       <RoleBadge role={user.role} />
                     </TableCell>
                     <TableCell>
+                      <div className="flex items-center gap-2 text-sm">
+                        {isOnline(user.last_active) && (
+                          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" title="Online" />
+                        )}
+                        <Clock className="w-4 h-4 text-muted-foreground" />
+                        <span className={isOnline(user.last_active) ? "text-emerald-600 font-medium" : "text-muted-foreground"}>
+                          {formatLastActive(user.last_active)}
+                        </span>
+                      </div>
+                    </TableCell>
+                    <TableCell>
                       <div className="flex items-center gap-2 text-muted-foreground text-sm">
                         <Calendar className="w-4 h-4" />
                         {formatDate(user.created_at)}
@@ -409,6 +462,18 @@ const UserManagement = () => {
                           >
                             <Shield className="w-4 h-4 mr-2" />
                             Rolle
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleResetTheme(user)}
+                            disabled={user.user_id === currentUser?.user_id}
+                            className="text-purple-600"
+                            title="Theme auf Standard (Hell) zurücksetzen"
+                            data-testid={`reset-theme-${user.user_id}`}
+                          >
+                            <Palette className="w-4 h-4 mr-2" />
+                            Theme
                           </Button>
                           <Button
                             variant={user.is_blocked ? "outline" : "ghost"}

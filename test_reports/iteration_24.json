@@ -1,63 +1,60 @@
 {
-  "summary": "Iteration 24: Pinnwand System, Dashboard Tabs, and Group Mentions Testing Complete. All 15 backend tests pass. Frontend tests verified: (1) Dashboard has two tabs - Pinnwand and Dashboard, (2) Dashboard tab shows sections in correct order: Favoriten → Zuletzt angesehen → Neueste Artikel → Statistiken, (3) Schnellzugriff section removed, (4) Pinnwand tab shows empty state when no Pinnwand articles exist, (5) Categories dialog has Pinnwand-Kategorie checkbox, (6) Pinnwand badge displays on categories marked as Pinnwand, (7) Documents folder filtering works correctly.",
-  "backend_issues": {
-    "critical": [],
-    "minor": []
-  },
-  "frontend_issues": {
-    "ui_bugs": [],
-    "integration_issues": [],
-    "design_issues": []
-  },
+  "summary": "Iteration 24: Documents Page Features Testing Complete. All tests pass. Tested: 1) Folder navigation - clicking folder updates document content view correctly, 2) Multi-select in gallery view with checkboxes for bulk actions, 3) Bulk action buttons (Download, Move, Delete) appearing when items selected, 4) Drag & drop documents to folders via @dnd-kit library, 5) Document count updates correctly when switching folders.",
+  "mode": "generate",
+  "baseline_commit": "af99cff42c173986b42bc253e95f0f8ef2fd404d",
+  "head_commit": "dfaf76ccd876139d41ee783d551f18eb11e2de1d",
+  "specs_created": [
+    "/app/tests/e2e/documents-features.spec.ts",
+    "/app/backend/tests/test_iteration24_documents.py"
+  ],
+  "specs_updated": [],
+  "quarantined_tests": [],
   "test_report_links": [
-    "/app/backend/tests/test_iteration24_pinnwand_groups.py",
+    "/app/tests/e2e/documents-features.spec.ts",
+    "/app/backend/tests/test_iteration24_documents.py",
     "/app/test_reports/pytest/pytest_results_iter24.xml"
   ],
+  "regression_results": {
+    "total_specs": 28,
+    "passed": 28,
+    "failed": 0,
+    "skipped": 1
+  },
+  "issues": [],
   "action_items": [],
-  "critical_code_review_comments": [],
   "updated_files": [
-    "/app/backend/tests/test_iteration24_pinnwand_groups.py"
+    "/app/tests/e2e/documents-features.spec.ts",
+    "/app/backend/tests/test_iteration24_documents.py",
+    "/app/.emergent/testing_baseline_commit"
   ],
-  "success_rate": {
-    "backend": "100% (15/15 pytest tests passed)",
-    "frontend": "100% (all Playwright tests passed)"
+  "test_results": {
+    "backend": "100% (13/13 pytest tests passed)",
+    "frontend": "100% (15/15 Playwright tests passed, 1 skipped due to no images in gallery)"
   },
-  "test_credentials": {
-    "admin_email": "marc.hansen@canusa.de",
-    "admin_password": "CanusaNexus2024!"
-  },
-  "seed_data_creation": "None - used existing admin user. Test categories created and cleaned up during testing.",
+  "seed_data_creation": "None - used existing admin user marc.hansen@canusa.de and existing documents/folders",
   "retest_needed": false,
   "should_main_agent_self_test": false,
-  "context_for_next_testing_agent": "Iteration 24 features fully tested: (1) Dashboard.jsx has Tabs component with Pinnwand/Dashboard tabs, (2) Dashboard tab shows Favoriten, Zuletzt angesehen, Neueste Artikel, Statistiken in correct order - Schnellzugriff removed, (3) Categories.jsx has is_pinnwand checkbox with data-testid='pinnwand-checkbox', (4) Pinnwand badge shows on categories with is_pinnwand=true, (5) GET /api/categories/pinnwand/articles returns articles from Pinnwand categories, (6) GET /api/groups/search/mention returns groups with member_count field, (7) Documents folder filtering bug fixed - sortedDocuments useMemo now filters by selectedFolderId.",
+  "context_for_next_testing_agent": "Documents page features fully tested. Three features were implemented and verified: (1) Folder navigation fixed - clicking a folder now correctly filters sortedDocuments by selectedFolderId, (2) Multi-select in gallery view works with checkboxes and bulk action bar showing Download/Move/Delete buttons, (3) Drag & drop implemented with @dnd-kit library allowing documents to be dragged to folders in sidebar. The skipped test is for multi-select with images - currently no images in root folder to test with.",
   "features_tested": {
-    "dashboard_tabs": {
+    "folder_navigation": {
       "status": "PASS",
-      "details": "Two tabs exist: Pinnwand and Dashboard. Pinnwand tab shows empty state message when no Pinnwand articles. Dashboard tab shows sections in correct order."
+      "details": "Clicking folder updates document content view. sortedDocuments correctly filters by selectedFolderId. Header and document count update correctly."
     },
-    "schnellzugriff_removed": {
+    "multi_select_gallery": {
       "status": "PASS",
-      "details": "Schnellzugriff section is no longer present in Dashboard."
+      "details": "Gallery view shows checkboxes on hover. Selecting items shows bulk action bar with count. 'Alle auswählen' button available when images present."
     },
-    "categories_pinnwand_checkbox": {
+    "bulk_actions": {
       "status": "PASS",
-      "details": "Pinnwand-Kategorie checkbox exists in create/edit dialog with data-testid='pinnwand-checkbox'. Description text explains articles will appear on Pinnwand."
+      "details": "Download, Move, Delete buttons appear when items selected. Actions work correctly via API."
     },
-    "pinnwand_badge": {
+    "drag_drop": {
       "status": "PASS",
-      "details": "Categories with is_pinnwand=true display Pinnwand badge in the category tree."
+      "details": "@dnd-kit library integrated. DraggableDocument wraps each doc in list view. DroppableFolder and DroppableRootFolder accept drops. Move API called on drop."
     },
-    "pinnwand_articles_api": {
+    "document_count": {
       "status": "PASS",
-      "details": "GET /api/categories/pinnwand/articles returns list of articles from Pinnwand categories."
-    },
-    "groups_mention_api": {
-      "status": "PASS",
-      "details": "GET /api/groups/search/mention returns groups with group_id, name, description, and member_count fields."
-    },
-    "documents_folder_filter": {
-      "status": "PASS",
-      "details": "Clicking folder in Documents view correctly filters documents. Bug fix verified - sortedDocuments useMemo filters by selectedFolderId."
+      "details": "Document count updates correctly when switching between folders. Shows 'X Dokumente im Stammverzeichnis' for root."
     }
   }
 }

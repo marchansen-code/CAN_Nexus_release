@@ -77,7 +77,15 @@ import {
   ZoomOut,
   Minimize2,
   Code2,
-  Images
+  Images,
+  ExternalLink,
+  FolderOpen,
+  Folder,
+  Search,
+  Eye,
+  X,
+  ChevronRight,
+  Home
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Toggle } from '@/components/ui/toggle';
@@ -109,7 +117,11 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { cn } from '@/lib/utils';
+import DocumentViewer from '@/components/DocumentViewer';
 
 const COLORS = [
   { name: 'Schwarz', value: '#000000' },
@@ -214,6 +226,195 @@ const EditorToolbar = ({ editor, onImageUpload, isFullscreen, onToggleFullscreen
   const [tableWithHeader, setTableWithHeader] = React.useState(true);
   const [showTableDialog, setShowTableDialog] = React.useState(false);
   const fileInputRef = useRef(null);
+  
+  // Extended Link Dialog State
+  const [showLinkDialog, setShowLinkDialog] = React.useState(false);
+  const [linkTab, setLinkTab] = React.useState('url'); // 'url' or 'document'
+  const [linkText, setLinkText] = React.useState('');
+  const [hasSelectedText, setHasSelectedText] = React.useState(false);
+  const [documents, setDocuments] = React.useState([]);
+  const [folders, setFolders] = React.useState([]);
+  const [currentFolderId, setCurrentFolderId] = React.useState(null);
+  const [folderPath, setFolderPath] = React.useState([]); // Breadcrumb path
+  const [documentSearch, setDocumentSearch] = React.useState('');
+  const [selectedDocument, setSelectedDocument] = React.useState(null);
+  const [documentLinkType, setDocumentLinkType] = React.useState('text'); // 'thumbnail', 'text', 'short'
+  const [loadingDocuments, setLoadingDocuments] = React.useState(false);
+  
+  // YouTube Dialog State
+  const [showYoutubeDialog, setShowYoutubeDialog] = React.useState(false);
+  const [pendingYoutubeUrl, setPendingYoutubeUrl] = React.useState('');
+  const [youtubeDisplayType, setYoutubeDisplayType] = React.useState('preview'); // 'preview' or 'link'
+
+  // Load folders for document browser
+  const loadFolders = async () => {
+    try {
+      const response = await axios.get(`${API}/document-folders`);
+      setFolders(response.data || []);
+    } catch (error) {
+      console.error('Failed to load folders:', error);
+    }
+  };
+
+  // Load documents for link dialog
+  const loadDocuments = async (folderId = null, search = '') => {
+    setLoadingDocuments(true);
+    try {
+      const response = await axios.get(`${API}/documents`, {
+        params: { search: search || undefined }
+      });
+      let docs = response.data || [];
+      
+      // Filter by folder if specified
+      if (folderId !== null) {
+        docs = docs.filter(d => d.folder_id === folderId);
+      } else if (!search) {
+        // Show only root-level documents when no search
+        docs = docs.filter(d => !d.folder_id);
+      }
+      
+      setDocuments(docs);
+    } catch (error) {
+      console.error('Failed to load documents:', error);
+    } finally {
+      setLoadingDocuments(false);
+    }
+  };
+
+  // Navigate to folder
+  const navigateToFolder = (folder) => {
+    if (folder) {
+      setCurrentFolderId(folder.folder_id);
+      setFolderPath([...folderPath, folder]);
+    } else {
+      setCurrentFolderId(null);
+      setFolderPath([]);
+    }
+    setSelectedDocument(null);
+    loadDocuments(folder?.folder_id || null);
+  };
+
+  // Navigate back in breadcrumb
+  const navigateToBreadcrumb = (index) => {
+    if (index === -1) {
+      // Go to root
+      setCurrentFolderId(null);
+      setFolderPath([]);
+      loadDocuments(null);
+    } else {
+      const folder = folderPath[index];
+      setCurrentFolderId(folder.folder_id);
+      setFolderPath(folderPath.slice(0, index + 1));
+      loadDocuments(folder.folder_id);
+    }
+    setSelectedDocument(null);
+  };
+
+  // Get subfolders for current folder
+  const getCurrentSubfolders = () => {
+    return folders.filter(f => f.parent_id === currentFolderId);
+  };
+
+  // Open link dialog with context
+  const openLinkDialog = () => {
+    const { selection } = editor.state;
+    const selectedText = editor.state.doc.textBetween(selection.from, selection.to, ' ');
+    setHasSelectedText(!!selectedText && selectedText.trim().length > 0);
+    setLinkText(selectedText || '');
+    setLinkUrl('');
+    setSelectedDocument(null);
+    setDocumentLinkType(selectedText ? 'text' : 'short');
+    setLinkTab('url');
+    setCurrentFolderId(null);
+    setFolderPath([]);
+    setDocumentSearch('');
+    loadFolders();
+    loadDocuments(null);
+    setShowLinkDialog(true);
+  };
+
+  // Insert link (URL or Document)
+  const insertLink = () => {
+    if (linkTab === 'url' && linkUrl) {
+      if (hasSelectedText) {
+        editor.chain().focus().extendMarkRange('link').setLink({ href: linkUrl }).run();
+      } else if (linkText) {
+        editor.chain().focus().insertContent(`<a href="${linkUrl}">${linkText}</a>`).run();
+      } else {
+        // Short URL display
+        const shortUrl = linkUrl.replace(/^https?:\/\/(www\.)?/, '').substring(0, 30) + (linkUrl.length > 30 ? '...' : '');
+        editor.chain().focus().insertContent(`<a href="${linkUrl}">${shortUrl}</a>`).run();
+      }
+    } else if (linkTab === 'document' && selectedDocument) {
+      const docUrl = selectedDocument.image_id 
+        ? `${API}/images/${selectedDocument.image_id}`
+        : `${API}/documents/${selectedDocument.document_id}/file`;
+      const docViewUrl = `#doc-preview-${selectedDocument.document_id}`;
+      
+      if (hasSelectedText) {
+        // Just link the selected text
+        editor.chain().focus().extendMarkRange('link').setLink({ 
+          href: docViewUrl,
+          'data-document-id': selectedDocument.document_id
+        }).run();
+      } else if (documentLinkType === 'thumbnail' && selectedDocument.is_image) {
+        // Insert thumbnail image that links to document
+        editor.chain().focus().insertContent(
+          `<a href="${docViewUrl}" data-document-id="${selectedDocument.document_id}"><img src="${docUrl}" alt="${selectedDocument.filename}" style="max-width: 200px; border-radius: 8px;" /></a>`
+        ).run();
+      } else if (documentLinkType === 'text' && linkText) {
+        editor.chain().focus().insertContent(
+          `<a href="${docViewUrl}" data-document-id="${selectedDocument.document_id}">${linkText}</a>`
+        ).run();
+      } else {
+        // Short display
+        const shortName = selectedDocument.filename.length > 25 
+          ? selectedDocument.filename.substring(0, 25) + '...' 
+          : selectedDocument.filename;
+        editor.chain().focus().insertContent(
+          `<a href="${docViewUrl}" data-document-id="${selectedDocument.document_id}">📄 ${shortName}</a>`
+        ).run();
+      }
+    }
+    setShowLinkDialog(false);
+  };
+
+  // Handle YouTube URL - check if it's a valid YouTube link
+  const handleYoutubeInput = (url) => {
+    setYoutubeUrl(url);
+  };
+
+  const checkAndInsertYoutube = () => {
+    if (!youtubeUrl) return;
+    // Show dialog to ask preview or link
+    setPendingYoutubeUrl(youtubeUrl);
+    setYoutubeDisplayType('preview');
+    setShowYoutubeDialog(true);
+    setYoutubeUrl('');
+  };
+
+  const insertYoutube = () => {
+    if (!pendingYoutubeUrl) return;
+    
+    if (youtubeDisplayType === 'preview') {
+      // Insert embedded video
+      editor.chain().focus().setYoutubeVideo({ src: pendingYoutubeUrl }).run();
+    } else {
+      // Insert as link only
+      const videoId = extractYoutubeId(pendingYoutubeUrl);
+      const displayUrl = `youtube.com/watch?v=${videoId}`;
+      editor.chain().focus().insertContent(
+        `<a href="${pendingYoutubeUrl}" target="_blank" rel="noopener">🎬 ${displayUrl}</a>`
+      ).run();
+    }
+    setShowYoutubeDialog(false);
+    setPendingYoutubeUrl('');
+  };
+
+  const extractYoutubeId = (url) => {
+    const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([^&?\s]+)/);
+    return match ? match[1] : '';
+  };
 
   const setLink = useCallback(() => {
     if (linkUrl) {
@@ -554,38 +755,247 @@ const EditorToolbar = ({ editor, onImageUpload, isFullscreen, onToggleFullscreen
       <Separator orientation="vertical" className="h-6 mx-1" />
 
       {/* Link */}
-      <Popover>
-        <PopoverTrigger asChild>
-          <Button variant="ghost" size="sm" className={cn("h-8 w-8 p-0", editor.isActive('link') && "bg-muted")} title="Link einfügen">
-            <LinkIcon className="h-4 w-4" />
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-80">
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>Link URL</Label>
-              <Input
-                placeholder="https://..."
-                value={linkUrl}
-                onChange={(e) => setLinkUrl(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && setLink()}
-              />
-            </div>
-            <div className="flex gap-2">
-              <Button size="sm" onClick={setLink}>Einfügen</Button>
-              {editor.isActive('link') && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => editor.chain().focus().unsetLink().run()}
-                >
-                  Entfernen
-                </Button>
+      <Button 
+        variant="ghost" 
+        size="sm" 
+        className={cn("h-8 w-8 p-0", editor.isActive('link') && "bg-muted")} 
+        title="Link einfügen"
+        onClick={openLinkDialog}
+      >
+        <LinkIcon className="h-4 w-4" />
+      </Button>
+
+      {/* Extended Link Dialog */}
+      <Dialog open={showLinkDialog} onOpenChange={setShowLinkDialog}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <LinkIcon className="w-5 h-5" />
+              Link einfügen
+            </DialogTitle>
+            <DialogDescription>
+              {hasSelectedText 
+                ? `Ausgewählter Text: "${linkText.substring(0, 30)}${linkText.length > 30 ? '...' : ''}"`
+                : 'Kein Text ausgewählt - Link wird eingefügt'
+              }
+            </DialogDescription>
+          </DialogHeader>
+
+          <Tabs value={linkTab} onValueChange={setLinkTab}>
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="url">
+                <ExternalLink className="w-4 h-4 mr-2" />
+                URL
+              </TabsTrigger>
+              <TabsTrigger value="document">
+                <FileText className="w-4 h-4 mr-2" />
+                Dokument
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="url" className="space-y-4 mt-4">
+              <div className="space-y-2">
+                <Label>Link URL</Label>
+                <Input
+                  placeholder="https://..."
+                  value={linkUrl}
+                  onChange={(e) => setLinkUrl(e.target.value)}
+                />
+              </div>
+              {!hasSelectedText && (
+                <div className="space-y-2">
+                  <Label>Anzeigetext (optional)</Label>
+                  <Input
+                    placeholder="Text für den Link..."
+                    value={linkText}
+                    onChange={(e) => setLinkText(e.target.value)}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Leer lassen für gekürzten Link
+                  </p>
+                </div>
               )}
-            </div>
-          </div>
-        </PopoverContent>
-      </Popover>
+            </TabsContent>
+
+            <TabsContent value="document" className="space-y-4 mt-4">
+              {/* Search */}
+              <div className="space-y-2">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Dokument suchen..."
+                    value={documentSearch}
+                    onChange={(e) => {
+                      setDocumentSearch(e.target.value);
+                      if (e.target.value) {
+                        // Search all documents
+                        loadDocuments(null, e.target.value);
+                      } else {
+                        // Return to current folder
+                        loadDocuments(currentFolderId);
+                      }
+                    }}
+                    className="pl-9"
+                  />
+                </div>
+              </div>
+
+              {/* Breadcrumb Navigation */}
+              {!documentSearch && (
+                <div className="flex items-center gap-1 text-sm flex-wrap">
+                  <button 
+                    onClick={() => navigateToBreadcrumb(-1)}
+                    className={cn(
+                      "flex items-center gap-1 px-2 py-1 rounded hover:bg-muted transition-colors",
+                      folderPath.length === 0 && "font-medium text-indigo-600"
+                    )}
+                  >
+                    <Home className="w-4 h-4" />
+                    <span>Dokumente</span>
+                  </button>
+                  {folderPath.map((folder, index) => (
+                    <React.Fragment key={folder.folder_id}>
+                      <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                      <button
+                        onClick={() => navigateToBreadcrumb(index)}
+                        className={cn(
+                          "px-2 py-1 rounded hover:bg-muted transition-colors",
+                          index === folderPath.length - 1 && "font-medium text-indigo-600"
+                        )}
+                      >
+                        {folder.name}
+                      </button>
+                    </React.Fragment>
+                  ))}
+                </div>
+              )}
+
+              {/* Folder and Document List */}
+              <ScrollArea className="h-[220px] border rounded-md">
+                {loadingDocuments ? (
+                  <div className="text-center py-8 text-muted-foreground">Laden...</div>
+                ) : (
+                  <div className="p-2 space-y-1">
+                    {/* Subfolders */}
+                    {!documentSearch && getCurrentSubfolders().map(folder => (
+                      <button
+                        key={folder.folder_id}
+                        onClick={() => navigateToFolder(folder)}
+                        className="w-full flex items-center gap-3 p-2 rounded text-left text-sm hover:bg-muted transition-colors"
+                      >
+                        <Folder className="w-5 h-5 text-amber-500 shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="truncate font-medium">{folder.name}</p>
+                          {folder.description && (
+                            <p className="text-xs text-muted-foreground truncate">{folder.description}</p>
+                          )}
+                        </div>
+                        <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                      </button>
+                    ))}
+                    
+                    {/* Documents */}
+                    {documents.map(doc => (
+                      <button
+                        key={doc.document_id}
+                        onClick={() => setSelectedDocument(doc)}
+                        className={cn(
+                          "w-full flex items-center gap-3 p-2 rounded text-left text-sm hover:bg-muted transition-colors",
+                          selectedDocument?.document_id === doc.document_id && "bg-indigo-50 border border-indigo-200"
+                        )}
+                      >
+                        {doc.is_image ? (
+                          <div className="w-8 h-8 rounded overflow-hidden bg-muted shrink-0">
+                            <img 
+                              src={`${API}/images/${doc.image_id}`} 
+                              alt="" 
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                        ) : (
+                          <FileText className="w-5 h-5 text-muted-foreground shrink-0" />
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <p className="truncate font-medium">{doc.filename}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {doc.file_type} {doc.file_size ? `• ${(doc.file_size / 1024).toFixed(1)} KB` : ''}
+                          </p>
+                        </div>
+                      </button>
+                    ))}
+                    
+                    {/* Empty state */}
+                    {!documentSearch && getCurrentSubfolders().length === 0 && documents.length === 0 && (
+                      <div className="text-center py-8 text-muted-foreground">
+                        <FolderOpen className="w-10 h-10 mx-auto mb-2 opacity-30" />
+                        <p>Dieser Ordner ist leer</p>
+                      </div>
+                    )}
+                    
+                    {documentSearch && documents.length === 0 && (
+                      <div className="text-center py-8 text-muted-foreground">
+                        <Search className="w-10 h-10 mx-auto mb-2 opacity-30" />
+                        <p>Keine Dokumente gefunden</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </ScrollArea>
+
+              {selectedDocument && !hasSelectedText && (
+                <div className="space-y-3 border-t pt-3">
+                  <Label>Darstellung</Label>
+                  <RadioGroup value={documentLinkType} onValueChange={setDocumentLinkType}>
+                    {selectedDocument.is_image && (
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="thumbnail" id="thumbnail" />
+                        <Label htmlFor="thumbnail" className="cursor-pointer">
+                          Vorschaubild (Thumbnail)
+                        </Label>
+                      </div>
+                    )}
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="text" id="text" />
+                      <Label htmlFor="text" className="cursor-pointer">
+                        Eigener Link-Text
+                      </Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="short" id="short" />
+                      <Label htmlFor="short" className="cursor-pointer">
+                        Gekürzter Dateiname
+                      </Label>
+                    </div>
+                  </RadioGroup>
+                  
+                  {documentLinkType === 'text' && (
+                    <Input
+                      placeholder="Link-Text eingeben..."
+                      value={linkText}
+                      onChange={(e) => setLinkText(e.target.value)}
+                    />
+                  )}
+                </div>
+              )}
+            </TabsContent>
+          </Tabs>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowLinkDialog(false)}>
+              Abbrechen
+            </Button>
+            <Button 
+              onClick={insertLink}
+              disabled={
+                (linkTab === 'url' && !linkUrl) || 
+                (linkTab === 'document' && !selectedDocument)
+              }
+            >
+              Link einfügen
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Image */}
       <DropdownMenu>
@@ -686,14 +1096,65 @@ const EditorToolbar = ({ editor, onImageUpload, isFullscreen, onToggleFullscreen
               <Input
                 placeholder="https://www.youtube.com/watch?v=..."
                 value={youtubeUrl}
-                onChange={(e) => setYoutubeUrl(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && addYoutube()}
+                onChange={(e) => handleYoutubeInput(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && checkAndInsertYoutube()}
               />
             </div>
-            <Button size="sm" onClick={addYoutube}>Video einfügen</Button>
+            <Button size="sm" onClick={checkAndInsertYoutube}>Video einfügen</Button>
           </div>
         </PopoverContent>
       </Popover>
+
+      {/* YouTube Display Type Dialog */}
+      <Dialog open={showYoutubeDialog} onOpenChange={setShowYoutubeDialog}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <YoutubeIcon className="w-5 h-5 text-red-600" />
+              YouTube-Video einfügen
+            </DialogTitle>
+            <DialogDescription>
+              Wie soll das Video angezeigt werden?
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <RadioGroup value={youtubeDisplayType} onValueChange={setYoutubeDisplayType}>
+              <div className="flex items-start space-x-3 p-3 border rounded-lg hover:bg-muted/50 cursor-pointer" onClick={() => setYoutubeDisplayType('preview')}>
+                <RadioGroupItem value="preview" id="yt-preview" className="mt-0.5" />
+                <div>
+                  <Label htmlFor="yt-preview" className="cursor-pointer font-medium">
+                    Video-Vorschau einbetten
+                  </Label>
+                  <p className="text-sm text-muted-foreground">
+                    Das Video wird direkt im Artikel angezeigt und kann abgespielt werden
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-start space-x-3 p-3 border rounded-lg hover:bg-muted/50 cursor-pointer" onClick={() => setYoutubeDisplayType('link')}>
+                <RadioGroupItem value="link" id="yt-link" className="mt-0.5" />
+                <div>
+                  <Label htmlFor="yt-link" className="cursor-pointer font-medium">
+                    Nur als Link anzeigen
+                  </Label>
+                  <p className="text-sm text-muted-foreground">
+                    Ein klickbarer Link öffnet das Video auf YouTube
+                  </p>
+                </div>
+              </div>
+            </RadioGroup>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowYoutubeDialog(false)}>
+              Abbrechen
+            </Button>
+            <Button onClick={insertYoutube} className="bg-red-600 hover:bg-red-700">
+              Einfügen
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Table */}
       <DropdownMenu>
@@ -995,6 +1456,26 @@ const RichTextEditor = ({ content, onChange, placeholder = "Inhalt eingeben...",
   const [showHtmlEditor, setShowHtmlEditor] = useState(false);
   const [htmlContent, setHtmlContent] = useState('');
   const [showMultiImageDialog, setShowMultiImageDialog] = useState(false);
+  const [documentPreview, setDocumentPreview] = useState(null); // For document preview popup
+  
+  // Handle clicks on document links in the editor
+  const handleEditorClick = useCallback((event) => {
+    const link = event.target.closest('a[data-document-id]');
+    if (link) {
+      event.preventDefault();
+      const documentId = link.getAttribute('data-document-id');
+      if (documentId) {
+        // Fetch document details and show preview
+        axios.get(`${API}/documents/${documentId}`)
+          .then(res => {
+            setDocumentPreview(res.data);
+          })
+          .catch(err => {
+            console.error('Failed to load document:', err);
+          });
+      }
+    }
+  }, []);
   
   // Mention suggestion configuration for articles (@)
   const mentionSuggestion = {
@@ -1292,7 +1773,7 @@ const RichTextEditor = ({ content, onChange, placeholder = "Inhalt eingeben...",
           ];
         },
       }),
-      // Group mention extension (@@@ trigger for groups)
+      // Group mention extension (@@@)
       Mention.extend({ name: 'groupMention' }).configure({
         HTMLAttributes: {
           class: 'group-mention',
@@ -1464,7 +1945,10 @@ const RichTextEditor = ({ content, onChange, placeholder = "Inhalt eingeben...",
           />
         </div>
       ) : (
-        <div className={cn("overflow-auto flex-1", isFullscreen ? "min-h-0" : "max-h-[600px]")}>
+        <div 
+          className={cn("overflow-auto flex-1", isFullscreen ? "min-h-0" : "max-h-[600px]")}
+          onClick={handleEditorClick}
+        >
           <EditorContent editor={editor} />
         </div>
       )}
@@ -1475,6 +1959,87 @@ const RichTextEditor = ({ content, onChange, placeholder = "Inhalt eingeben...",
         onClose={() => setShowMultiImageDialog(false)}
         onImagesUploaded={handleMultiImageUpload}
       />
+
+      {/* Document Preview Dialog */}
+      <Dialog open={!!documentPreview} onOpenChange={(open) => !open && setDocumentPreview(null)}>
+        <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="w-5 h-5" />
+              {documentPreview?.filename || documentPreview?.title || 'Dokumentenvorschau'}
+            </DialogTitle>
+            <DialogDescription>
+              {documentPreview?.file_size && (
+                <span>{(documentPreview.file_size / 1024).toFixed(1)} KB</span>
+              )}
+              {documentPreview?.created_at && (
+                <span className="ml-4">Hochgeladen: {new Date(documentPreview.created_at).toLocaleDateString('de-DE')}</span>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="flex-1 min-h-0 overflow-auto">
+            {documentPreview && (
+              documentPreview.is_image && documentPreview.image_id ? (
+                // Image preview
+                <div className="flex items-center justify-center p-4">
+                  <img 
+                    src={`${API}/images/${documentPreview.image_id}`} 
+                    alt={documentPreview.filename}
+                    className="max-w-full max-h-[60vh] object-contain rounded-lg"
+                  />
+                </div>
+              ) : documentPreview.file_type === '.pdf' ? (
+                // PDF preview via iframe with inline endpoint
+                <div className="h-[60vh]">
+                  <iframe
+                    src={`${API}/documents/${documentPreview.document_id}/preview`}
+                    className="w-full h-full border-0 rounded-lg"
+                    title={documentPreview.filename}
+                  />
+                </div>
+              ) : documentPreview.html_content ? (
+                // DOCX, XLSX, CSV etc. - show HTML content
+                <div className="p-4 prose prose-slate dark:prose-invert max-w-none">
+                  <div dangerouslySetInnerHTML={{ __html: documentPreview.html_content }} />
+                </div>
+              ) : documentPreview.extracted_text ? (
+                // Fallback: show extracted text
+                <div className="p-4">
+                  <pre className="whitespace-pre-wrap text-sm font-mono bg-slate-50 dark:bg-slate-900 p-4 rounded-lg overflow-auto max-h-[60vh]">
+                    {documentPreview.extracted_text}
+                  </pre>
+                </div>
+              ) : (
+                // No preview available
+                <div className="flex flex-col items-center justify-center h-[40vh] text-muted-foreground">
+                  <FileText className="w-16 h-16 mb-4 opacity-30" />
+                  <p>Keine Vorschau verfügbar</p>
+                  <p className="text-sm">Klicken Sie unten, um die Datei zu öffnen</p>
+                </div>
+              )
+            )}
+          </div>
+          
+          <DialogFooter className="flex-shrink-0">
+            <Button
+              variant="outline"
+              onClick={() => {
+                const url = documentPreview.image_id 
+                  ? `${API}/images/${documentPreview.image_id}`
+                  : `${API}/documents/${documentPreview.document_id}/file`;
+                window.open(url, '_blank');
+              }}
+            >
+              <Eye className="w-4 h-4 mr-2" />
+              In neuem Tab öffnen
+            </Button>
+            <Button onClick={() => setDocumentPreview(null)}>
+              Schließen
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

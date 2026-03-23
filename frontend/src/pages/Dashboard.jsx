@@ -7,7 +7,6 @@ import {
   FileText,
   Upload,
   FolderTree,
-  Search,
   TrendingUp,
   Clock,
   ChevronRight,
@@ -187,7 +186,7 @@ const Dashboard = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="w-8 h-8 border-2 border-red-500 border-t-transparent rounded-full animate-spin"></div>
+        <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
       </div>
     );
   }
@@ -209,7 +208,7 @@ const Dashboard = () => {
             <Upload className="w-4 h-4 mr-2" />
             PDF hochladen
           </Button>
-          <Button onClick={() => navigate("/articles/new")} className="bg-canusa-red hover:bg-red-600" data-testid="new-article-btn">
+          <Button onClick={() => navigate("/articles/new")} className="bg-primary hover:bg-primary/90" data-testid="new-article-btn">
             <Plus className="w-4 h-4 mr-2" />
             Neuer Artikel
           </Button>
@@ -371,7 +370,7 @@ const Dashboard = () => {
               title="Artikel gesamt"
               value={stats?.total_articles || 0}
               icon={FileText}
-              color="bg-red-100 text-red-600"
+              color="bg-primary/10 text-primary"
             />
             <StatCard
               title="Veröffentlicht"
@@ -406,7 +405,7 @@ const Dashboard = () => {
               <div className="flex items-center gap-6">
                 <Avatar className="w-16 h-16">
                   <AvatarImage src={user?.picture} alt={user?.name} />
-                  <AvatarFallback className="bg-red-100 text-red-700 text-xl">
+                  <AvatarFallback className="bg-primary/10 text-primary text-xl">
                     {user?.name?.split(" ").map(n => n[0]).join("").slice(0, 2)}
                   </AvatarFallback>
                 </Avatar>
@@ -428,7 +427,7 @@ const Dashboard = () => {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="text-lg flex items-center gap-2">
-                <TrendingUp className="w-5 h-5 text-canusa-red" />
+                <TrendingUp className="w-5 h-5 text-primary" />
                 Beliebteste Artikel
               </CardTitle>
             </CardHeader>
@@ -441,7 +440,7 @@ const Dashboard = () => {
                       className="flex items-center gap-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors cursor-pointer"
                       onClick={() => navigate(`/articles/${article.article_id}`)}
                     >
-                      <span className="shrink-0 w-8 h-8 rounded-full bg-red-100 text-red-700 flex items-center justify-center font-bold text-sm">
+                      <span className="shrink-0 w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-sm">
                         {index + 1}
                       </span>
                       <div className="min-w-0 flex-1">
@@ -470,36 +469,36 @@ const Dashboard = () => {
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="p-4 rounded-lg bg-slate-50 border border-slate-200">
+                <div className="p-4 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium text-slate-700">Entwürfe</span>
-                    <span className="text-2xl font-bold text-slate-900">{stats?.draft_articles || 0}</span>
+                    <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Entwürfe</span>
+                    <span className="text-2xl font-bold text-slate-900 dark:text-slate-100">{stats?.draft_articles || 0}</span>
                   </div>
-                  <div className="h-2 bg-slate-200 rounded-full">
+                  <div className="h-2 bg-slate-200 dark:bg-slate-700 rounded-full">
                     <div 
                       className="h-2 bg-slate-500 rounded-full transition-all"
                       style={{ width: `${stats?.total_articles ? (stats.draft_articles / stats.total_articles) * 100 : 0}%` }}
                     />
                   </div>
                 </div>
-                <div className="p-4 rounded-lg bg-amber-50 border border-amber-200">
+                <div className="p-4 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium text-amber-700">In Review</span>
-                    <span className="text-2xl font-bold text-amber-900">{stats?.review_articles || 0}</span>
+                    <span className="text-sm font-medium text-amber-700 dark:text-amber-400">In Review</span>
+                    <span className="text-2xl font-bold text-amber-900 dark:text-amber-200">{stats?.review_articles || 0}</span>
                   </div>
-                  <div className="h-2 bg-amber-200 rounded-full">
+                  <div className="h-2 bg-amber-200 dark:bg-amber-800 rounded-full">
                     <div 
                       className="h-2 bg-amber-500 rounded-full transition-all"
                       style={{ width: `${stats?.total_articles ? (stats.review_articles / stats.total_articles) * 100 : 0}%` }}
                     />
                   </div>
                 </div>
-                <div className="p-4 rounded-lg bg-emerald-50 border border-emerald-200">
+                <div className="p-4 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium text-emerald-700">Veröffentlicht</span>
-                    <span className="text-2xl font-bold text-emerald-900">{stats?.published_articles || 0}</span>
+                    <span className="text-sm font-medium text-emerald-700 dark:text-emerald-400">Veröffentlicht</span>
+                    <span className="text-2xl font-bold text-emerald-900 dark:text-emerald-200">{stats?.published_articles || 0}</span>
                   </div>
-                  <div className="h-2 bg-emerald-200 rounded-full">
+                  <div className="h-2 bg-emerald-200 dark:bg-emerald-800 rounded-full">
                     <div 
                       className="h-2 bg-emerald-500 rounded-full transition-all"
                       style={{ width: `${stats?.total_articles ? (stats.published_articles / stats.total_articles) * 100 : 0}%` }}

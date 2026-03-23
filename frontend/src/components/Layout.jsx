@@ -3,7 +3,6 @@ import { NavLink, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { API, AuthContext } from "@/App";
 import { toast } from "sonner";
-import { useTheme } from "@/components/ThemeProvider";
 import {
   LayoutDashboard,
   Search,
@@ -14,9 +13,6 @@ import {
   LogOut,
   Menu,
   Users,
-  Moon,
-  Sun,
-  Monitor,
   Database,
   UsersRound,
   Trash2
@@ -43,7 +39,7 @@ const allNavItems = [
   { path: "/groups", icon: UsersRound, label: "Gruppen", roles: ["admin"] },
   { path: "/trash", icon: Trash2, label: "Papierkorb", roles: ["admin"] },
   { path: "/backup", icon: Database, label: "Backup", roles: ["admin"] },
-  { path: "/settings", icon: Settings, label: "Einstellungen", roles: ["admin"] },
+  { path: "/settings", icon: Settings, label: "Einstellungen", roles: ["admin", "editor", "viewer"] },
 ];
 
 const Sidebar = ({ className = "", onNavigate, userRole }) => {
@@ -53,20 +49,13 @@ const Sidebar = ({ className = "", onNavigate, userRole }) => {
   return (
     <aside className={`h-screen w-64 border-r bg-card flex flex-col ${className}`}>
       {/* Logo */}
-      <div className="p-6 border-b">
-        <div className="flex items-center gap-3">
+      <div className="p-4 border-b">
+        <div className="flex items-center justify-center">
           <img 
-            src="https://www.canusa.de/_Resources/Static/Packages/Canusa.CanusaDe/Images/logo-canusa.svg" 
-            alt="CANUSA" 
-            className="h-8"
-            onError={(e) => {
-              e.target.style.display = 'none';
-            }}
+            src="/nexus-logo.png" 
+            alt="CANUSA Nexus - The Knowledge Hub" 
+            className="h-24 object-contain"
           />
-          <div className="border-l pl-2">
-            <span className="text-sm font-semibold text-canusa-dark-blue block">Nexus</span>
-            <span className="text-xs text-muted-foreground">The Knowledge Hub</span>
-          </div>
         </div>
       </div>
 
@@ -80,7 +69,7 @@ const Sidebar = ({ className = "", onNavigate, userRole }) => {
             className={({ isActive }) =>
               `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
                 isActive
-                  ? "bg-red-50 text-red-700 border-l-2 border-red-500 -ml-[2px]"
+                  ? "bg-primary/10 text-primary border-l-2 border-primary -ml-[2px]"
                   : "text-muted-foreground hover:text-foreground hover:bg-muted"
               }`
             }
@@ -94,7 +83,7 @@ const Sidebar = ({ className = "", onNavigate, userRole }) => {
       {/* Footer */}
       <div className="p-4 border-t">
         <p className="text-xs text-muted-foreground text-center">
-          CANUSA Nexus v1.3
+          CANUSA Nexus v1.4
         </p>
       </div>
     </aside>
@@ -104,7 +93,6 @@ const Sidebar = ({ className = "", onNavigate, userRole }) => {
 const Header = () => {
   const { user } = useContext(AuthContext);
   const navigate = useNavigate();
-  const { theme, setTheme } = useTheme();
   const [mobileOpen, setMobileOpen] = React.useState(false);
 
   const handleLogout = async () => {
@@ -154,52 +142,26 @@ const Header = () => {
         </div>
 
         {/* Mobile Logo */}
-        <div className="lg:hidden flex items-center gap-2">
-          <span className="font-bold text-red-600">CANUSA</span>
-          <span className="text-sm text-muted-foreground">Nexus</span>
+        <div className="lg:hidden flex items-center">
+          <img 
+            src="/nexus-logo.png" 
+            alt="CANUSA Nexus" 
+            className="h-10 object-contain"
+          />
         </div>
 
         {/* Spacer for desktop */}
         <div className="hidden lg:block" />
 
-        {/* Theme Toggle & User Menu */}
+        {/* User Menu */}
         <div className="flex items-center gap-2">
-          {/* Theme Dropdown */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                className="gap-1.5 text-muted-foreground hover:text-foreground"
-                data-testid="theme-toggle"
-              >
-                {theme === 'dark' ? <Moon className="w-4 h-4" /> : theme === 'light' ? <Sun className="w-4 h-4" /> : <Monitor className="w-4 h-4" />}
-                <span className="hidden sm:inline text-xs">Mode</span>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => setTheme('light')} className={theme === 'light' ? 'bg-muted' : ''}>
-                <Sun className="w-4 h-4 mr-2" />
-                Hell
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setTheme('dark')} className={theme === 'dark' ? 'bg-muted' : ''}>
-                <Moon className="w-4 h-4 mr-2" />
-                Dunkel
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setTheme('system')} className={theme === 'system' ? 'bg-muted' : ''}>
-                <Monitor className="w-4 h-4 mr-2" />
-                Automatisch
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-
           {/* User Menu */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="gap-2 h-auto py-2" data-testid="user-menu-trigger">
                 <Avatar className="w-8 h-8">
                   <AvatarImage src={user?.picture} alt={user?.name} />
-                  <AvatarFallback className="bg-red-100 text-red-700 text-sm">
+                  <AvatarFallback className="bg-primary/10 text-primary text-sm">
                     {getInitials(user?.name)}
                   </AvatarFallback>
                 </Avatar>

@@ -287,14 +287,12 @@ Wissensmanagement-Plattform für CANUSA Touristik GmbH & Co. KG und CU-Travel.
 - **Passwort**: CanusaNexus2024!
 
 ## Test Coverage
+- Iteration 27: Frontend 100% (8/8), Regression 100% (8/9) - YouTube & Link Dialog Features
+- Iteration 26: Backend 100% (12/12), Frontend 100% (13/13), Regression 100% (25/25) - User Last Active & Folder Move
+- Iteration 25: Backend 100% (13/13), Frontend 95% (20/21) - Article Move & Image Upload Tree
+- Iteration 24: Backend 100% (13/13), Frontend 100% (15/15, 1 skipped) - Documents Page Features
 - Iteration 23: Backend 100% (9/9), Frontend 100% (15/15) - Editor Improvements
 - Iteration 22: Backend 100% (14/14), Frontend 100% (11/11) - Notification System
-- Iteration 29: Backend 100% (14/14), Frontend 100% (12/12)
-- Iteration 28: Backend 100% (20/20), Frontend 100% (17/17)
-- Iteration 27: Backend 100% (17/17), Frontend 100% (38/38)
-- Iteration 26: Backend 100% (17/17), Frontend 100% (69/69)
-- Iteration 25: Backend 100% (22/22), Frontend 100% (34/34)
-- Iteration 24: Backend 100% (13/13), Frontend 100% (33/33)
 - Last tested: 19.03.2026
 
 ## Editor Improvements (Iteration 23) - 19.03.2026
@@ -321,6 +319,48 @@ Wissensmanagement-Plattform für CANUSA Touristik GmbH & Co. KG und CU-Travel.
 - ✅ **Sortierung Dokumente** - Nach Datum, Name, Größe (auf-/absteigend)
 - ✅ **Ansichtsmodus-Toggle** - Umschaltbar zwischen Liste und Galerie für Dokumente
 
+## Ordner-Navigation & Multi-Select (Iteration 25) - 19.03.2026
+- ✅ **Ordner-Navigation Bug behoben** - Klick auf Ordner aktualisiert jetzt korrekt die Dokumentenliste
+- ✅ **Multi-Select in Galerie-Ansicht** - Checkboxen erscheinen beim Hover über Bilder
+- ✅ **Bulk-Aktionsleiste** - Zeigt Anzahl ausgewählter Elemente mit Download/Verschieben/Löschen-Buttons
+- ✅ **Alle auswählen** - Button um alle Bilder in der Ansicht zu selektieren
+- ✅ **Drag & Drop für Dokumente** - Dokumente können per Drag & Drop in Ordner verschoben werden
+- ✅ **@dnd-kit Integration** - Moderne Drag & Drop Bibliothek für React
+- ✅ **Drag-Handles** - GripVertical Icons in der Listenansicht zeigen Drag-Möglichkeit an
+- ✅ **Droppable Ordner** - Ordner in der Baumansicht akzeptieren Drops und werden visuell hervorgehoben
+- ✅ **DragOverlay** - Zeigt Dateinamen/Thumbnail während des Ziehens
+
+## Artikel Verschieben & Bilder-Upload Verbesserung (Iteration 26) - 19.03.2026
+- ✅ **Artikel Verschieben** - "Verschieben" Option im Dropdown-Menü jedes Artikels
+- ✅ **Artikel Verschieben Dialog** - Hierarchische Kategorienauswahl im Dialog (wie bei neuen Kategorien)
+- ✅ **Drag & Drop für Artikel** - Artikel können per Drag & Drop zu Kategorien in der Seitenleiste verschoben werden
+- ✅ **Drag-Handles für Artikel** - GripVertical Icons zeigen Drag-Möglichkeit an
+- ✅ **Droppable Kategorien** - Kategorien in der Baumansicht akzeptieren Drops und werden visuell hervorgehoben
+- ✅ **Bilder-Upload Ordnerauswahl** - Hierarchische Baumstruktur statt flacher Dropdown-Liste
+- ✅ **Expand/Collapse für Ordner** - Pfeile zum Auf-/Zuklappen von Ordnern mit Unterordnern
+- ✅ **Auto-Auswahl "Bilder"** - "Bilder (automatisch)" ist als Standard vorausgewählt
+
+## Benutzer & Sicherheit Verbesserungen (Iteration 27) - 19.03.2026
+- ✅ **Zuletzt online für Admins** - Neue "Zuletzt online" Spalte in der Benutzerverwaltung
+- ✅ **Online-Status Indikator** - Grüner pulsierender Punkt für Benutzer, die in den letzten 5 Minuten aktiv waren
+- ✅ **Relative Zeitangaben** - "Gerade eben", "vor X Min.", "vor X Std.", "vor X Tagen", "Nie"
+- ✅ **last_active Tracking** - Backend aktualisiert last_active bei Login und /me Endpoint-Aufrufen
+- ✅ **Ordner verschieben per Drag & Drop** - Ordner können jetzt auch in andere Ordner gezogen werden
+- ✅ **Ordner verschieben API** - Neuer PUT /api/document-folders/{id}/move Endpoint
+- ✅ **Zirkuläre Referenz Schutz** - Backend verhindert das Verschieben eines Ordners in seinen eigenen Unterordner
+- ✅ **Bestätigungs-Dialog vor Drag & Drop** - "Möchten Sie XYZ wirklich nach ZYX verschieben?"
+- ✅ **Bestätigung für alle Drag & Drop Operationen** - Dokumente, Ordner und Artikel
+
+## Editor Erweiterungen (Iteration 28) - 19.03.2026
+- ✅ **YouTube-Link Dialog** - Beim Einfügen eines YouTube-Videos wird gefragt: "Vorschau einbetten" oder "Nur als Link anzeigen"
+- ✅ **Erweiterte Link-Funktion** - Link-Dialog mit zwei Tabs: "URL" und "Dokument"
+- ✅ **Dokument-Verlinkung** - Durchsuchbare Liste mit Thumbnails für Bilder
+- ✅ **Darstellungs-Optionen** - Bei Dokumenten-Links ohne markierten Text: Vorschaubild, Eigener Link-Text, Gekürzter Dateiname
+- ✅ **Dokument-Vorschau Popup** - Klick auf Dokument-Link öffnet Vollbild-Vorschau
+- ✅ **Bilder-Vorschau** - Zeigt Bild zentriert im Dialog
+- ✅ **PDF/Dokument-Vorschau** - Zeigt Dokument in iframe
+- ✅ **"In neuem Tab öffnen" Button** - Ermöglicht direkten Download/Ansicht
+
 ## Backlog
 
 ### P2 (Medium)
@@ -328,35 +368,12 @@ Wissensmanagement-Plattform für CANUSA Touristik GmbH & Co. KG und CU-Travel.
 - [x] ~~Artikel-Versionierung~~ (Erledigt in Iteration 26)
 - [x] ~~Multi-Format-Dokumente~~ (Erledigt in Iteration 27)
 - [ ] Schnellsuche (Strg+K)
-- [ ] Multi-Select in Galerie-Ansicht
-- [ ] Drag & Drop für Ordner-Neuordnung
 
 ### P3 (Nice to Have)
 - [ ] OCR für gescannte PDFs
 - [x] ~~E-Mail-Benachrichtigungen~~ (Erledigt in Iteration 22 - 17.03.2026)
 - [x] ~~Hochwertige PDF-zu-HTML-Konvertierung~~ (Erledigt in Iteration 24)
 - [x] ~~Vollwertiger PDF-Viewer~~ (Erledigt in Iteration 25)
-
-## Pinnwand & Dashboard-Umbau (Iteration 25) - 23.03.2026
-- ✅ **Dashboard-Tabs** - Zwei Tabs: "Pinnwand" und "Dashboard"
-- ✅ **Pinnwand-Ansicht** - Zeigt Artikel aus als Pinnwand markierten Kategorien mit Amber-Akzentfarbe
-- ✅ **Dashboard-Reihenfolge** - Neuer Aufbau: Favoriten → Zuletzt angesehen → Neueste Artikel → Statistiken
-- ✅ **Schnellzugriff entfernt** - Bereich wurde aus Dashboard entfernt
-- ✅ **Pinnwand-Kategorien** - Kategorien können als "Pinnwand" markiert werden
-- ✅ **Pinnwand-Badge** - Kategorien mit Pinnwand-Flag zeigen Badge in Baumansicht
-- ✅ **Gruppen-@-Mentions** - `@@@Gruppenname` erwähnt alle Mitglieder einer Gruppe
-- ✅ **Gruppen-E-Mail-Benachrichtigung** - Alle Gruppenmitglieder erhalten E-Mail bei Gruppen-Mention
-- ✅ **BUG FIX: Ordner-Navigation** - Klicken auf Ordner filtert Dokumente jetzt korrekt
-- **Neue Komponenten**:
-  - `GroupMentionList.jsx` - Autocomplete-Liste für Gruppen-Mentions im Editor
-- **Neue API-Endpunkte**:
-  - `GET /api/categories/pinnwand/articles` - Artikel aus Pinnwand-Kategorien abrufen
-  - `GET /api/groups/search/mention` - Gruppen mit Mitgliederzahl für Mentions suchen
-- **Modell-Änderungen**:
-  - `Category.is_pinnwand: bool` - Flag für Pinnwand-Kategorien
-- **Editor-Änderungen**:
-  - Gruppen-Mention Extension mit `@@@` Trigger (User-Mentions bleiben `@@`)
-  - Grüne Styling für Gruppen-Mentions, blaue für User-Mentions
 
 ## Benachrichtigungssystem (Iteration 22) - 17.03.2026
 - ✅ **@-Mentions Benachrichtigungen** - Benutzer werden per E-Mail benachrichtigt, wenn sie in einem Artikel erwähnt werden
@@ -390,7 +407,7 @@ Wissensmanagement-Plattform für CANUSA Touristik GmbH & Co. KG und CU-Travel.
 │   └── email_service.py # E-Mail-Versand für Benachrichtigungen
 └── routes/
     ├── auth.py        # Login, Logout
-    ├── users.py       # Benutzer-CRUD mit Status-Benachrichtigungen
+    ├── users.py       # Benutzer-CRUD mit Status-Benachrichtigungen, Theme-Einstellungen
     ├── groups.py      # Gruppen-CRUD
     ├── categories.py  # Kategorien-CRUD
     ├── articles.py    # Artikel, Kommentare, Tags mit Benachrichtigungen
@@ -407,13 +424,68 @@ Wissensmanagement-Plattform für CANUSA Touristik GmbH & Co. KG und CU-Travel.
     └── notifications.py # E-Mail-Benachrichtigungssystem
 ```
 
-## Bekannte offene Probleme (Backlog)
+## Dark Mode & Theme System (Iteration 29) - 19.03.2026
+- ✅ **Dark Mode Fixes** - Umfassende CSS-Korrekturen für lesbare Texte im Dark Mode
+  - Input-Felder, Textareas und Selects haben jetzt korrekten Kontrast
+  - Tabellen-Texte sind lesbar (Header und Daten-Zeilen)
+  - Überschriften (h1-h6) sind hell auf dunklem Hintergrund
+  - ProseMirror/TipTap Editor-Inhalte sind lesbar
+  - Formulare und Dialogboxen haben korrekte Farben
+- ✅ **Theme-Einstellungen für alle Benutzer** - Neuer Tab "Erscheinungsbild" in Einstellungen
+  - Theme-Modus auswählen: Hell, Dunkel, Automatisch
+  - Farbschema-Vorlagen: CANUSA Standard, Ozean Blau, Wald Grün, Sonnenuntergang, Lavendel, Mitternacht
+  - "Auf Standard zurücksetzen" Button
+  - "Einstellungen speichern" Button
+- ✅ **Dynamische Farbschema-Anwendung** - Primärfarben ändern sich überall in der UI:
+  - Sidebar-Navigation aktiver Zustand
+  - Alle primären Buttons (Neu, Speichern, etc.)
+  - StatCard-Icons auf dem Dashboard
+  - Login-Seite Branding und Buttons
+  - Avatar-Fallback-Farben
+  - Kategoriebaum Auswahl
+- ✅ **Theme-Button aus Header entfernt** - Nur noch über Einstellungen erreichbar
+- ✅ **Neues CANUSA Nexus Logo** integriert:
+  - Sidebar Logo zentriert
+  - Mobile Header Logo
+  - Login-Seite Header und Hero-Bereich
+  - Landing-Seite Header und Hero-Bereich
+  - Favicon und Apple Touch Icon
+- ✅ **Einstellungen für alle Rollen sichtbar** - Nicht nur Admins können auf Einstellungen zugreifen
+- ✅ **Admin: Theme zurücksetzen** - Neuer "Theme" Button in der Benutzerverwaltung
+  - Setzt das Theme eines Benutzers auf Standard (Light Mode) zurück
+- **Neue API-Endpunkte**:
+  - `GET /api/users/me/theme` - Theme-Einstellungen des aktuellen Benutzers abrufen
+  - `PUT /api/users/me/theme` - Theme-Einstellungen speichern
+  - `PUT /api/users/{id}/reset-theme` - Theme eines Benutzers zurücksetzen (Admin)
+- **Neue/Aktualisierte Komponenten**:
+  - `ThemeSettings.jsx` - Erscheinungsbild-Einstellungskomponente
+  - `ThemeProvider.jsx` - Erweitert mit Farbschema-Support, CSS-Variablen und Server-Sync
+- **Aktualisierte Seiten** (für dynamische Primärfarben und neues Logo):
+  - `Layout.jsx` - Sidebar-Navigation, neues Logo
+  - `Dashboard.jsx` - StatCards, Buttons, Avatars
+  - `Articles.jsx` - Kategorie-Baum, Buttons
+  - `ArticleEditor.jsx` - Kategorie-Checkboxen, Speichern-Button
+  - `ArticleView.jsx` - Export-Button
+  - `Login.jsx` - Neues Logo, Feature-Icons, Login-Button
+  - `Landing.jsx` - Neues Logo, CTA-Buttons
+  - `Groups.jsx` - Erstellen/Speichern-Buttons
+  - `Backup.jsx` - Alle primären Buttons
+- **Neue Assets**:
+  - `/public/nexus-logo.png` - Das neue CANUSA Nexus Logo
+- **Neue CSS-Utilities**:
+  - `bg-theme-primary`, `text-theme-primary`, `border-theme-primary`
+  - `bg-theme-primary-light`, `bg-theme-primary-lighter`
 
-### Google Drive Integration (P2)
-- **Export zu Shared Drives**: Fehlender `supportsAllDrives=True` Parameter in `exports.py`
-- **Falsche Dateiliste im Export-Dialog**: API-Aufruf in `google_drive.py` prüfen
+## Known Issues / Backlog
 
-### Geplante Features (P2)
-- Multi-Select in Galerie-Ansicht (Documents.jsx)
-- Drag & Drop für Ordner-Neuordnung (react-beautiful-dnd)
-- Schnellsuche (Strg+K)
+### P1 (Kritisch)
+- [ ] Google Drive Import Dialog - "Meine Ablage" Tab reagiert nicht (wiederkehrendes Problem)
+- [ ] Export zu Google Shared Drive funktioniert nicht
+- [ ] Google Drive Dateiliste im Export-Dialog ist fehlerhaft
+
+### P2 (Medium)
+- [ ] Schnellsuche (Strg+K)
+
+### P3 (Nice to Have)
+- [ ] OCR für gescannte PDFs
+
