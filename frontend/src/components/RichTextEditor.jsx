@@ -239,6 +239,7 @@ const EditorToolbar = ({ editor, onImageUpload, isFullscreen, onToggleFullscreen
   const [documentSearch, setDocumentSearch] = React.useState('');
   const [selectedDocument, setSelectedDocument] = React.useState(null);
   const [documentLinkType, setDocumentLinkType] = React.useState('text'); // 'thumbnail', 'text', 'short'
+  const [documentInsertMode, setDocumentInsertMode] = React.useState('link'); // 'link' or 'embed'
   const [loadingDocuments, setLoadingDocuments] = React.useState(false);
   
   // YouTube Dialog State
@@ -351,29 +352,53 @@ const EditorToolbar = ({ editor, onImageUpload, isFullscreen, onToggleFullscreen
         : `${API}/documents/${selectedDocument.document_id}/file`;
       const docViewUrl = `#doc-preview-${selectedDocument.document_id}`;
       
-      if (hasSelectedText) {
-        // Just link the selected text
-        editor.chain().focus().extendMarkRange('link').setLink({ 
-          href: docViewUrl,
-          'data-document-id': selectedDocument.document_id
-        }).run();
-      } else if (documentLinkType === 'thumbnail' && selectedDocument.is_image) {
-        // Insert thumbnail image that links to document
-        editor.chain().focus().insertContent(
-          `<a href="${docViewUrl}" data-document-id="${selectedDocument.document_id}"><img src="${docUrl}" alt="${selectedDocument.filename}" style="max-width: 200px; border-radius: 8px;" /></a>`
-        ).run();
-      } else if (documentLinkType === 'text' && linkText) {
-        editor.chain().focus().insertContent(
-          `<a href="${docViewUrl}" data-document-id="${selectedDocument.document_id}">${linkText}</a>`
-        ).run();
+      // Embed mode - insert document viewer
+      if (documentInsertMode === 'embed') {
+        const previewUrl = selectedDocument.file_type?.toLowerCase() === 'pdf' || selectedDocument.file_type?.toLowerCase() === '.pdf'
+          ? `${API}/documents/${selectedDocument.document_id}/preview`
+          : docUrl;
+        
+        // Insert embedded document viewer
+        const embedHtml = `
+          <div class="embedded-document" data-document-id="${selectedDocument.document_id}" contenteditable="false" style="margin: 16px 0; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden;">
+            <div style="background: #f3f4f6; padding: 8px 12px; border-bottom: 1px solid #e5e7eb; display: flex; align-items: center; gap: 8px;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+              <span style="font-weight: 500; font-size: 14px;">${selectedDocument.filename}</span>
+            </div>
+            <iframe 
+              src="${previewUrl}" 
+              style="width: 100%; height: 500px; border: none;"
+              title="${selectedDocument.filename}"
+            ></iframe>
+          </div>
+        `;
+        editor.chain().focus().insertContent(embedHtml).run();
       } else {
-        // Short display
-        const shortName = selectedDocument.filename.length > 25 
-          ? selectedDocument.filename.substring(0, 25) + '...' 
-          : selectedDocument.filename;
-        editor.chain().focus().insertContent(
-          `<a href="${docViewUrl}" data-document-id="${selectedDocument.document_id}">📄 ${shortName}</a>`
-        ).run();
+        // Link mode
+        if (hasSelectedText) {
+          // Just link the selected text
+          editor.chain().focus().extendMarkRange('link').setLink({ 
+            href: docViewUrl,
+            'data-document-id': selectedDocument.document_id
+          }).run();
+        } else if (documentLinkType === 'thumbnail' && selectedDocument.is_image) {
+          // Insert thumbnail image that links to document
+          editor.chain().focus().insertContent(
+            `<a href="${docViewUrl}" data-document-id="${selectedDocument.document_id}"><img src="${docUrl}" alt="${selectedDocument.filename}" style="max-width: 200px; border-radius: 8px;" /></a>`
+          ).run();
+        } else if (documentLinkType === 'text' && linkText) {
+          editor.chain().focus().insertContent(
+            `<a href="${docViewUrl}" data-document-id="${selectedDocument.document_id}">${linkText}</a>`
+          ).run();
+        } else {
+          // Short display
+          const shortName = selectedDocument.filename.length > 25 
+            ? selectedDocument.filename.substring(0, 25) + '...' 
+            : selectedDocument.filename;
+          editor.chain().focus().insertContent(
+            `<a href="${docViewUrl}" data-document-id="${selectedDocument.document_id}">📄 ${shortName}</a>`
+          ).run();
+        }
       }
     }
     setShowLinkDialog(false);
@@ -944,36 +969,72 @@ const EditorToolbar = ({ editor, onImageUpload, isFullscreen, onToggleFullscreen
 
               {selectedDocument && !hasSelectedText && (
                 <div className="space-y-3 border-t pt-3">
-                  <Label>Darstellung</Label>
-                  <RadioGroup value={documentLinkType} onValueChange={setDocumentLinkType}>
-                    {selectedDocument.is_image && (
+                  {/* Insert Mode Selection */}
+                  <div className="space-y-2">
+                    <Label>Einfügemodus</Label>
+                    <RadioGroup value={documentInsertMode} onValueChange={setDocumentInsertMode} className="flex gap-4">
                       <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="thumbnail" id="thumbnail" />
-                        <Label htmlFor="thumbnail" className="cursor-pointer">
-                          Vorschaubild (Thumbnail)
+                        <RadioGroupItem value="link" id="insert-link" />
+                        <Label htmlFor="insert-link" className="cursor-pointer flex items-center gap-1.5">
+                          <ExternalLink className="w-4 h-4" />
+                          Link einfügen
                         </Label>
                       </div>
-                    )}
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="text" id="text" />
-                      <Label htmlFor="text" className="cursor-pointer">
-                        Eigener Link-Text
-                      </Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="short" id="short" />
-                      <Label htmlFor="short" className="cursor-pointer">
-                        Gekürzter Dateiname
-                      </Label>
-                    </div>
-                  </RadioGroup>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="embed" id="insert-embed" />
+                        <Label htmlFor="insert-embed" className="cursor-pointer flex items-center gap-1.5">
+                          <FileText className="w-4 h-4" />
+                          Einbetten (Viewer)
+                        </Label>
+                      </div>
+                    </RadioGroup>
+                  </div>
                   
-                  {documentLinkType === 'text' && (
-                    <Input
-                      placeholder="Link-Text eingeben..."
-                      value={linkText}
-                      onChange={(e) => setLinkText(e.target.value)}
-                    />
+                  {/* Link Options - only show when link mode is selected */}
+                  {documentInsertMode === 'link' && (
+                    <div className="space-y-3 pl-4 border-l-2 border-muted">
+                      <Label>Link-Darstellung</Label>
+                      <RadioGroup value={documentLinkType} onValueChange={setDocumentLinkType}>
+                        {selectedDocument.is_image && (
+                          <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="thumbnail" id="thumbnail" />
+                            <Label htmlFor="thumbnail" className="cursor-pointer">
+                              Vorschaubild (Thumbnail)
+                            </Label>
+                          </div>
+                        )}
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="text" id="text" />
+                          <Label htmlFor="text" className="cursor-pointer">
+                            Eigener Link-Text
+                          </Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="short" id="short" />
+                          <Label htmlFor="short" className="cursor-pointer">
+                            Gekürzter Dateiname
+                          </Label>
+                        </div>
+                      </RadioGroup>
+                      
+                      {documentLinkType === 'text' && (
+                        <Input
+                          placeholder="Link-Text eingeben..."
+                          value={linkText}
+                          onChange={(e) => setLinkText(e.target.value)}
+                        />
+                      )}
+                    </div>
+                  )}
+                  
+                  {/* Embed Preview Info */}
+                  {documentInsertMode === 'embed' && (
+                    <div className="pl-4 border-l-2 border-amber-400 bg-amber-50 dark:bg-amber-900/20 p-3 rounded-r-lg">
+                      <p className="text-sm text-amber-800 dark:text-amber-200">
+                        Das Dokument wird als interaktiver Viewer direkt im Artikel eingebettet. 
+                        Leser können das Dokument durchblättern, ohne die Seite zu verlassen.
+                      </p>
+                    </div>
                   )}
                 </div>
               )}

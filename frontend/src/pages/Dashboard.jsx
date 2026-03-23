@@ -16,7 +16,18 @@ import {
   User,
   History,
   Pin,
-  LayoutDashboard
+  LayoutDashboard,
+  Newspaper,
+  Sparkles,
+  Bell,
+  Megaphone,
+  Calendar,
+  AlertCircle,
+  Info,
+  Gift,
+  Zap,
+  MessageSquare,
+  Bookmark
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -219,6 +230,23 @@ const Dashboard = () => {
   // Get Pinnwand categories and group articles by category
   const pinnwandCategories = categories.filter(c => c.is_pinnwand);
   
+  // Get icon for Pinnwand category title
+  const getPinnwandIcon = (title) => {
+    const titleLower = title.toLowerCase();
+    if (titleLower.includes('news') || titleLower.includes('neuigkeit')) return Newspaper;
+    if (titleLower.includes('special') || titleLower.includes('angebot')) return Sparkles;
+    if (titleLower.includes('wichtig') || titleLower.includes('alert') || titleLower.includes('achtung')) return AlertCircle;
+    if (titleLower.includes('info') || titleLower.includes('hinweis')) return Info;
+    if (titleLower.includes('event') || titleLower.includes('termin') || titleLower.includes('kalender')) return Calendar;
+    if (titleLower.includes('ankündigung') || titleLower.includes('announce')) return Megaphone;
+    if (titleLower.includes('aktion') || titleLower.includes('promo')) return Gift;
+    if (titleLower.includes('tipp') || titleLower.includes('tip')) return Zap;
+    if (titleLower.includes('feedback') || titleLower.includes('kommentar')) return MessageSquare;
+    if (titleLower.includes('merken') || titleLower.includes('bookmark')) return Bookmark;
+    if (titleLower.includes('bell') || titleLower.includes('benachrichtigung')) return Bell;
+    return Pin; // Default icon
+  };
+  
   // Group articles by Pinnwand category
   const articlesByCategory = React.useMemo(() => {
     const grouped = {};
@@ -288,36 +316,39 @@ const Dashboard = () => {
         </TabsList>
 
         {/* Pinnwand Tab */}
-        <TabsContent value="pinnwand" className="mt-6 space-y-6">
+        <TabsContent value="pinnwand" className="mt-6">
           {pinnwandCategories.length > 0 ? (
-            <div className="space-y-6">
-              {Object.values(articlesByCategory).map(({ category, title, articles }) => (
-                <Card key={category.category_id} className="border-l-4 border-l-amber-500">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-lg flex items-center gap-2">
-                      <Pin className="w-5 h-5 text-amber-500" />
-                      {title}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="pt-0">
-                    {articles.length > 0 ? (
-                      <div className="divide-y rounded-lg border">
-                        {articles.map((article) => (
-                          <PinnwandArticleRow
-                            key={article.article_id}
-                            article={article}
-                            onClick={() => navigate(`/articles/${article.article_id}`)}
-                          />
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="text-center py-6 text-muted-foreground">
-                        <p className="text-sm">Keine Artikel in dieser Kategorie</p>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              ))}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+              {Object.values(articlesByCategory).map(({ category, title, articles }) => {
+                const IconComponent = getPinnwandIcon(title);
+                return (
+                  <Card key={category.category_id} className="border-l-4 border-l-amber-500 h-fit">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-lg flex items-center gap-2">
+                        <IconComponent className="w-5 h-5 text-amber-500" />
+                        {title}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="pt-0">
+                      {articles.length > 0 ? (
+                        <div className="divide-y rounded-lg border">
+                          {articles.map((article) => (
+                            <PinnwandArticleRow
+                              key={article.article_id}
+                              article={article}
+                              onClick={() => navigate(`/articles/${article.article_id}`)}
+                            />
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="text-center py-4 text-muted-foreground">
+                          <p className="text-sm">Keine Artikel</p>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                );
+              })}
             </div>
           ) : (
             <Card>
