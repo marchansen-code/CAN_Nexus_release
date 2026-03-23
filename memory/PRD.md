@@ -498,6 +498,28 @@ Wissensmanagement-Plattform für CANUSA Touristik GmbH & Co. KG und CU-Travel.
 - **CSS-Änderungen**:
   - `.group-mention` Klasse für grüne Gruppen-Mention-Darstellung
 
+## Pinnwand-Verbesserungen & Backlog-Features (Iteration 29) - 23.03.2026
+- ✅ **Pinnwand-Container pro Kategorie** - Jede Pinnwand-Kategorie hat eigenen Container
+- ✅ **Container-Titel aus zweitem Wort** - "Pinnwand NEWS" → Container-Titel "NEWS"
+- ✅ **Einzeilige Artikel-Darstellung** - Artikel in Pinnwand-Containern als einzelne Zeilen
+- ✅ **Schnellsuche (Strg+K)** - Globale Suche nach Artikeln, Dokumenten, Kategorien
+- ✅ **Schnellnavigation** - Dashboard, Artikel, Dokumente, Kategorien, Benutzer, Einstellungen
+- ✅ **OCR für gescannte PDFs** - Tesseract OCR (kostenlos, open-source)
+- ✅ **OCR-Button im Dokument-Viewer** - "Text per OCR extrahieren" für PDFs und Bilder
+- ✅ **OCR-Ergebnis-Dialog** - Zeigt Seiten, Wörter, Zeichen, Konfidenz mit "Text kopieren"
+- **Neue Komponenten**:
+  - `QuickSearch.jsx` - Schnellsuche-Dialog mit CommandDialog
+  - `PinnwandArticleRow` - Einzeilige Artikel-Darstellung in Pinnwand-Containern
+- **Neue API-Endpunkte**:
+  - `GET /api/articles/search` - Volltextsuche in Artikeln
+  - `GET /api/ocr/status` - OCR-Dienststatus prüfen
+  - `POST /api/ocr/extract-from-document/{id}` - Text aus gespeichertem Dokument extrahieren
+- **Backend-Services**:
+  - `services/ocr_service.py` - Tesseract OCR Service (Deutsch + Englisch)
+- **System-Dependencies**:
+  - Tesseract OCR (`tesseract-ocr`, `tesseract-ocr-deu`, `tesseract-ocr-eng`)
+  - pytesseract, pdf2image
+
 ## Known Issues / Backlog
 
 ### P1 (Kritisch)
@@ -505,11 +527,12 @@ Wissensmanagement-Plattform für CANUSA Touristik GmbH & Co. KG und CU-Travel.
 - [ ] Export zu Google Shared Drive funktioniert nicht
 - [ ] Google Drive Dateiliste im Export-Dialog ist fehlerhaft
 
-### P2 (Medium)
-- [ ] Schnellsuche (Strg+K)
-- [ ] Multi-Select in Galerie-Ansicht (Dokumenten-Seite)
-- [ ] Drag & Drop für Ordner-Neuordnung
+### P2 (Medium) - ERLEDIGT
+- [x] ~~Schnellsuche (Strg+K)~~ ✅ Erledigt in Iteration 29
+- [x] ~~Multi-Select in Galerie-Ansicht~~ ✅ Bereits im GitHub-Repo implementiert
+- [x] ~~Drag & Drop für Ordner-Neuordnung~~ ✅ Bereits im GitHub-Repo implementiert
+- [x] ~~OCR für gescannte PDFs~~ ✅ Erledigt in Iteration 29 mit Tesseract (kostenlos)
 
 ### P3 (Nice to Have)
-- [ ] OCR für gescannte PDFs
+- [ ] Handschrift-OCR verbessern (Tesseract hat Limitationen)
 
