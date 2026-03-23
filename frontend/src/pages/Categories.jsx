@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import axios from "axios";
-import { API } from "@/App";
+import { API, AuthContext } from "@/App";
 import { toast } from "sonner";
 import {
   FolderTree,
@@ -120,8 +120,8 @@ const CategoryTreeSelector = ({ categories, selectedId, onSelect, excludeId }) =
   );
 };
 
-const TreeItem = ({ category, categories, level = 0, onEdit, onDelete, onAddChild, expandedIds, toggleExpand }) => {
-  const children = categories.filter(c => c.parent_id === category.category_id);
+const TreeItem = ({ category, categories, level = 0, onEdit, onDelete, onAddChild, expandedIds, toggleExpand, isAdmin }) => {
+  const children = categories.filter(c => c.parent_id === category.category_id).filter(c => isAdmin || !c.is_pinnwand);
   const hasChildren = children.length > 0;
   const isExpanded = expandedIds.includes(category.category_id);
 
@@ -204,6 +204,7 @@ const TreeItem = ({ category, categories, level = 0, onEdit, onDelete, onAddChil
               onAddChild={onAddChild}
               expandedIds={expandedIds}
               toggleExpand={toggleExpand}
+              isAdmin={isAdmin}
             />
           ))}
         </div>
@@ -213,6 +214,8 @@ const TreeItem = ({ category, categories, level = 0, onEdit, onDelete, onAddChil
 };
 
 const Categories = () => {
+  const { user } = useContext(AuthContext);
+  const isAdmin = user?.role === "admin";
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [expandedIds, setExpandedIds] = useState([]);
@@ -318,7 +321,9 @@ const Categories = () => {
     }
   };
 
-  const rootCategories = categories.filter(c => !c.parent_id);
+  const rootCategories = categories
+    .filter(c => !c.parent_id)
+    .filter(c => isAdmin || !c.is_pinnwand);
 
   if (loading) {
     return (
@@ -371,6 +376,7 @@ const Categories = () => {
                   onAddChild={handleOpenCreateChild}
                   expandedIds={expandedIds}
                   toggleExpand={toggleExpand}
+                  isAdmin={isAdmin}
                 />
               ))}
             </div>
@@ -470,7 +476,8 @@ const Categories = () => {
               </Popover>
             </div>
             
-            {/* Pinnwand Checkbox */}
+            {/* Pinnwand Checkbox - nur für Admins */}
+            {isAdmin && (
             <div className="flex items-center space-x-2 pt-2 border-t">
               <Checkbox
                 id="is_pinnwand"
@@ -491,6 +498,7 @@ const Categories = () => {
                 </p>
               </div>
             </div>
+            )}
           </div>
           
           <DialogFooter>

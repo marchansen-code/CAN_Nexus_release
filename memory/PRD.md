@@ -555,6 +555,9 @@ Wissensmanagement-Plattform für CANUSA Touristik GmbH & Co. KG und CU-Travel.
 - [x] ~~Eingebetteter Dokument-Viewer fehlt in veröffentlichter Artikelansicht~~ Erledigt in Iteration 31
 - [x] ~~Separater "Dokument einbetten"-Button im Editor~~ Erledigt in Iteration 31
 
+- [x] ~~Pinnwand-Kategorien nur für Admins sichtbar~~ Erledigt in Iteration 31
+- [x] ~~Pinnwand-Checkbox nur für Admins im Kategorie-Dialog~~ Erledigt in Iteration 31
+
 ### P3 (Nice to Have)
 - [ ] Handschrift-OCR verbessern (Tesseract hat Limitationen)
 
