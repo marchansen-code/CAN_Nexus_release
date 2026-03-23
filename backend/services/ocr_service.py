@@ -1,13 +1,14 @@
 """
-OCR Service using Google Cloud Vision API
+OCR Service using Tesseract (Free, Open-Source)
 Extracts text from scanned PDFs and images
 """
 import io
 import logging
 import os
-from typing import List, Optional
+from typing import Optional
 from pdf2image import convert_from_bytes
-from google.cloud import vision
+import pytesseract
+from PIL import Image
 from pydantic import BaseModel
 
 logger = logging.getLogger(__name__)
@@ -17,42 +18,37 @@ class OCRResult(BaseModel):
     text: str
     confidence: float
     page_count: int
-    language: str = "unknown"
+    language: str = "deu+eng"
 
 class OCRService:
-    """Service for extracting text from scanned documents using Google Cloud Vision"""
+    """Service for extracting text from scanned documents using Tesseract OCR (Free)"""
     
     def __init__(self):
-        """Initialize Vision API client"""
-        self.client = None
-        self._initialized = False
+        """Initialize Tesseract OCR"""
+        self._available = False
+        self._check_tesseract()
         
-    def _ensure_initialized(self):
-        """Lazy initialization of Vision client"""
-        if not self._initialized:
-            try:
-                # Check for credentials
-                credentials_path = os.environ.get('GOOGLE_APPLICATION_CREDENTIALS')
-                if credentials_path and os.path.exists(credentials_path):
-                    self.client = vision.ImageAnnotatorClient()
-                    self._initialized = True
-                    logger.info("Google Cloud Vision client initialized")
-                else:
-                    logger.warning("Google Cloud Vision credentials not found. OCR will not be available.")
-            except Exception as e:
-                logger.error(f"Failed to initialize Vision client: {e}")
+    def _check_tesseract(self):
+        """Check if Tesseract is installed and available"""
+        try:
+            version = pytesseract.get_tesseract_version()
+            logger.info(f"Tesseract OCR initialized: version {version}")
+            self._available = True
+        except Exception as e:
+            logger.warning(f"Tesseract OCR not available: {e}")
+            self._available = False
     
     def is_available(self) -> bool:
         """Check if OCR service is available"""
-        self._ensure_initialized()
-        return self._initialized and self.client is not None
+        return self._available
     
     async def extract_text_from_pdf(
         self, 
         pdf_bytes: bytes,
         dpi: int = 200,
         first_page: Optional[int] = None,
-        last_page: Optional[int] = None
+        last_page: Optional[int] = None,
+        lang: str = "deu+eng"
     ) -> OCRResult:
         """
         Extract text from a scanned PDF using OCR.
@@ -62,18 +58,17 @@ class OCRService:
             dpi: Resolution for PDF to image conversion (higher = better quality but slower)
             first_page: First page to process (1-indexed)
             last_page: Last page to process (inclusive)
+            lang: Language codes (e.g., 'deu+eng' for German and English)
         
         Returns:
             OCRResult with extracted text and metadata
         """
-        self._ensure_initialized()
-        
-        if not self.client:
+        if not self._available:
             return OCRResult(
                 text="",
                 confidence=0.0,
                 page_count=0,
-                language="unknown"
+                language=lang
             )
         
         try:
@@ -89,30 +84,21 @@ class OCRService:
             
             if not images:
                 logger.warning("No images extracted from PDF")
-                return OCRResult(text="", confidence=0.0, page_count=0)
+                return OCRResult(text="", confidence=0.0, page_count=0, language=lang)
             
-            logger.info(f"Processing {len(images)} pages with Vision API")
+            logger.info(f"Processing {len(images)} pages with Tesseract OCR")
             
             # Process each page
             all_text_parts = []
             all_confidence_scores = []
-            detected_language = "unknown"
             
             for page_idx, image in enumerate(images):
-                # Convert PIL Image to bytes
-                img_byte_arr = io.BytesIO()
-                image.save(img_byte_arr, format='JPEG', quality=85)
-                img_byte_arr.seek(0)
-                image_content = img_byte_arr.getvalue()
-                
                 # Extract text from page
-                page_result = await self._extract_text_from_image(image_content)
+                page_result = await self._extract_text_from_pil_image(image, lang)
                 
                 if page_result.text:
-                    all_text_parts.append(page_result.text)
+                    all_text_parts.append(f"--- Seite {page_idx + 1} ---\n{page_result.text}")
                     all_confidence_scores.append(page_result.confidence)
-                    if page_result.language != "unknown":
-                        detected_language = page_result.language
             
             # Calculate overall confidence
             overall_confidence = (
@@ -120,99 +106,81 @@ class OCRService:
                 if all_confidence_scores else 0.0
             )
             
-            full_text = "\n\n--- Seite ---\n\n".join(all_text_parts)
+            full_text = "\n\n".join(all_text_parts)
             
-            logger.info(f"OCR completed: {len(full_text)} characters, confidence: {overall_confidence:.2f}")
+            logger.info(f"OCR completed: {len(full_text)} characters, confidence: {overall_confidence:.1f}%")
             
             return OCRResult(
                 text=full_text,
-                confidence=overall_confidence,
+                confidence=overall_confidence / 100.0,  # Convert to 0-1 scale
                 page_count=len(images),
-                language=detected_language
+                language=lang
             )
             
         except Exception as e:
             logger.error(f"OCR processing failed: {e}", exc_info=True)
-            return OCRResult(text="", confidence=0.0, page_count=0)
+            return OCRResult(text="", confidence=0.0, page_count=0, language=lang)
     
-    async def _extract_text_from_image(self, image_content: bytes) -> OCRResult:
+    async def _extract_text_from_pil_image(self, image: Image.Image, lang: str = "deu+eng") -> OCRResult:
         """
-        Extract text from a single image using Vision API.
+        Extract text from a PIL Image using Tesseract.
         
         Args:
-            image_content: Image bytes (JPEG/PNG)
+            image: PIL Image object
+            lang: Language codes
         
         Returns:
             OCRResult for this image
         """
         try:
-            # Prepare image for Vision API
-            image = vision.Image(content=image_content)
+            # Get text with confidence data
+            data = pytesseract.image_to_data(image, lang=lang, output_type=pytesseract.Output.DICT)
             
-            # Use DOCUMENT_TEXT_DETECTION for better results on documents
-            response = self.client.document_text_detection(image=image)
+            # Extract text
+            text = pytesseract.image_to_string(image, lang=lang)
             
-            # Check for errors
-            if response.error.message:
-                logger.error(f"Vision API error: {response.error.message}")
-                return OCRResult(text="", confidence=0.0, page_count=1)
-            
-            # Extract text and confidence
-            if not response.full_text_annotation:
-                return OCRResult(text="", confidence=0.0, page_count=1)
-            
-            document = response.full_text_annotation
-            full_text = document.text
-            
-            # Calculate average confidence from pages
-            confidence_scores = []
-            detected_language = "unknown"
-            
-            for page in document.pages:
-                # Get detected language
-                if page.property and page.property.detected_languages:
-                    lang = page.property.detected_languages[0]
-                    detected_language = lang.language_code
-                
-                # Collect word confidences
-                for block in page.blocks:
-                    for paragraph in block.paragraphs:
-                        for word in paragraph.words:
-                            if hasattr(word, 'confidence'):
-                                confidence_scores.append(word.confidence)
-            
-            avg_confidence = (
-                sum(confidence_scores) / len(confidence_scores)
-                if confidence_scores else 0.8  # Default if no confidence data
-            )
+            # Calculate average confidence (exclude -1 values which indicate no text)
+            confidences = [int(c) for c in data['conf'] if int(c) > 0]
+            avg_confidence = sum(confidences) / len(confidences) if confidences else 0.0
             
             return OCRResult(
-                text=full_text,
+                text=text.strip(),
                 confidence=avg_confidence,
                 page_count=1,
-                language=detected_language
+                language=lang
             )
             
         except Exception as e:
             logger.error(f"Image OCR failed: {e}")
-            return OCRResult(text="", confidence=0.0, page_count=1)
+            return OCRResult(text="", confidence=0.0, page_count=1, language=lang)
     
-    async def extract_text_from_image(self, image_bytes: bytes) -> OCRResult:
+    async def extract_text_from_image(self, image_bytes: bytes, lang: str = "deu+eng") -> OCRResult:
         """
         Extract text from a single image file.
         
         Args:
             image_bytes: Image content as bytes
+            lang: Language codes
         
         Returns:
             OCRResult with extracted text
         """
-        self._ensure_initialized()
+        if not self._available:
+            return OCRResult(text="", confidence=0.0, page_count=1, language=lang)
         
-        if not self.client:
-            return OCRResult(text="", confidence=0.0, page_count=1)
-        
-        return await self._extract_text_from_image(image_bytes)
+        try:
+            # Open image from bytes
+            image = Image.open(io.BytesIO(image_bytes))
+            
+            # Convert to RGB if necessary
+            if image.mode != 'RGB':
+                image = image.convert('RGB')
+            
+            return await self._extract_text_from_pil_image(image, lang)
+            
+        except Exception as e:
+            logger.error(f"Image OCR failed: {e}")
+            return OCRResult(text="", confidence=0.0, page_count=1, language=lang)
 
 
 # Singleton instance

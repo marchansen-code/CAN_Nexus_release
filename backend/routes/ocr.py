@@ -19,8 +19,9 @@ async def get_ocr_status(user: User = Depends(get_current_user)):
     """Check if OCR service is available."""
     return {
         "available": ocr_service.is_available(),
-        "provider": "Google Cloud Vision" if ocr_service.is_available() else None,
-        "message": "OCR ist verfügbar" if ocr_service.is_available() else "OCR ist nicht konfiguriert. Bitte Google Cloud Vision Credentials hinterlegen."
+        "provider": "Tesseract OCR (Kostenlos)" if ocr_service.is_available() else None,
+        "languages": ["Deutsch", "Englisch"],
+        "message": "OCR ist verfügbar (Tesseract)" if ocr_service.is_available() else "OCR ist nicht verfügbar. Tesseract ist nicht installiert."
     }
 
 
