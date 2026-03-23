@@ -476,6 +476,28 @@ Wissensmanagement-Plattform für CANUSA Touristik GmbH & Co. KG und CU-Travel.
   - `bg-theme-primary`, `text-theme-primary`, `border-theme-primary`
   - `bg-theme-primary-light`, `bg-theme-primary-lighter`
 
+## Pinnwand & Dashboard-Umbau (Iteration 28) - 23.03.2026
+- ✅ **Dashboard-Tabs** - Zwei Tabs: "Pinnwand" und "Dashboard"
+- ✅ **Pinnwand-Ansicht** - Zeigt Artikel aus als Pinnwand markierten Kategorien mit Amber-Akzentfarbe
+- ✅ **Dashboard-Reihenfolge** - Neuer Aufbau: Favoriten → Zuletzt angesehen → Neueste Artikel → Statistiken
+- ✅ **Schnellzugriff entfernt** - Bereich wurde aus Dashboard entfernt wie angefordert
+- ✅ **Pinnwand-Kategorien** - Kategorien können als "Pinnwand" markiert werden
+- ✅ **Pinnwand-Badge** - Kategorien mit Pinnwand-Flag zeigen Badge in Baumansicht
+- ✅ **Gruppen-@-Mentions** - `@@@Gruppenname` erwähnt alle Mitglieder einer Gruppe
+- ✅ **Gruppen-E-Mail-Benachrichtigung** - Alle Gruppenmitglieder erhalten E-Mail bei Gruppen-Mention
+- **Neue Komponenten**:
+  - `GroupMentionList.jsx` - Autocomplete-Liste für Gruppen-Mentions im Editor (grünes Styling)
+- **Neue API-Endpunkte**:
+  - `GET /api/categories/pinnwand/articles` - Artikel aus Pinnwand-Kategorien abrufen
+  - `GET /api/groups/search/mention` - Gruppen mit Mitgliederzahl für Mentions suchen
+- **Modell-Änderungen**:
+  - `Category.is_pinnwand: bool` - Flag für Pinnwand-Kategorien
+- **Editor-Änderungen**:
+  - Gruppen-Mention Extension mit `@@@` Trigger (User-Mentions bleiben `@@`)
+  - Grüne Styling für Gruppen-Mentions, blaue für User-Mentions
+- **CSS-Änderungen**:
+  - `.group-mention` Klasse für grüne Gruppen-Mention-Darstellung
+
 ## Known Issues / Backlog
 
 ### P1 (Kritisch)
@@ -485,6 +507,8 @@ Wissensmanagement-Plattform für CANUSA Touristik GmbH & Co. KG und CU-Travel.
 
 ### P2 (Medium)
 - [ ] Schnellsuche (Strg+K)
+- [ ] Multi-Select in Galerie-Ansicht (Dokumenten-Seite)
+- [ ] Drag & Drop für Ordner-Neuordnung
 
 ### P3 (Nice to Have)
 - [ ] OCR für gescannte PDFs
