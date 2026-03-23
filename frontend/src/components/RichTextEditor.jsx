@@ -23,6 +23,7 @@ import axios from 'axios';
 import { API } from '@/App';
 import { MentionList } from './MentionSuggestion';
 import { UserMentionList } from './UserMentionList';
+import { GroupMentionList } from './GroupMentionList';
 import MultiImageUploadDialog from './dialogs/MultiImageUploadDialog';
 import {
   Bold,
@@ -1128,6 +1129,72 @@ const RichTextEditor = ({ content, onChange, placeholder = "Inhalt eingeben...",
     },
   };
 
+  // Group mention suggestion configuration (@@@)
+  const groupMentionSuggestion = {
+    char: '@@@',
+    allowSpaces: true,
+    items: async ({ query }) => {
+      try {
+        const response = await axios.get(`${API}/groups/search/mention`, {
+          params: { q: query || '', limit: 8 }
+        });
+        return response.data.results || [];
+      } catch (error) {
+        console.error('Failed to fetch groups for mention:', error);
+        return [];
+      }
+    },
+    render: () => {
+      let component;
+      let popup;
+
+      return {
+        onStart: props => {
+          component = new ReactRenderer(GroupMentionList, {
+            props,
+            editor: props.editor,
+          });
+
+          if (!props.clientRect) return;
+
+          popup = tippy('body', {
+            getReferenceClientRect: props.clientRect,
+            appendTo: () => document.body,
+            content: component.element,
+            showOnCreate: true,
+            interactive: true,
+            trigger: 'manual',
+            placement: 'bottom-start',
+          });
+        },
+
+        onUpdate(props) {
+          component?.updateProps(props);
+
+          if (!props.clientRect) return;
+
+          popup?.[0]?.setProps({
+            getReferenceClientRect: props.clientRect,
+          });
+        },
+
+        onKeyDown(props) {
+          if (props.event.key === 'Escape') {
+            popup?.[0]?.hide();
+            return true;
+          }
+
+          return component?.ref?.onKeyDown(props);
+        },
+
+        onExit() {
+          popup?.[0]?.destroy();
+          component?.destroy();
+        },
+      };
+    },
+  };
+
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
@@ -1222,6 +1289,24 @@ const RichTextEditor = ({ content, onChange, placeholder = "Inhalt eingeben...",
               'data-user-id': node.attrs.id,
             },
             `@@${node.attrs.label}`,
+          ];
+        },
+      }),
+      // Group mention extension (@@@ trigger for groups)
+      Mention.extend({ name: 'groupMention' }).configure({
+        HTMLAttributes: {
+          class: 'group-mention',
+        },
+        suggestion: groupMentionSuggestion,
+        renderHTML({ options, node }) {
+          return [
+            'span',
+            {
+              ...options.HTMLAttributes,
+              'data-group-mention': '',
+              'data-group-id': node.attrs.id,
+            },
+            `@@@${node.attrs.label}`,
           ];
         },
       }),

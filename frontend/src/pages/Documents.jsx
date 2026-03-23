@@ -442,14 +442,6 @@ const Documents = () => {
     fetchData();
   };
 
-  // Get documents for current folder
-  const filteredDocuments = documents.filter(doc => {
-    if (selectedFolderId === null || selectedFolderId === "root") {
-      return !doc.folder_id;
-    }
-    return doc.folder_id === selectedFolderId;
-  });
-
   // Get current folder name
   const currentFolder = folders.find(f => f.folder_id === selectedFolderId);
 
@@ -532,9 +524,18 @@ const Documents = () => {
     }
   };
 
-  // Sort documents
+  // Sort AND filter documents - MUST use filteredDocuments, not all documents
   const sortedDocuments = React.useMemo(() => {
-    const sorted = [...documents].sort((a, b) => {
+    // First filter by selected folder
+    const filtered = documents.filter(doc => {
+      if (selectedFolderId === null || selectedFolderId === "root") {
+        return !doc.folder_id;
+      }
+      return doc.folder_id === selectedFolderId;
+    });
+    
+    // Then sort
+    const sorted = [...filtered].sort((a, b) => {
       let aVal, bVal;
       switch (sortBy) {
         case "title":
@@ -553,9 +554,9 @@ const Documents = () => {
       }
     });
     return sorted;
-  }, [documents, sortBy, sortOrder]);
+  }, [documents, sortBy, sortOrder, selectedFolderId]);
 
-  // Filter images for gallery
+  // Filter images for gallery (from already filtered & sorted documents)
   const imageDocuments = sortedDocuments.filter(doc => doc.is_image);
   const nonImageDocuments = sortedDocuments.filter(doc => !doc.is_image);
 

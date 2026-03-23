@@ -568,6 +568,22 @@ input:focus, textarea:focus, select:focus {
     border-color: hsl(220 84% 30%);
 }
 
+/* Group Mentions */
+.group-mention {
+    background: linear-gradient(135deg, hsl(142 76% 95%) 0%, hsl(142 76% 92%) 100%);
+    color: hsl(142 76% 30%);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-weight: 500;
+    border: 1px solid hsl(142 76% 75%);
+}
+
+.dark .group-mention {
+    background: linear-gradient(135deg, hsl(142 76% 20%) 0%, hsl(142 76% 15%) 100%);
+    color: hsl(142 76% 75%);
+    border-color: hsl(142 76% 30%);
+}
+
 /* Tippy.js mention popup styling */
 .tippy-box[data-theme~='default'] {
     background: transparent;

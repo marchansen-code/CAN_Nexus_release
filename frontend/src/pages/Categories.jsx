@@ -11,13 +11,15 @@ import {
   ChevronDown,
   Folder,
   FolderOpen,
-  Check
+  Check,
+  Pin
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 import {
   Dialog,
@@ -152,6 +154,14 @@ const TreeItem = ({ category, categories, level = 0, onEdit, onDelete, onAddChil
         
         <span className="flex-1 font-medium">{category.name}</span>
         
+        {/* Pinnwand Badge */}
+        {category.is_pinnwand && (
+          <span className="flex items-center gap-1 px-2 py-0.5 text-xs font-medium bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 rounded-full">
+            <Pin className="w-3 h-3" />
+            Pinnwand
+          </span>
+        )}
+        
         <div className="opacity-0 group-hover:opacity-100 flex gap-1 transition-opacity">
           <Button 
             variant="ghost" 
@@ -211,7 +221,8 @@ const Categories = () => {
   const [formData, setFormData] = useState({
     name: "",
     description: "",
-    parent_id: null
+    parent_id: null,
+    is_pinnwand: false
   });
 
   useEffect(() => {
@@ -239,12 +250,12 @@ const Categories = () => {
   };
 
   const handleOpenCreate = () => {
-    setFormData({ name: "", description: "", parent_id: null });
+    setFormData({ name: "", description: "", parent_id: null, is_pinnwand: false });
     setEditDialog({ open: true, category: null });
   };
 
   const handleOpenCreateChild = (parentCategory) => {
-    setFormData({ name: "", description: "", parent_id: parentCategory.category_id });
+    setFormData({ name: "", description: "", parent_id: parentCategory.category_id, is_pinnwand: false });
     setEditDialog({ open: true, category: null });
     // Expand the parent so the new child will be visible
     if (!expandedIds.includes(parentCategory.category_id)) {
@@ -256,7 +267,8 @@ const Categories = () => {
     setFormData({
       name: category.name,
       description: category.description || "",
-      parent_id: category.parent_id
+      parent_id: category.parent_id,
+      is_pinnwand: category.is_pinnwand || false
     });
     setEditDialog({ open: true, category });
   };
@@ -271,7 +283,8 @@ const Categories = () => {
       const payload = {
         name: formData.name.trim(),
         description: formData.description.trim() || null,
-        parent_id: formData.parent_id === "none" ? null : formData.parent_id
+        parent_id: formData.parent_id === "none" ? null : formData.parent_id,
+        is_pinnwand: formData.is_pinnwand
       };
 
       if (editDialog.category) {
@@ -455,6 +468,28 @@ const Categories = () => {
                   </div>
                 </PopoverContent>
               </Popover>
+            </div>
+            
+            {/* Pinnwand Checkbox */}
+            <div className="flex items-center space-x-2 pt-2 border-t">
+              <Checkbox
+                id="is_pinnwand"
+                checked={formData.is_pinnwand}
+                onCheckedChange={(checked) => setFormData(prev => ({ ...prev, is_pinnwand: checked }))}
+                data-testid="pinnwand-checkbox"
+              />
+              <div className="grid gap-0.5 leading-none">
+                <Label
+                  htmlFor="is_pinnwand"
+                  className="text-sm font-medium cursor-pointer flex items-center gap-1.5"
+                >
+                  <Pin className="w-4 h-4 text-amber-500" />
+                  Pinnwand-Kategorie
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Artikel dieser Kategorie erscheinen auf der Pinnwand im Dashboard
+                </p>
+              </div>
             </div>
           </div>
           

@@ -27,6 +27,7 @@ async def create_category(category: CategoryCreate, user: User = Depends(get_cur
         parent_id=category.parent_id,
         description=category.description,
         order=category.order,
+        is_pinnwand=category.is_pinnwand,
         created_by=user.user_id
     )
     doc = cat_doc.model_dump()
@@ -46,6 +47,7 @@ async def update_category(category_id: str, update: CategoryCreate, user: User =
             "parent_id": update.parent_id,
             "description": update.description,
             "order": update.order,
+            "is_pinnwand": update.is_pinnwand,
             "updated_at": datetime.now(timezone.utc).isoformat()
         }}
     )
@@ -54,6 +56,51 @@ async def update_category(category_id: str, update: CategoryCreate, user: User =
     
     cat = await db.categories.find_one({"category_id": category_id}, {"_id": 0})
     return cat
+
+
+@router.get("/pinnwand/articles")
+async def get_pinnwand_articles(user: User = Depends(get_current_user)):
+    """Get all articles in Pinnwand categories."""
+    # Get all Pinnwand categories
+    pinnwand_categories = await db.categories.find(
+        {"is_pinnwand": True}, 
+        {"_id": 0, "category_id": 1}
+    ).to_list(100)
+    
+    if not pinnwand_categories:
+        return []
+    
+    category_ids = [c["category_id"] for c in pinnwand_categories]
+    
+    # Get user's groups for visibility check
+    user_doc = await db.users.find_one({"user_id": user.user_id}, {"group_ids": 1})
+    user_groups = user_doc.get("group_ids", []) if user_doc else []
+    
+    # Find articles in Pinnwand categories
+    articles = await db.articles.find(
+        {
+            "category_ids": {"$in": category_ids},
+            "status": "published",
+            "deleted_at": {"$exists": False}
+        },
+        {"_id": 0}
+    ).sort("updated_at", -1).to_list(50)
+    
+    # Filter by visibility
+    filtered = []
+    for art in articles:
+        if user.role == "admin":
+            filtered.append(art)
+            continue
+        
+        visible_groups = art.get("visible_to_groups", [])
+        if visible_groups:
+            if any(g in user_groups for g in visible_groups):
+                filtered.append(art)
+        else:
+            filtered.append(art)
+    
+    return filtered
 
 
 @router.delete("/{category_id}")

@@ -19,6 +19,26 @@ async def get_groups(user: User = Depends(get_current_user)):
     return groups
 
 
+@router.get("/search/mention")
+async def search_groups_for_mention(q: str = "", limit: int = 10, user: User = Depends(get_current_user)):
+    """Search groups for @@ mentions."""
+    query = {}
+    if q:
+        query["name"] = {"$regex": q, "$options": "i"}
+    
+    groups = await db.groups.find(
+        query,
+        {"_id": 0, "group_id": 1, "name": 1, "description": 1}
+    ).limit(limit).to_list(limit)
+    
+    # Add member count for each group
+    for group in groups:
+        member_count = await db.users.count_documents({"group_ids": group["group_id"]})
+        group["member_count"] = member_count
+    
+    return {"results": groups}
+
+
 @router.post("", response_model=Dict)
 async def create_group(group: GroupCreate, user: User = Depends(get_current_user)):
     """Create a new group (admin only)."""

@@ -81,6 +81,7 @@ class Category(BaseModel):
     parent_id: Optional[str] = None
     description: Optional[str] = None
     order: int = 0
+    is_pinnwand: bool = False  # New field for Pinnwand categories
     created_by: str
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
@@ -91,6 +92,7 @@ class CategoryCreate(BaseModel):
     parent_id: Optional[str] = None
     description: Optional[str] = None
     order: int = 0
+    is_pinnwand: bool = False  # New field for Pinnwand categories
 
 
 # ==================== ARTICLE MODELS ====================

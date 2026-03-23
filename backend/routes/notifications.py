@@ -139,26 +139,48 @@ async def notify_mentions_in_content(
     author_user_id: str,
     article_title: str
 ):
-    """Parse content for @@ user mentions and send notifications."""
-    # Pattern matches data-user-id in user mention spans
-    pattern = r'data-user-id="([^"]+)"'
-    mentioned_ids = re.findall(pattern, content)
-    
-    if not mentioned_ids:
-        return
-    
-    # Remove duplicates
-    mentioned_ids = list(set(mentioned_ids))
-    
+    """Parse content for @@ user mentions and @@@ group mentions and send notifications."""
     # Get author name
     author = await db.users.find_one({"user_id": author_user_id}, {"_id": 0, "name": 1})
     author_name = author.get("name", "Unbekannt") if author else "Unbekannt"
     
-    # Get mentioned users and send notifications
-    for user_id in mentioned_ids:
-        if user_id == author_user_id:
-            continue  # Don't notify author about their own mentions
+    # Pattern matches data-user-id in user mention spans
+    user_pattern = r'data-user-id="([^"]+)"'
+    mentioned_user_ids = re.findall(user_pattern, content)
+    
+    # Pattern for group mentions: data-group-id 
+    group_pattern = r'data-group-id="([^"]+)"'
+    mentioned_group_ids = re.findall(group_pattern, content)
+    
+    # Remove duplicates
+    mentioned_user_ids = list(set(mentioned_user_ids))
+    mentioned_group_ids = list(set(mentioned_group_ids))
+    
+    # Collect all user IDs to notify (from direct mentions and group memberships)
+    users_to_notify = set()
+    
+    # Add directly mentioned users
+    for user_id in mentioned_user_ids:
+        if user_id != author_user_id:
+            users_to_notify.add(user_id)
+    
+    # Add group members
+    for group_id in mentioned_group_ids:
+        # Get all members of this group
+        group_members = await db.users.find(
+            {"group_ids": group_id},
+            {"_id": 0, "user_id": 1}
+        ).to_list(1000)
         
+        for member in group_members:
+            if member["user_id"] != author_user_id:
+                users_to_notify.add(member["user_id"])
+    
+    if not users_to_notify:
+        return
+    
+    # Send notifications to all collected users
+    for user_id in users_to_notify:
         mentioned_user = await db.users.find_one(
             {"user_id": user_id},
             {"_id": 0, "email": 1, "name": 1, "notification_preferences": 1}
