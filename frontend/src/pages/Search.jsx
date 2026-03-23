@@ -363,14 +363,16 @@ const Search = () => {
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-[250px] p-0" align="start">
-                    <Command>
+                    <Command shouldFilter={false}>
                       <CommandInput 
                         placeholder="Tag suchen..." 
                         value={tagSearchQuery}
                         onValueChange={setTagSearchQuery}
                       />
                       <CommandList>
-                        <CommandEmpty>Kein Tag gefunden.</CommandEmpty>
+                        {filteredTags.length === 0 && (
+                          <div className="py-6 text-center text-sm text-muted-foreground">Kein Tag gefunden.</div>
+                        )}
                         <CommandGroup>
                           {filteredTags.map((tag) => (
                             <CommandItem

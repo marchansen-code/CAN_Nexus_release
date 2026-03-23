@@ -135,12 +135,13 @@ async def search_articles(q: str = "", limit: int = 10, user: User = Depends(get
     user_doc = await db.users.find_one({"user_id": user.user_id}, {"group_ids": 1})
     user_groups = user_doc.get("group_ids", []) if user_doc else []
     
-    # Search in title and content
+    # Search in title, content, and tags
     articles = await db.articles.find(
         {
             "$or": [
                 {"title": {"$regex": q, "$options": "i"}},
-                {"content": {"$regex": q, "$options": "i"}}
+                {"content": {"$regex": q, "$options": "i"}},
+                {"tags": {"$regex": q, "$options": "i"}}
             ],
             "deleted_at": {"$exists": False}
         },

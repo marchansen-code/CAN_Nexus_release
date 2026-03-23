@@ -310,8 +310,8 @@ const ArticleEditor = () => {
 
   // Tag handling
   const handleAddTag = (tag) => {
-    const trimmed = tag.trim().toLowerCase();
-    if (trimmed && !article.tags.includes(trimmed)) {
+    const trimmed = tag.trim();
+    if (trimmed && !article.tags.some(t => t.toLowerCase() === trimmed.toLowerCase())) {
       setArticle(prev => ({ ...prev, tags: [...prev.tags, trimmed] }));
     }
     setTagInput("");
@@ -460,15 +460,6 @@ const ArticleEditor = () => {
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>Inhalt</CardTitle>
               <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowImportDialog(true)}
-                  data-testid="import-document-btn"
-                >
-                  <FileUp className="w-4 h-4 mr-1" />
-                  Importieren
-                </Button>
                 <Button
                   variant="outline"
                   size="sm"
