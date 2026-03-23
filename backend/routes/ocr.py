@@ -5,7 +5,7 @@ from fastapi import APIRouter, UploadFile, File, HTTPException, Depends
 from typing import Dict, Optional
 import logging
 
-from auth import get_current_user
+from dependencies import get_current_user
 from models import User
 from services.ocr_service import ocr_service
 
@@ -164,16 +164,16 @@ async def extract_text_from_stored_document(
         with open(file_path, "rb") as f:
             file_bytes = f.read()
         
-        file_type = document.get("file_type", "").lower()
+        file_type = document.get("file_type", "").lower().replace(".", "")
         
-        if file_type == "pdf":
+        if file_type in ["pdf", "application/pdf"]:
             result = await ocr_service.extract_text_from_pdf(file_bytes, dpi=dpi)
-        elif file_type in ["jpg", "jpeg", "png", "tiff", "bmp"]:
+        elif file_type in ["jpg", "jpeg", "png", "tiff", "bmp", "image/jpeg", "image/png"]:
             result = await ocr_service.extract_text_from_image(file_bytes)
         else:
             raise HTTPException(
                 status_code=400,
-                detail=f"OCR wird für diesen Dateityp nicht unterstützt: {file_type}"
+                detail=f"OCR wird für diesen Dateityp nicht unterstützt: {document.get('file_type')}"
             )
         
         # Optionally update document with extracted text

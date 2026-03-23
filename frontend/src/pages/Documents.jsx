@@ -47,7 +47,8 @@ import {
   LayoutGrid as Grid,
   CheckSquare,
   Square,
-  GripVertical
+  GripVertical,
+  ScanText
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -480,6 +481,11 @@ const Documents = () => {
   const [activeDragType, setActiveDragType] = useState(null); // 'document' or 'folder'
   const [pendingDrop, setPendingDrop] = useState(null); // { item, targetFolder, type }
   const [confirmDropDialog, setConfirmDropDialog] = useState(false);
+  
+  // OCR state
+  const [ocrDialog, setOcrDialog] = useState({ open: false, doc: null });
+  const [ocrResult, setOcrResult] = useState(null);
+  const [ocrProcessing, setOcrProcessing] = useState(false);
   
   // DnD sensors
   const sensors = useSensors(
@@ -926,6 +932,33 @@ const Documents = () => {
     }
   };
 
+  // OCR Text Extraction
+  const handleOcrExtract = async (doc) => {
+    setOcrDialog({ open: true, doc });
+    setOcrResult(null);
+    setOcrProcessing(true);
+    
+    try {
+      const response = await axios.post(`${API}/ocr/extract-from-document/${doc.document_id}`, null, {
+        params: { dpi: 200 }
+      });
+      
+      if (response.data.success) {
+        setOcrResult(response.data);
+        toast.success(`OCR abgeschlossen: ${response.data.word_count} Wörter erkannt`);
+      } else {
+        throw new Error("OCR fehlgeschlagen");
+      }
+    } catch (error) {
+      console.error("OCR error:", error);
+      const errorMsg = error.response?.data?.detail || error.message || "OCR-Verarbeitung fehlgeschlagen";
+      toast.error(errorMsg);
+      setOcrResult({ error: errorMsg });
+    } finally {
+      setOcrProcessing(false);
+    }
+  };
+
   const handleDeleteDocument = async () => {
     if (!deleteDialog.doc) return;
     
@@ -991,6 +1024,7 @@ const Documents = () => {
   }
 
   return (
+    <>
     <DndContext
       sensors={sensors}
       collisionDetection={closestCenter}
@@ -1854,6 +1888,29 @@ const Documents = () => {
                       </>
                     )}
                   </Button>
+                  
+                  {/* OCR Button */}
+                  {(selectedDoc.file_type?.toLowerCase().includes('pdf') || selectedDoc.is_image) && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleOcrExtract(selectedDoc)}
+                      disabled={ocrProcessing}
+                      data-testid="ocr-extract-btn"
+                    >
+                      {ocrProcessing ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          OCR läuft...
+                        </>
+                      ) : (
+                        <>
+                          <ScanText className="w-4 h-4 mr-2" />
+                          Text per OCR extrahieren
+                        </>
+                      )}
+                    </Button>
+                  )}
                 </div>
               </div>
               
@@ -2154,6 +2211,85 @@ const Documents = () => {
       )}
     </DragOverlay>
     </DndContext>
+    
+    <Dialog open={ocrDialog.open} onOpenChange={(open) => !open && setOcrDialog({ open: false, doc: null })}>
+      <DialogContent className="max-w-3xl max-h-[80vh]">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <ScanText className="w-5 h-5 text-primary" />
+            OCR-Texterkennung
+          </DialogTitle>
+          {ocrDialog.doc && (
+            <p className="text-sm text-muted-foreground">{ocrDialog.doc.filename}</p>
+          )}
+        </DialogHeader>
+        
+        <div className="flex-1 overflow-auto">
+          {ocrProcessing ? (
+            <div className="flex flex-col items-center justify-center py-12">
+              <Loader2 className="w-12 h-12 text-primary animate-spin mb-4" />
+              <p className="text-muted-foreground">Text wird erkannt...</p>
+              <p className="text-xs text-muted-foreground mt-1">Dies kann bei größeren Dokumenten etwas dauern</p>
+            </div>
+          ) : ocrResult?.error ? (
+            <div className="flex flex-col items-center justify-center py-12">
+              <XCircle className="w-12 h-12 text-red-500 mb-4" />
+              <p className="text-red-600 font-medium">OCR fehlgeschlagen</p>
+              <p className="text-sm text-muted-foreground mt-2">{ocrResult.error}</p>
+            </div>
+          ) : ocrResult ? (
+            <div className="space-y-4">
+              <div className="grid grid-cols-4 gap-4">
+                <div className="p-3 bg-muted rounded-lg text-center">
+                  <p className="text-2xl font-bold">{ocrResult.page_count}</p>
+                  <p className="text-xs text-muted-foreground">Seiten</p>
+                </div>
+                <div className="p-3 bg-muted rounded-lg text-center">
+                  <p className="text-2xl font-bold">{ocrResult.word_count}</p>
+                  <p className="text-xs text-muted-foreground">Wörter</p>
+                </div>
+                <div className="p-3 bg-muted rounded-lg text-center">
+                  <p className="text-2xl font-bold">{ocrResult.character_count}</p>
+                  <p className="text-xs text-muted-foreground">Zeichen</p>
+                </div>
+                <div className="p-3 bg-muted rounded-lg text-center">
+                  <p className="text-2xl font-bold">{ocrResult.confidence_percent}</p>
+                  <p className="text-xs text-muted-foreground">Konfidenz</p>
+                </div>
+              </div>
+              
+              <div className="border rounded-lg">
+                <div className="px-4 py-2 border-b bg-muted/30 flex items-center justify-between">
+                  <span className="text-sm font-medium">Erkannter Text</span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      navigator.clipboard.writeText(ocrResult.text);
+                      toast.success("Text in Zwischenablage kopiert");
+                    }}
+                  >
+                    Text kopieren
+                  </Button>
+                </div>
+                <div className="p-4 max-h-[400px] overflow-auto">
+                  <pre className="whitespace-pre-wrap text-sm font-mono">
+                    {ocrResult.text || "Kein Text erkannt"}
+                  </pre>
+                </div>
+              </div>
+            </div>
+          ) : null}
+        </div>
+        
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setOcrDialog({ open: false, doc: null })}>
+            Schließen
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 };
 
