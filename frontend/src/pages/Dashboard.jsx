@@ -95,6 +95,46 @@ const ArticleCard = ({ article, onClick }) => {
   );
 };
 
+// Pinnwand Article Row - simple one-line display
+const PinnwandArticleRow = ({ article, onClick }) => {
+  const formatDate = (dateString) => {
+    if (!dateString) return "";
+    const date = new Date(dateString);
+    return date.toLocaleDateString("de-DE", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric"
+    });
+  };
+
+  return (
+    <div
+      className="flex items-center justify-between p-3 hover:bg-muted/50 transition-colors cursor-pointer border-b last:border-b-0"
+      onClick={onClick}
+      data-testid={`pinnwand-article-${article.article_id}`}
+    >
+      <div className="flex items-center gap-3 min-w-0 flex-1">
+        {article.is_important && (
+          <Badge variant="destructive" className="text-[10px] px-1.5 py-0 shrink-0">Wichtig</Badge>
+        )}
+        <span className="font-medium truncate">{article.title}</span>
+      </div>
+      <div className="flex items-center gap-3 text-xs text-muted-foreground shrink-0 ml-4">
+        <span className="flex items-center gap-1">
+          <Clock className="w-3 h-3" />
+          {formatDate(article.updated_at)}
+        </span>
+        {article.view_count > 0 && (
+          <span className="flex items-center gap-1">
+            <Eye className="w-3 h-3" />
+            {article.view_count}
+          </span>
+        )}
+      </div>
+    </div>
+  );
+};
+
 // Pinnwand Article Card with more details
 const PinnwandArticleCard = ({ article, onClick, categoryName }) => {
   const formatDate = (dateString) => {
@@ -176,6 +216,25 @@ const Dashboard = () => {
     fetchData();
   }, []);
 
+  // Get Pinnwand categories and group articles by category
+  const pinnwandCategories = categories.filter(c => c.is_pinnwand);
+  
+  // Group articles by Pinnwand category
+  const articlesByCategory = React.useMemo(() => {
+    const grouped = {};
+    pinnwandCategories.forEach(cat => {
+      grouped[cat.category_id] = {
+        category: cat,
+        // Extract second word from category name (e.g., "Pinnwand NEWS" → "NEWS")
+        title: cat.name.split(' ').slice(1).join(' ') || cat.name,
+        articles: pinnwandArticles.filter(article => 
+          article.category_ids?.includes(cat.category_id)
+        )
+      };
+    });
+    return grouped;
+  }, [pinnwandCategories, pinnwandArticles]);
+
   // Helper to get category name
   const getCategoryName = (categoryIds) => {
     if (!categoryIds || categoryIds.length === 0) return null;
@@ -230,22 +289,41 @@ const Dashboard = () => {
 
         {/* Pinnwand Tab */}
         <TabsContent value="pinnwand" className="mt-6 space-y-6">
-          {pinnwandArticles.length > 0 ? (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {pinnwandArticles.map((article) => (
-                <PinnwandArticleCard
-                  key={article.article_id}
-                  article={article}
-                  categoryName={getCategoryName(article.category_ids)}
-                  onClick={() => navigate(`/articles/${article.article_id}`)}
-                />
+          {pinnwandCategories.length > 0 ? (
+            <div className="space-y-6">
+              {Object.values(articlesByCategory).map(({ category, title, articles }) => (
+                <Card key={category.category_id} className="border-l-4 border-l-amber-500">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <Pin className="w-5 h-5 text-amber-500" />
+                      {title}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="pt-0">
+                    {articles.length > 0 ? (
+                      <div className="divide-y rounded-lg border">
+                        {articles.map((article) => (
+                          <PinnwandArticleRow
+                            key={article.article_id}
+                            article={article}
+                            onClick={() => navigate(`/articles/${article.article_id}`)}
+                          />
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center py-6 text-muted-foreground">
+                        <p className="text-sm">Keine Artikel in dieser Kategorie</p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
               ))}
             </div>
           ) : (
             <Card>
               <CardContent className="flex flex-col items-center justify-center py-12">
                 <Pin className="w-16 h-16 text-muted-foreground/30 mb-4" />
-                <h3 className="font-semibold text-lg mb-2">Keine Pinnwand-Artikel</h3>
+                <h3 className="font-semibold text-lg mb-2">Keine Pinnwand-Kategorien</h3>
                 <p className="text-muted-foreground text-center max-w-md">
                   Artikel erscheinen hier, wenn sie einer Pinnwand-Kategorie zugewiesen sind. 
                   Admins können Kategorien unter "Kategorien" als Pinnwand markieren.

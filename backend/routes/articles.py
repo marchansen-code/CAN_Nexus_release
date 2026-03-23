@@ -125,6 +125,46 @@ async def search_linkable_articles(q: str, limit: int = 10, user: User = Depends
     return {"results": articles}
 
 
+@router.get("/search")
+async def search_articles(q: str = "", limit: int = 10, user: User = Depends(get_current_user)):
+    """Search articles by title or content."""
+    if not q or len(q) < 2:
+        return {"articles": []}
+    
+    # Get user's groups
+    user_doc = await db.users.find_one({"user_id": user.user_id}, {"group_ids": 1})
+    user_groups = user_doc.get("group_ids", []) if user_doc else []
+    
+    # Search in title and content
+    articles = await db.articles.find(
+        {
+            "$or": [
+                {"title": {"$regex": q, "$options": "i"}},
+                {"content": {"$regex": q, "$options": "i"}}
+            ],
+            "deleted_at": {"$exists": False}
+        },
+        {"_id": 0}
+    ).limit(limit * 2).to_list(limit * 2)  # Get extra for filtering
+    
+    # Filter by visibility
+    filtered = []
+    for article in articles:
+        if user.role == "admin":
+            filtered.append(article)
+        elif article.get("status") == "published":
+            visible_groups = article.get("visible_to_groups", [])
+            if not visible_groups or any(g in user_groups for g in visible_groups):
+                filtered.append(article)
+        elif article.get("created_by") == user.user_id:
+            filtered.append(article)
+        
+        if len(filtered) >= limit:
+            break
+    
+    return {"articles": filtered}
+
+
 @router.get("/{article_id}", response_model=Dict)
 async def get_article(article_id: str, user: User = Depends(get_current_user)):
     """Get a single article."""

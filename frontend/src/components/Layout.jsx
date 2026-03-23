@@ -15,7 +15,8 @@ import {
   Users,
   Database,
   UsersRound,
-  Trash2
+  Trash2,
+  Command
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -27,6 +28,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import QuickSearch from "./QuickSearch";
 
 // Navigation items with role-based visibility
 const allNavItems = [
@@ -153,8 +155,25 @@ const Header = () => {
         {/* Spacer for desktop */}
         <div className="hidden lg:block" />
 
-        {/* User Menu */}
-        <div className="flex items-center gap-2">
+        {/* Quick Search Trigger & User Menu */}
+        <div className="flex items-center gap-3">
+          {/* Quick Search Button */}
+          <Button 
+            variant="outline" 
+            className="hidden sm:flex items-center gap-2 text-muted-foreground h-9 px-3"
+            onClick={() => {
+              // Trigger Ctrl+K programmatically
+              document.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true }));
+            }}
+            data-testid="quick-search-btn"
+          >
+            <Search className="w-4 h-4" />
+            <span className="text-sm">Suche...</span>
+            <kbd className="ml-2 pointer-events-none hidden sm:inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground">
+              <span className="text-xs">⌘</span>K
+            </kbd>
+          </Button>
+
           {/* User Menu */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -204,6 +223,9 @@ const Layout = ({ children }) => {
   
   return (
     <div className="min-h-screen bg-background flex">
+      {/* Quick Search Modal */}
+      <QuickSearch />
+      
       {/* Desktop Sidebar */}
       <Sidebar className="hidden lg:flex" userRole={user?.role} />
 
