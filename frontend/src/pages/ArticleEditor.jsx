@@ -65,8 +65,8 @@ import { de } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 
 // Category Tree Item for Selection
-const CategoryTreeItem = ({ category, categories, selectedIds, onToggle, expandedIds, onToggleExpand, level = 0 }) => {
-  const childCategories = categories.filter(c => c.parent_id === category.category_id);
+const CategoryTreeItem = ({ category, categories, selectedIds, onToggle, expandedIds, onToggleExpand, level = 0, isAdmin }) => {
+  const childCategories = categories.filter(c => c.parent_id === category.category_id).filter(c => isAdmin || !c.is_pinnwand);
   const hasChildren = childCategories.length > 0;
   const isExpanded = expandedIds.has(category.category_id);
   const isSelected = selectedIds.includes(category.category_id);
@@ -131,6 +131,7 @@ const CategoryTreeItem = ({ category, categories, selectedIds, onToggle, expande
               expandedIds={expandedIds}
               onToggleExpand={onToggleExpand}
               level={level + 1}
+              isAdmin={isAdmin}
             />
           ))}
         </div>
@@ -360,8 +361,9 @@ const ArticleEditor = () => {
     });
   };
 
-  // Get root categories (those without parent)
-  const rootCategories = categories.filter(c => !c.parent_id);
+  // Get root categories (those without parent), filter pinnwand for non-admins
+  const isAdmin = user?.role === "admin";
+  const rootCategories = categories.filter(c => !c.parent_id).filter(c => isAdmin || !c.is_pinnwand);
 
   // Group toggle
   const toggleGroup = (groupId) => {
@@ -508,6 +510,7 @@ const ArticleEditor = () => {
                       onToggle={toggleCategory}
                       expandedIds={expandedCategoryIds}
                       onToggleExpand={toggleCategoryExpand}
+                      isAdmin={isAdmin}
                     />
                   ))}
                   {rootCategories.length === 0 && categories.length > 0 && (

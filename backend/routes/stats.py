@@ -25,7 +25,17 @@ async def get_stats(user: User = Depends(get_current_user)):
     total_documents = await db.documents.count_documents({})
     pending_documents = await db.documents.count_documents({"status": "pending"})
     
-    recent_articles = await db.articles.find({}, {"_id": 0}).sort("updated_at", -1).limit(5).to_list(5)
+    # For non-admins: exclude drafts created by other users
+    if user.role != "admin":
+        recent_articles = await db.articles.find(
+            {"$or": [
+                {"status": {"$ne": "draft"}},
+                {"status": "draft", "created_by": user.user_id}
+            ]},
+            {"_id": 0}
+        ).sort("updated_at", -1).limit(5).to_list(5)
+    else:
+        recent_articles = await db.articles.find({}, {"_id": 0}).sort("updated_at", -1).limit(5).to_list(5)
     top_articles = await db.articles.find({}, {"_id": 0}).sort("view_count", -1).limit(5).to_list(5)
     
     favorite_articles = await db.articles.find(
