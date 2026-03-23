@@ -548,11 +548,22 @@ Wissensmanagement-Plattform für CANUSA Touristik GmbH & Co. KG und CU-Travel.
 - [ ] Google Drive Dateiliste im Export-Dialog ist fehlerhaft
 
 ### P2 (Medium) - ERLEDIGT
-- [x] ~~Schnellsuche (Strg+K)~~ ✅ Erledigt in Iteration 29
-- [x] ~~Multi-Select in Galerie-Ansicht~~ ✅ Bereits im GitHub-Repo implementiert
-- [x] ~~Drag & Drop für Ordner-Neuordnung~~ ✅ Bereits im GitHub-Repo implementiert
-- [x] ~~OCR für gescannte PDFs~~ ✅ Erledigt in Iteration 29 mit Tesseract (kostenlos)
+- [x] ~~Schnellsuche (Strg+K)~~ Erledigt in Iteration 29
+- [x] ~~Multi-Select in Galerie-Ansicht~~ Bereits im GitHub-Repo implementiert
+- [x] ~~Drag & Drop für Ordner-Neuordnung~~ Bereits im GitHub-Repo implementiert
+- [x] ~~OCR für gescannte PDFs~~ Erledigt in Iteration 29 mit Tesseract (kostenlos)
+- [x] ~~Eingebetteter Dokument-Viewer fehlt in veröffentlichter Artikelansicht~~ Erledigt in Iteration 31
+- [x] ~~Separater "Dokument einbetten"-Button im Editor~~ Erledigt in Iteration 31
 
 ### P3 (Nice to Have)
 - [ ] Handschrift-OCR verbessern (Tesseract hat Limitationen)
+
+### Iteration 31 - 23.03.2026
+- **Bug Fix**: Eingebetteter Dokument-Viewer (iframe) wird jetzt in der veröffentlichten Artikelansicht korrekt angezeigt
+  - `EmbeddedDocument.jsx`: `renderHTML()` gibt jetzt vollständiges HTML mit iframe aus, `addAttributes()` nutzt `data-*` Attribute
+  - `ArticleView.jsx`: `useRef` + `useEffect` post-prozessiert `div[data-embedded-document]` Elemente und injiziert Viewer-HTML (handles alte + neue Formate)
+- **Neues Feature**: Separater "Dokument einbetten"-Button (FileInput-Icon) in der Editor-Toolbar
+  - Öffnet einen dedizierten Dialog zum Durchsuchen der Dokumentbibliothek
+  - Bietet "Einbetten (Viewer)" und "Link einfügen" Modi
+  - Unabhängig vom bestehenden Link-Dialog
 
