@@ -25,6 +25,7 @@ import { MentionList } from './MentionSuggestion';
 import { UserMentionList } from './UserMentionList';
 import { GroupMentionList } from './GroupMentionList';
 import MultiImageUploadDialog from './dialogs/MultiImageUploadDialog';
+import { EmbeddedDocument } from './extensions/EmbeddedDocument';
 import {
   Bold,
   Italic,
@@ -85,7 +86,8 @@ import {
   Eye,
   X,
   ChevronRight,
-  Home
+  Home,
+  FileInput
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Toggle } from '@/components/ui/toggle';
@@ -247,6 +249,9 @@ const EditorToolbar = ({ editor, onImageUpload, isFullscreen, onToggleFullscreen
   const [pendingYoutubeUrl, setPendingYoutubeUrl] = React.useState('');
   const [youtubeDisplayType, setYoutubeDisplayType] = React.useState('preview'); // 'preview' or 'link'
 
+  // Document Import Dialog State
+  const [showDocImportDialog, setShowDocImportDialog] = React.useState(false);
+
   // Load folders for document browser
   const loadFolders = async () => {
     try {
@@ -334,6 +339,64 @@ const EditorToolbar = ({ editor, onImageUpload, isFullscreen, onToggleFullscreen
     setShowLinkDialog(true);
   };
 
+  // Open dedicated document import dialog
+  const openDocumentImportDialog = () => {
+    setSelectedDocument(null);
+    setDocumentInsertMode('embed');
+    setDocumentLinkType('short');
+    setLinkText('');
+    setHasSelectedText(false);
+    setCurrentFolderId(null);
+    setFolderPath([]);
+    setDocumentSearch('');
+    loadFolders();
+    loadDocuments(null);
+    setShowDocImportDialog(true);
+  };
+
+  // Insert document from import dialog
+  const insertDocumentImport = () => {
+    if (!selectedDocument) return;
+    const docUrl = selectedDocument.image_id 
+      ? `${API}/images/${selectedDocument.image_id}`
+      : `${API}/documents/${selectedDocument.document_id}/file`;
+    
+    if (documentInsertMode === 'embed') {
+      const previewUrl = selectedDocument.file_type?.toLowerCase().includes('pdf')
+        ? `${API}/documents/${selectedDocument.document_id}/preview`
+        : docUrl;
+      
+      editor.chain().focus().insertContent({
+        type: 'embeddedDocument',
+        attrs: {
+          documentId: selectedDocument.document_id,
+          filename: selectedDocument.filename,
+          previewUrl: previewUrl,
+          fileUrl: docUrl,
+        },
+      }).run();
+    } else {
+      const docViewUrl = `#doc-preview-${selectedDocument.document_id}`;
+      if (documentLinkType === 'thumbnail' && selectedDocument.is_image) {
+        editor.chain().focus().insertContent(
+          `<a href="${docViewUrl}" data-document-id="${selectedDocument.document_id}"><img src="${docUrl}" alt="${selectedDocument.filename}" style="max-width: 200px; border-radius: 8px;" /></a>`
+        ).run();
+      } else if (documentLinkType === 'text' && linkText) {
+        editor.chain().focus().insertContent(
+          `<a href="${docViewUrl}" data-document-id="${selectedDocument.document_id}">${linkText}</a>`
+        ).run();
+      } else {
+        const shortName = selectedDocument.filename.length > 25 
+          ? selectedDocument.filename.substring(0, 25) + '...' 
+          : selectedDocument.filename;
+        editor.chain().focus().insertContent(
+          `<a href="${docViewUrl}" data-document-id="${selectedDocument.document_id}">${shortName}</a>`
+        ).run();
+      }
+    }
+    setShowDocImportDialog(false);
+  };
+
   // Insert link (URL or Document)
   const insertLink = () => {
     if (linkTab === 'url' && linkUrl) {
@@ -352,27 +415,22 @@ const EditorToolbar = ({ editor, onImageUpload, isFullscreen, onToggleFullscreen
         : `${API}/documents/${selectedDocument.document_id}/file`;
       const docViewUrl = `#doc-preview-${selectedDocument.document_id}`;
       
-      // Embed mode - insert document viewer
+      // Embed mode - insert document viewer using custom node
       if (documentInsertMode === 'embed') {
-        const previewUrl = selectedDocument.file_type?.toLowerCase() === 'pdf' || selectedDocument.file_type?.toLowerCase() === '.pdf'
+        const previewUrl = selectedDocument.file_type?.toLowerCase().includes('pdf')
           ? `${API}/documents/${selectedDocument.document_id}/preview`
           : docUrl;
         
-        // Insert embedded document viewer
-        const embedHtml = `
-          <div class="embedded-document" data-document-id="${selectedDocument.document_id}" contenteditable="false" style="margin: 16px 0; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden;">
-            <div style="background: #f3f4f6; padding: 8px 12px; border-bottom: 1px solid #e5e7eb; display: flex; align-items: center; gap: 8px;">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
-              <span style="font-weight: 500; font-size: 14px;">${selectedDocument.filename}</span>
-            </div>
-            <iframe 
-              src="${previewUrl}" 
-              style="width: 100%; height: 500px; border: none;"
-              title="${selectedDocument.filename}"
-            ></iframe>
-          </div>
-        `;
-        editor.chain().focus().insertContent(embedHtml).run();
+        // Insert embedded document using custom Tiptap node
+        editor.chain().focus().insertContent({
+          type: 'embeddedDocument',
+          attrs: {
+            documentId: selectedDocument.document_id,
+            filename: selectedDocument.filename,
+            previewUrl: previewUrl,
+            fileUrl: docUrl,
+          },
+        }).run();
       } else {
         // Link mode
         if (hasSelectedText) {
@@ -1053,6 +1111,217 @@ const EditorToolbar = ({ editor, onImageUpload, isFullscreen, onToggleFullscreen
               }
             >
               Link einfügen
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Document Import Button */}
+      <Button 
+        variant="ghost" 
+        size="sm" 
+        className="h-8 w-8 p-0"
+        title="Dokument einbetten / verlinken"
+        onClick={openDocumentImportDialog}
+        data-testid="doc-import-btn"
+      >
+        <FileInput className="h-4 w-4" />
+      </Button>
+
+      {/* Document Import Dialog */}
+      <Dialog open={showDocImportDialog} onOpenChange={setShowDocImportDialog}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileInput className="w-5 h-5" />
+              Dokument einbetten
+            </DialogTitle>
+            <DialogDescription>
+              Wählen Sie ein Dokument aus Ihrer Bibliothek zum Einbetten oder Verlinken.
+            </DialogDescription>
+          </DialogHeader>
+
+          {/* Search */}
+          <div className="space-y-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                placeholder="Dokument suchen..."
+                value={documentSearch}
+                onChange={(e) => {
+                  setDocumentSearch(e.target.value);
+                  if (e.target.value) {
+                    loadDocuments(null, e.target.value);
+                  } else {
+                    loadDocuments(currentFolderId);
+                  }
+                }}
+                className="pl-9"
+                data-testid="doc-import-search"
+              />
+            </div>
+
+            {/* Breadcrumb */}
+            {!documentSearch && (
+              <div className="flex items-center gap-1 text-sm flex-wrap">
+                <button 
+                  onClick={() => navigateToBreadcrumb(-1)}
+                  className={cn(
+                    "flex items-center gap-1 px-2 py-1 rounded hover:bg-muted transition-colors",
+                    folderPath.length === 0 && "font-medium text-indigo-600"
+                  )}
+                >
+                  <Home className="w-4 h-4" />
+                  <span>Dokumente</span>
+                </button>
+                {folderPath.map((folder, index) => (
+                  <React.Fragment key={folder.folder_id}>
+                    <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                    <button
+                      onClick={() => navigateToBreadcrumb(index)}
+                      className={cn(
+                        "px-2 py-1 rounded hover:bg-muted transition-colors",
+                        index === folderPath.length - 1 && "font-medium text-indigo-600"
+                      )}
+                    >
+                      {folder.name}
+                    </button>
+                  </React.Fragment>
+                ))}
+              </div>
+            )}
+
+            {/* File List */}
+            <ScrollArea className="h-[220px] border rounded-md">
+              {loadingDocuments ? (
+                <div className="text-center py-8 text-muted-foreground">Laden...</div>
+              ) : (
+                <div className="p-2 space-y-1">
+                  {!documentSearch && getCurrentSubfolders().map(folder => (
+                    <button
+                      key={folder.folder_id}
+                      onClick={() => navigateToFolder(folder)}
+                      className="w-full flex items-center gap-3 p-2 rounded text-left text-sm hover:bg-muted transition-colors"
+                    >
+                      <Folder className="w-5 h-5 text-amber-500 shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="truncate font-medium">{folder.name}</p>
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                    </button>
+                  ))}
+                  {documents.map(doc => (
+                    <button
+                      key={doc.document_id}
+                      onClick={() => setSelectedDocument(doc)}
+                      className={cn(
+                        "w-full flex items-center gap-3 p-2 rounded text-left text-sm hover:bg-muted transition-colors",
+                        selectedDocument?.document_id === doc.document_id && "bg-indigo-50 border border-indigo-200"
+                      )}
+                    >
+                      {doc.is_image ? (
+                        <div className="w-8 h-8 rounded overflow-hidden bg-muted shrink-0">
+                          <img src={`${API}/images/${doc.image_id}`} alt="" className="w-full h-full object-cover" />
+                        </div>
+                      ) : (
+                        <FileText className="w-5 h-5 text-muted-foreground shrink-0" />
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="truncate font-medium">{doc.filename}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {doc.file_type} {doc.file_size ? `• ${(doc.file_size / 1024).toFixed(1)} KB` : ''}
+                        </p>
+                      </div>
+                    </button>
+                  ))}
+                  {!documentSearch && getCurrentSubfolders().length === 0 && documents.length === 0 && (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <FolderOpen className="w-10 h-10 mx-auto mb-2 opacity-30" />
+                      <p>Dieser Ordner ist leer</p>
+                    </div>
+                  )}
+                  {documentSearch && documents.length === 0 && (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <Search className="w-10 h-10 mx-auto mb-2 opacity-30" />
+                      <p>Keine Dokumente gefunden</p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </ScrollArea>
+
+            {selectedDocument && (
+              <div className="space-y-3 border-t pt-3">
+                <div className="space-y-2">
+                  <Label>Einfügemodus</Label>
+                  <RadioGroup value={documentInsertMode} onValueChange={setDocumentInsertMode} className="flex gap-4">
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="embed" id="dimport-embed" />
+                      <Label htmlFor="dimport-embed" className="cursor-pointer flex items-center gap-1.5">
+                        <Eye className="w-4 h-4" />
+                        Einbetten (Viewer)
+                      </Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="link" id="dimport-link" />
+                      <Label htmlFor="dimport-link" className="cursor-pointer flex items-center gap-1.5">
+                        <ExternalLink className="w-4 h-4" />
+                        Link einfügen
+                      </Label>
+                    </div>
+                  </RadioGroup>
+                </div>
+                
+                {documentInsertMode === 'link' && (
+                  <div className="space-y-3 pl-4 border-l-2 border-muted">
+                    <Label>Link-Darstellung</Label>
+                    <RadioGroup value={documentLinkType} onValueChange={setDocumentLinkType}>
+                      {selectedDocument.is_image && (
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="thumbnail" id="dimport-thumbnail" />
+                          <Label htmlFor="dimport-thumbnail" className="cursor-pointer">Vorschaubild</Label>
+                        </div>
+                      )}
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="text" id="dimport-text" />
+                        <Label htmlFor="dimport-text" className="cursor-pointer">Eigener Text</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="short" id="dimport-short" />
+                        <Label htmlFor="dimport-short" className="cursor-pointer">Dateiname</Label>
+                      </div>
+                    </RadioGroup>
+                    {documentLinkType === 'text' && (
+                      <Input
+                        placeholder="Link-Text eingeben..."
+                        value={linkText}
+                        onChange={(e) => setLinkText(e.target.value)}
+                      />
+                    )}
+                  </div>
+                )}
+                
+                {documentInsertMode === 'embed' && (
+                  <div className="pl-4 border-l-2 border-amber-400 bg-amber-50 dark:bg-amber-900/20 p-3 rounded-r-lg">
+                    <p className="text-sm text-amber-800 dark:text-amber-200">
+                      Das Dokument wird als interaktiver Viewer direkt im Artikel eingebettet.
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowDocImportDialog(false)}>
+              Abbrechen
+            </Button>
+            <Button 
+              onClick={insertDocumentImport}
+              disabled={!selectedDocument}
+              data-testid="doc-import-submit"
+            >
+              Importieren
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1852,6 +2121,8 @@ const RichTextEditor = ({ content, onChange, placeholder = "Inhalt eingeben...",
           ];
         },
       }),
+      // Embedded Document Extension
+      EmbeddedDocument,
     ],
     content,
     onUpdate: ({ editor }) => {

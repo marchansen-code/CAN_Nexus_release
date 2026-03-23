@@ -1,186 +1,206 @@
 <analysis>**original_problem_statement:**
-The user's initial goal was to build a comprehensive knowledge management platform named CANUSA Nexus.
+The user wants to enhance their knowledge management platform, CANUSA Nexus, with several new features and bug fixes.
 
-During this session, the user added the following requests, which have all been implemented:
-- Add a move function and drag & drop capabilities for articles into categories.
-- Change the image upload dialog to use a hierarchical tree for folder selection, similar to the category selector.
-- Add a last online timestamp for users in the user management section, visible to admins.
-- Implement folder moving (including moving into other folders) via drag & drop or an edit menu.
-- Add a confirmation dialog (Are you sure you want to move X to Y?) before any drag & drop move is finalized.
-- When a YouTube link is pasted into the editor, prompt the user to choose between an embedded preview or a simple link.
-- Enhance the editor's link function:
-    - Allow linking to documents within the system.
-    - When linking to a document, the link should open a full-screen preview popup.
-    - If no text is selected, provide options for a thumbnail, custom text, or a shortened link.
-- Fix a bug where the document preview for DOCX files was broken, showing File not found.
-- Fix a bug where clicking a link to a PDF document in an article would download the file instead of opening the preview.
-- Enhance the document selection dialog (for linking) to include a hierarchical folder browser to navigate and find files.
-- Remove the Made with Emergent badge from the UI.
-- Change the application version display to 1.4.
+**PRODUCT REQUIREMENTS (from this session):**
+
+1.  **Pinnwand Enhancements (Message #197, #403):**
+    *   On the Pinnwand page, group articles into separate containers for each Pinnwand category.
+    *   The title for each container should be derived from the second word of the category's name (e.g., Pinnwand NEWS -> NEWS).
+    *   Assign a relevant icon to each container title.
+    *   Arrange the containers horizontally in a grid, with a maximum of three containers per row and a 20px gap between them.
+
+2.  **Backlog Abarbeiten (Work through backlog - Message #197):**
+    *   Implement Multi-Select in the gallery view.
+    *   Implement Drag & Drop for folder reordering.
+    *   Implement a Quick Search () feature.
+    *   Implement OCR for scanned PDFs.
+
+3.  **Editor Document Import (Message #403, #454):**
+    *   In the editor, when importing a document, provide two options: Einbetten (Embed) to insert an interactive document viewer directly into the article, and Link einfügen (Insert Link) for a standard hyperlink.
+    *   The user noted confusion because this feature was added to the Link dialog, not a separate Import button. They also reported that the embedded viewer was not rendering correctly.
+
+4.  **UI/UX Changes (Message #454):**
+    *   Rename the main navigation menu item Dashboard to Home and update its icon accordingly.
+
+5.  **OCR Implementation Choice (Message #270, #378):**
+    *   Initially, the user agreed to use Google Cloud services for OCR.
+    *   When confronted with a billing account requirement, the user requested a completely free alternative.
 
 **User's preferred language**: Deutsch
 
 **what currently exists?**
-The application is a full-stack knowledge management platform (React/FastAPI/MongoDB) with JWT and Google OAuth.
-- **Content Management**: A highly featured Tiptap-based editor now supports advanced document linking (with a hierarchical browser and full-screen previews), and a user prompt for handling YouTube link previews.
-- **Document Management**: Features a robust, hierarchical folder system. The UI supports list/gallery views, sorting, multi-select for bulk actions, and drag & drop for both documents and folders. A confirmation dialog is now in place for all drag-and-drop move operations.
-- **Article Management**: Articles can be organized into categories and moved between them via drag & drop.
-- **User Management**: Admins can now see a last active status for each user, indicating their last login time.
-- **UI**: The application version is now , and the Made with Emergent badge has been removed.
-- **Bug Fixes**: Critical bugs related to document previews for both DOCX (rendering HTML content) and PDFs (displaying inline instead of downloading) have been resolved.
+The application is a full-stack knowledge management platform (React/FastAPI/MongoDB) with user authentication, a rich-text editor, and document management.
+
+During this session, several major features were implemented and bugs were fixed:
+- The critical bug preventing folder navigation in the Documents view has been **resolved**.
+- **Group @-Mentions** () are fully functional, including backend logic and email notifications.
+- A **Pinnwand (Notice Board)** system has been created. It now displays articles grouped by category in a responsive grid layout with custom titles and icons.
+- The **Dashboard** has been reworked into Pinnwand and Home tabs, and the main navigation link was renamed from Dashboard to Home.
+- A global **Quick Search (Ctrl+K)** feature has been implemented, allowing users to search for articles, documents, and categories from anywhere in the app.
+- **OCR functionality for PDFs** was added using the free and open-source **Tesseract OCR engine**, replacing an initial attempt with Google Cloud Vision.
+- The editor's Link dialog now supports **embedding documents** directly into articles as an interactive viewer, in addition to inserting a standard link. A custom Tiptap extension was built to ensure the embedded  renders correctly.
 
 **Last working item**:
-- **Last item agent was working**: Removing the Made with Emergent badge and updating the version number to 1.4 in the UI.
-- **Status**: NONE (This task is complete and was verified by the user).
+- **Last item agent was working**: The agent was addressing the user's feedback from message #454. This involved two tasks: 1) Renaming the Dashboard menu item to Home and updating its icon. 2) Fixing a bug where the embedded document viewer (an ) was not rendering in the Tiptap editor because it was being sanitized. The agent created a custom Tiptap extension to allow s and updated the editor configuration.
+- **Status**: USER VERIFICATION PENDING
 - **Agent Testing Done**: Y
-- **Which testing method agent to use?**: NA
-- **User Testing Done**: Y
+- **Which testing method agent to use?**: frontend testing agent. The agent should verify that the Home link is present in the navigation bar and that embedding a PDF in the editor results in a visible and functional  viewer.
+- **User Testing Done**: N
 
 **All Pending/In progress Issue list**:
-- **Issue 1**: Google Drive Import dialog is broken (Meine Ablage tab unresponsive) (P1)
-- **Issue 2**: Exporting to a Google Shared Drive fails (P2)
-- **Issue 3**: Google Drive file list in export dialog is incorrect (P2)
+- **Issue 1: Document viewer not rendering in editor (P0)**
+- **Issue 2: Dashboard menu item needs renaming to Home (P0)**
+- **Issue 3: Google Drive - Export to Shared Drive Fails (P2)**
+- **Issue 4: Google Drive - Incorrect file list in export dialog (P2)**
 
 **Issues Detail:**
-- **Issue 1: Google Drive Import dialog is broken (Meine Ablage tab unresponsive)**
-  - **Description**: This is a long-standing, recurring critical bug. The My Drive tab in the Google Drive import dialog does not respond to clicks, blocking all file imports from a user's personal drive.
-  - **Attempted fixes**: None in this session.
-  - **Next debug checklist**: Re-examine , check the browser console for errors on click, verify network requests to , and inspect the component state to understand why the click handler or state update is failing.
-  - **Why fix this issue and what will be achieved with the fix?**: This is a key integration feature that is completely non-functional. Fixing it will restore a primary method for getting content into the platform.
-  - **Status**: NOT STARTED
-  - **Is recurring issue?**: Y
-  - **Should Test frontend/backend/both after fix?**: Both.
+- **Issue 1: Document viewer not rendering in editor**
+  - **Attempted fixes**: The agent correctly identified that Tiptap's default behavior sanitizes and removes  elements. A custom Tiptap Node extension was created in  and integrated into  to correctly render the . The agent verified the fix with a screenshot showing the viewer successfully embedded.
+  - **Next debug checklist**: Await user verification. If the user still reports an issue, check the browser's developer console for any new errors and re-verify the  extension logic.
+  - **Why fix this issue and what will be achieved with the fix?**: This is a core part of the new document embedding feature requested by the user.
+  - **Status**: USER VERIFICATION PENDING
+  - **Is recurring issue?**: N
+  - **Should Test frontend/backend/both after fix?**: Frontend.
   - **Blocked on other issue**: None.
 
-- **Issue 2: Exporting to a Google Shared Drive fails**
-  - **Description**: The feature to export articles to a Google Shared Drive is not working.
-  - **Next debug checklist**: Verify the backend call in  correctly uses . Check backend logs for API errors from Google during an export attempt.
+- **Issue 2: Dashboard menu item needs renaming to Home**
+  - **Attempted fixes**: The agent replaced all instances of Dashboard with Home in  and , and updated the icon to a Home icon. This was verified via screenshot.
+  - **Next debug checklist**: Await user verification.
+  - **Why fix this issue and what will be achieved with the fix?**: A direct UI/UX request from the user.
+  - **Status**: USER VERIFICATION PENDING
+  - **Is recurring issue?**: N
+  - **Should Test frontend/backend/both after fix?**: Frontend.
+  - **Blocked on other issue**: None.
+
+- **Issue 3: Google Drive - Export to Shared Drive Fails**
+  - **Attempted fixes**: None in this session. This is a carry-over from the previous handoff.
+  - **Next debug checklist**: Investigate  and verify if the Google Drive API call includes the  parameter.
+  - **Why fix this issue and what will be achieved with the fix?**: It will enable a key integration feature for users who rely on Google Shared Drives.
   - **Status**: NOT STARTED
   - **Is recurring issue?**: N
   - **Should Test frontend/backend/both after fix?**: Backend.
+  - **Blocked on other issue**: None.
 
-- **Issue 3: Google Drive file list in export dialog is incorrect**
-  - **Description**: The list of files shown in the Google Drive export dialog does not accurately reflect the files the user owns.
-  - **Next debug checklist**: Verify the API call in  correctly uses the  query filter. Compare the UI list with the user's actual Google Drive content to identify discrepancies.
+- **Issue 4: Google Drive - Incorrect file list in export dialog**
+  - **Attempted fixes**: None in this session. This is a carry-over from the previous handoff.
+  - **Next debug checklist**: Review the API endpoint in  that fetches the file list and the corresponding component on the frontend to ensure correct filtering and display.
+  - **Why fix this issue and what will be achieved with the fix?**: This will fix a data integrity and usability issue within the Google Drive export feature.
   - **Status**: NOT STARTED
   - **Is recurring issue?**: N
   - **Should Test frontend/backend/both after fix?**: Both.
+  - **Blocked on other issue**: None.
 
 **In progress Task List**:
 - None.
 
 **Upcoming and Future Tasks**
 - **Upcoming Tasks**:
-  - **P3: OCR for Scanned PDFs**: Add a feature to extract text from image-based PDFs during upload.
+    - **P1: Fix Google Drive - Export to Shared Drive Fails**: As described in Issue #3.
+    - **P1: Fix Google Drive - Incorrect file list in export dialog**: As described in Issue #4.
 - **Future Tasks**:
-  - **Backlog: Schnellsuche (Strg+K)**: Implement a command-palette style quick search functionality.
+    - **P2: Editor UX Improvement**: The user expressed confusion that the Embed Document feature is located in the Link dialog, not an Import button. Propose adding a dedicated Import Document button to the editor's toolbar that opens this dialog.
 
 **Completed work in this session**
-- **Bug Fix**: Folder click in  now correctly filters the document list.
-- **Feature**: Multi-select and bulk actions in the  gallery view.
-- **Feature**: Drag & drop for both documents and folders in .
-- **Feature**: Drag & drop to move articles between categories in .
-- **Feature**: Implemented Last online status for users in .
-- **Feature**: Added a confirmation dialog for all drag-and-drop operations.
-- **Feature**: Hierarchical folder selector implemented in .
-- **Feature**: Enhanced the editor's link tool () to include a hierarchical document browser and preview functionality.
-- **Feature**: The editor now prompts users to choose how to display pasted YouTube links.
-- **Bug Fix**: Fixed document previews for DOCX and other office files to render HTML instead of showing an error.
-- **Bug Fix**: Corrected PDF previews to display inline instead of forcing a download.
-- **UI**: Removed the Made with Emergent badge and updated the version to .
+- **Pinnwand Feature**: Implemented the full Pinnwand system, including backend logic, UI for management, and a dashboard view that groups articles by category in a responsive grid with icons.
+- **Dashboard Rework**: Reorganized the dashboard into Pinnwand and Home tabs and removed the Schnellzugriff section.
+- **Group @-Mentions**: Implemented  mentions with email notifications.
+- **Quick Search (Ctrl+K)**: Built a global search dialog for articles, documents, and categories.
+- **PDF OCR with Tesseract**: Integrated a free, server-side OCR solution using Tesseract for extracting text from PDFs.
+- **Editor Document Embedding**: Enhanced the editor to allow embedding PDFs as an interactive  viewer and fixed the bug preventing it from rendering.
+- **UI Renaming**: Changed the main Dashboard navigation item to Home.
+- **Bug Fix**: Resolved the critical bug where folder navigation in the Documents section was broken.
+- **Project Sync**: Successfully pulled the latest codebase from the user's GitHub repository to work on the correct version.
 
 **Earlier issues found/mentioned but not fixed**
-- The pending Google Drive integration issues (unresponsive import tab, failing shared drive export, incorrect export file list) were noted in the initial handoff and remain unresolved.
+- **Issue 1: Exporting to a Google Shared Drive fails**
+  - **Debug checklist**: Verify the  call in  includes .
+  - **Why to solve this issue and what will be achieved with this?**: This is a key part of the Google Drive integration that is currently not working.
+  - **Should Test frontend/backend/both after fix?**: Backend.
+  - **Is recurring issue?**: N
+- **Issue 2: Incorrect file list in Google Drive export dialog**
+  - **Debug checklist**: Verify the API call to  in  is correctly filtering for files owned by the user.
+  - **Why to solve this issue and what will be achieved with this?**: Ensures correct functionality and data privacy.
+  - **Should Test frontend/backend/both after fix?**: Both.
+  - **Is recurring issue?**: N
 
 **Known issue recurrence from previous fork**
-- **Issue recurrence in previous fork**: The  Meine Ablage tab being unresponsive.
-- **Recurrence count**: 4+
-- **Status**: NOT STARTED
+- **Issue recurrence in previous fork**: The Google Drive import dialog has a history of UI bugs. No new regressions were reported, but caution is advised when modifying it.
+- **Recurrence count**: 3+
+- **Status**: RESOLVED (for now)
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
-- **Backend**: FastAPI, Motor (MongoDB), Pydantic.
-- **Frontend**: React, , , Shadcn UI, TipTap editor, **@dnd-kit** (newly added for drag & drop).
-- **Deployment**: Docker, Docker Compose, Nginx.
-- **API Design**: Differentiating file serving headers ( vs ).
+- **Tesseract OCR**: Switched from a paid API (Google Vision) to a free, open-source engine () for server-side OCR processing. This required installing  and  on the backend container.
+- **Custom Tiptap Extension**: Created a custom Tiptap Node to render  elements, bypassing the editor's default HTML sanitization. This was essential for the Embed Document feature.
+- **Git Repository Sync**: Used  and  to overwrite the local workspace with the user's provided repository, ensuring work was done on the correct codebase.
+- **Shadcn UI**: Leveraged , , and  components for building the new UI features.
 
 **key DB schema**
-- **users**: Added  to track user activity.
-
-**changes in tech stack**
-- **New Dependency**: Added , , and  to the frontend for drag and drop functionality.
+- **categories**:  (Field added to identify Pinnwand categories).
 
 **All files of reference**
-- 
-- 
-- 
-- 
-- 
-- 
-- 
-- 
-- 
-- 
-- 
-- 
-
-**Areas that need refactoring**:
-- The , , and  files have become very large and complex. The drag-and-drop logic (components, hooks, handlers) and the various dialogs could be extracted into separate, reusable components/hooks to improve maintainability.
-
-**key api endpoints**
-- : Moves a folder to a new parent.
-- : Serves a file with  for browser viewing.
-- : Serves a file with  for download.
-- : Modified to update the  timestamp on login.
-- : Modified to update the  timestamp on session validation.
+- : For editor features, including document embedding.
+- : The custom extension for rendering s.
+- : Contains the logic for the Pinnwand grid layout.
+- : For the Home navigation item change.
+- : The new global search component.
+- : The Tesseract OCR implementation.
+- : Contains the new global search endpoint.
+- : The API route for the OCR service.
 
 **Critical Info for New Agent**
-- You **MUST** respond in **German**.
-- The highest priority technical debt is the broken **Google Drive integration**. The Meine Ablage (My Drive) tab in the import dialog is a recurring critical bug that has not been addressed.
-- After addressing any immediate bugs, the next major feature requested by the user is **OCR for scanned PDFs**.
-- The core UI for documents and articles is now significantly more powerful with drag-and-drop and advanced linking. Maintain the pattern of using a confirmation dialog for all drag-and-drop move operations.
+- **You MUST respond in German.** The user is a native German speaker.
+- **Address the Google Drive issues next.** These are the highest-priority items remaining from the original backlog.
+- **Clarify the Import button UX.** The user was confused about where to find the new document embedding feature. Ask if they would prefer a dedicated Import Document button in the editor toolbar instead of having it inside the Link dialog.
 
 **documents and test reports created in this job**
--  (Updated throughout the session)
+- 
 - 
 - 
 - 
 - 
 
 **Last 10 User Messages and any pending HUMAN messages**
-1. **User**: Add a last online feature, folder moving, and a D&D confirmation dialog. **Status: Completed.**
-2. **User**: Add YouTube preview options and an advanced document linking feature to the editor. **Status: Completed.**
-3. **User**: Reports that the document preview for DOCX files is broken. **Status: Completed (Fixed).**
-4. **User**: Reports that linked PDFs are being downloaded instead of previewed. **Status: Completed (Fixed).**
-5. **User**: Requests a hierarchical folder browser in the document linking dialog. **Status: Completed.**
-6. **User**: Asks to remove the Made with Emergent badge and update the version number to 1.4. **Status: Completed.**
-7. **User**: (Final user message of previous session) Acknowledges the summary for the badge/version update. **Status: Completed.**
+1.  **User (#403)**: Requested Pinnwand layout changes (grid, gap, icons) and a document embedding feature for the editor. **Status: COMPLETED**.
+2.  **User (#454)**: Reported that the Dashboard menu item should be Home and that the embedded document viewer was not rendering correctly. **Status: USER VERIFICATION PENDING**.
+3.  **User (#403)**: Requested Pinnwand layout changes (grid, gap, icons) and a document embedding feature for the editor. **Status: COMPLETED**.
+4.  **User (#378)**: Asked for a free OCR alternative after being prompted for a Google Cloud billing account. **Status: COMPLETED**.
+5.  **User (#289)**: Provided Google Cloud Vision credentials and asked if further permissions were needed. **Status: ACTIONED/SUPERSEDED**.
+6.  **User (#270)**: Agreed to use Google services for OCR. **Status: ACTIONED/SUPERSEDED**.
+7.  **User (#197)**: Requested Pinnwand containers, dynamic titles, and to work through the backlog (Quick Search, OCR). **Status: COMPLETED**.
+8.  **User (#90)**: Pointed out the agent was working on an old codebase and provided a GitHub link to the latest version. **Status: COMPLETED**.
+9.  **User (#5)**: Confirmed a previous fix and that an issue was resolved on their live server. **Status: COMPLETED**.
+10. **User (#2)**: Approved the agent's initial plan. **Status: COMPLETED**.
 
 **Project Health Check:**
 - **Broken**:
-  - : The Meine Ablage (My Drive) tab is unresponsive, blocking a primary import path.
-  - Google Drive Shared Drive export functionality is not working.
+    - Google Drive export to Shared Drives is non-functional.
+    - The file list in the Google Drive export dialog is incorrect.
 - **Mocked**: None.
 
 **3rd Party Integrations**
-- **Google OAuth**: Complete and functional.
-- **Google Drive API**: **Partially implemented but critically buggy.** Import and export features are unreliable or non-functional.
-- **SMTP (Gmail)**: Completed and functional.
-- **@dnd-kit**: Newly integrated for drag-and-drop UI.
+- **Google OAuth**: Integrated and functional.
+- **Google Drive API**: Integrated for import/export, but has two known, pending bugs (Shared Drive export, incorrect file list).
+- **SMTP (Gmail)**: Fully integrated and functional.
+- **Tesseract OCR**: Newly integrated via  as a free, server-side OCR solution.
 
 **Testing status**
-- **Testing agent used after significant changes**: YES. The testing agent was used successfully after every major feature implementation, with all new tests passing.
+- **Testing agent used after significant changes**: YES. The agent was used multiple times to validate large feature sets like the Pinnwand, Quick Search, and Document Embedding. All tests passed.
 - **Troubleshoot agent used after agent stuck in loop**: NO.
-- **Test files created**: Test reports were generated for iterations 24 through 27.
-- **Known regressions**: The Google Drive import dialog remains a persistent regression.
+- **Test files created**:
+    - 
+    - 
+    - 
+    - 
+- **Known regressions**: None.
 
 **Credentials to test flow:**
 - **Admin Email**: 
 - **Admin Password**: 
-- **Google Client ID/Secret**: Available in .
-- **SMTP Credentials**: Available in  (app password: ).
+- **Google Client ID/Secret**: In .
+- **SMTP Credentials**: In .
 
 **What agent forgot to execute**
-- The agent successfully implemented a large number of new features and fixes requested by the user during the session. However, the critical, long-standing bugs related to the Google Drive integration (noted in the initial handoff summary) were not addressed and remain as significant technical debt.</analysis>
+- The agent did not address the two pending Google Drive bugs mentioned in the initial handoff summary (exporting to a Shared Drive and the incorrect file list in the export dialog). These tasks were carried over but not started.</analysis>

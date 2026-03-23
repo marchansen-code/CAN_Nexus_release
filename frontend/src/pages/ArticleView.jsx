@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext, useCallback } from "react";
+import React, { useState, useEffect, useContext, useCallback, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 import { API, AuthContext } from "@/App";
@@ -119,10 +119,38 @@ const ArticleView = () => {
   // Document preview state
   const [documentPreview, setDocumentPreview] = useState(null);
 
+  // Ref for article content to post-process embedded documents
+  const contentRef = useRef(null);
+
   const canEdit = user?.role === "admin" || user?.role === "editor";
   const isAdmin = user?.role === "admin";
   const isAuthor = article?.created_by === user?.user_id;
   const canViewAnalytics = isAdmin || isAuthor;
+
+  // Post-process embedded document divs to render iframes in published view
+  useEffect(() => {
+    if (!contentRef.current || !article?.content) return;
+    const embeddedDocs = contentRef.current.querySelectorAll('div[data-embedded-document]');
+    embeddedDocs.forEach(div => {
+      // Check if already has an iframe (new format articles)
+      if (div.querySelector('iframe')) return;
+      // Get attributes (handle both old lowercase and new data-* format)
+      const filename = div.getAttribute('data-filename') || div.getAttribute('filename') || 'Dokument';
+      const previewUrl = div.getAttribute('data-preview-url') || div.getAttribute('previewurl');
+      const fileUrl = div.getAttribute('data-file-url') || div.getAttribute('fileurl') || '#';
+      if (previewUrl) {
+        div.innerHTML = `<div style="margin:16px 0;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;background:#fff;">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 16px;background:#f1f5f9;border-bottom:1px solid #e2e8f0;">
+            <span style="font-weight:500;font-size:14px;color:#334155;">${filename}</span>
+            <a href="${fileUrl}" target="_blank" rel="noopener noreferrer" style="font-size:12px;color:#2563eb;text-decoration:none;">Öffnen</a>
+          </div>
+          <div style="height:500px;position:relative;">
+            <iframe src="${previewUrl}" style="width:100%;height:100%;border:0;" title="${filename}"></iframe>
+          </div>
+        </div>`;
+      }
+    });
+  }, [article?.content]);
 
   // Handle clicks on document links in article content
   const handleContentClick = useCallback((event) => {
@@ -495,6 +523,7 @@ const ArticleView = () => {
 
         {/* Article Content */}
         <div 
+          ref={contentRef}
           className="prose prose-slate dark:prose-invert max-w-none prose-headings:font-bold prose-h1:text-3xl prose-h2:text-2xl prose-h3:text-xl prose-h4:text-lg prose-p:leading-7 prose-p:my-3 prose-a:text-red-600 prose-a:no-underline hover:prose-a:underline prose-img:rounded-lg prose-img:shadow-md prose-table:border-collapse prose-td:border prose-td:border-slate-300 prose-td:p-3 prose-th:border prose-th:border-slate-300 prose-th:p-3 prose-th:bg-slate-100 dark:prose-th:bg-slate-800 prose-blockquote:border-l-4 prose-blockquote:border-red-500 prose-blockquote:bg-slate-50 dark:prose-blockquote:bg-slate-900 prose-blockquote:py-1 prose-blockquote:px-4 prose-ul:my-3 prose-ol:my-3 prose-li:my-1"
           dangerouslySetInnerHTML={{ __html: article.content }}
           onClick={handleContentClick}

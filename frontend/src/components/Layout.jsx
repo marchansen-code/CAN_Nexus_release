@@ -16,7 +16,8 @@ import {
   Database,
   UsersRound,
   Trash2,
-  Command
+  Command,
+  Home
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -32,7 +33,7 @@ import QuickSearch from "./QuickSearch";
 
 // Navigation items with role-based visibility
 const allNavItems = [
-  { path: "/dashboard", icon: LayoutDashboard, label: "Dashboard", roles: ["admin", "editor", "viewer"] },
+  { path: "/dashboard", icon: Home, label: "Home", roles: ["admin", "editor", "viewer"] },
   { path: "/search", icon: Search, label: "Suche", roles: ["admin", "editor", "viewer"] },
   { path: "/articles", icon: FileText, label: "Artikel", roles: ["admin", "editor", "viewer"] },
   { path: "/documents", icon: Upload, label: "Dokumente", roles: ["admin", "editor"] },

@@ -109,7 +109,7 @@ const QuickSearch = () => {
 
   // Quick navigation pages
   const quickPages = [
-    { name: 'Dashboard', path: '/', icon: Home },
+    { name: 'Home', path: '/', icon: Home },
     { name: 'Artikel', path: '/articles', icon: FileText },
     { name: 'Dokumente', path: '/documents', icon: File },
     { name: 'Kategorien', path: '/categories', icon: FolderTree },
