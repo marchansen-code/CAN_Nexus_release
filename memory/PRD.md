@@ -498,6 +498,26 @@ Wissensmanagement-Plattform für CANUSA Touristik GmbH & Co. KG und CU-Travel.
 - **CSS-Änderungen**:
   - `.group-mention` Klasse für grüne Gruppen-Mention-Darstellung
 
+## Pinnwand-Layout & Editor Dokument-Einbetten (Iteration 30) - 23.03.2026
+- ✅ **Pinnwand horizontal** - Container nebeneinander angeordnet (max. 3 pro Zeile)
+- ✅ **20px Abstand** - `gap-5` zwischen allen Pinnwand-Containern
+- ✅ **Icons für Titel** - Passende Icons basierend auf Kategorie-Namen:
+  - NEWS → Zeitung-Icon (Newspaper)
+  - SPECIALS → Sparkles-Icon
+  - WICHTIG/ALERT → AlertCircle-Icon
+  - INFO → Info-Icon
+  - EVENT/TERMIN → Calendar-Icon
+  - ANKÜNDIGUNG → Megaphone-Icon
+  - Standard → Pin-Icon
+- ✅ **Dokument-Einbetten im Editor** - Neuer "Einfügemodus" im Link-Dialog
+- ✅ **Link einfügen** - Dokument als klickbaren Link einfügen
+- ✅ **Einbetten (Viewer)** - Dokument als interaktiven Viewer direkt im Artikel einbetten
+- ✅ **Info-Box** - Erklärt Einbetten-Funktion mit amber/gelber Hervorhebung
+- **CSS-Änderungen**:
+  - `.embedded-document` Klasse für eingebettete Dokument-Viewer
+- **State-Änderungen in RichTextEditor**:
+  - `documentInsertMode`: 'link' oder 'embed'
+
 ## Pinnwand-Verbesserungen & Backlog-Features (Iteration 29) - 23.03.2026
 - ✅ **Pinnwand-Container pro Kategorie** - Jede Pinnwand-Kategorie hat eigenen Container
 - ✅ **Container-Titel aus zweitem Wort** - "Pinnwand NEWS" → Container-Titel "NEWS"
