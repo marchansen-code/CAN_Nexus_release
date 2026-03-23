@@ -566,4 +566,7 @@ Wissensmanagement-Plattform für CANUSA Touristik GmbH & Co. KG und CU-Travel.
   - Öffnet einen dedizierten Dialog zum Durchsuchen der Dokumentbibliothek
   - Bietet "Einbetten (Viewer)" und "Link einfügen" Modi
   - Unabhängig vom bestehenden Link-Dialog
+- **Bug Fix**: Schnellsuche (Ctrl+K) gab keine Ergebnisse zurück
+  - Ursache: `cmdk`-Bibliothek filterte client-seitig nach Item-Value (nur IDs), nicht nach Titel
+  - Fix: `shouldFilter={false}` an `CommandDialog` übergeben, manuelle "Keine Ergebnisse" Logik
 

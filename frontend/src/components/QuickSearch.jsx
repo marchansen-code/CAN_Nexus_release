@@ -136,7 +136,7 @@ const QuickSearch = () => {
   };
 
   return (
-    <CommandDialog open={open} onOpenChange={setOpen}>
+    <CommandDialog open={open} onOpenChange={setOpen} shouldFilter={false}>
       <CommandInput 
         placeholder="Suchen... (Artikel, Dokumente, Kategorien)" 
         value={query}
@@ -149,7 +149,12 @@ const QuickSearch = () => {
           </div>
         ) : (
           <>
-            <CommandEmpty>Keine Ergebnisse gefunden.</CommandEmpty>
+            {/* Show "no results" only when there's a query and no results */}
+            {query && query.length >= 2 && results.articles.length === 0 && results.documents.length === 0 && results.categories.length === 0 && (
+              <div className="py-6 text-center text-sm text-muted-foreground">
+                Keine Ergebnisse gefunden.
+              </div>
+            )}
             
             {/* Quick Navigation - Always show when no query */}
             {!query && (
