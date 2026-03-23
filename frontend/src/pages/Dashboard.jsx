@@ -291,6 +291,8 @@ const Dashboard = () => {
           </p>
         </div>
         <div className="flex gap-3">
+          {user?.role !== "viewer" && (
+          <>
           <Button variant="outline" onClick={() => navigate("/documents")} data-testid="upload-doc-btn">
             <Upload className="w-4 h-4 mr-2" />
             PDF hochladen
@@ -299,6 +301,8 @@ const Dashboard = () => {
             <Plus className="w-4 h-4 mr-2" />
             Neuer Artikel
           </Button>
+          </>
+          )}
         </div>
       </div>
 
