@@ -561,7 +561,11 @@ Wissensmanagement-Plattform für CANUSA Touristik GmbH & Co. KG und CU-Travel.
 ### P3 (Nice to Have)
 - [ ] Handschrift-OCR verbessern (Tesseract hat Limitationen)
 
-### Iteration 31 - 23.03.2026
+### Iteration 32 - 24.03.2026
+- **Fix**: Kategorien expandieren per Klick auf gesamte Zeile (nicht nur Pfeil)
+- **Fix**: Pinnwand-Kategorien überall ausgeblendet für Nicht-Admins (Dashboard-Tab, QuickSearch, ArticleEditor Kategorieauswahl)
+- **Fix**: Zellenfarbe im Editor repariert (TableCell/TableHeader um backgroundColor-Attribut erweitert) + 15 Farben im Grid
+- **Fix**: Gruppen-beschränkte Artikel aus Suchergebnissen ausgeblendet für Nicht-Gruppenmitglieder (search.py Visibility-Filter)
 - **Bug Fix**: Eingebetteter Dokument-Viewer (iframe) wird jetzt in der veröffentlichten Artikelansicht korrekt angezeigt
   - `EmbeddedDocument.jsx`: `renderHTML()` gibt jetzt vollständiges HTML mit iframe aus, `addAttributes()` nutzt `data-*` Attribute
   - `ArticleView.jsx`: `useRef` + `useEffect` post-prozessiert `div[data-embedded-document]` Elemente und injiziert Viewer-HTML (handles alte + neue Formate)
