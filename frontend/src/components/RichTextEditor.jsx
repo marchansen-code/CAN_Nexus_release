@@ -1563,22 +1563,34 @@ const EditorToolbar = ({ editor, onImageUpload, isFullscreen, onToggleFullscreen
                 <DropdownMenuSubTrigger>
                   <PaintBucket className="h-4 w-4 mr-2" /> Zellenhintergrund
                 </DropdownMenuSubTrigger>
-                <DropdownMenuSubContent>
-                  <DropdownMenuItem onClick={() => editor.chain().focus().setCellAttribute('backgroundColor', '#fef3c7').run()}>
-                    <div className="w-4 h-4 mr-2 rounded bg-amber-100 border" /> Gelb
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => editor.chain().focus().setCellAttribute('backgroundColor', '#dcfce7').run()}>
-                    <div className="w-4 h-4 mr-2 rounded bg-green-100 border" /> Grün
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => editor.chain().focus().setCellAttribute('backgroundColor', '#dbeafe').run()}>
-                    <div className="w-4 h-4 mr-2 rounded bg-blue-100 border" /> Blau
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => editor.chain().focus().setCellAttribute('backgroundColor', '#fce7f3').run()}>
-                    <div className="w-4 h-4 mr-2 rounded bg-pink-100 border" /> Rosa
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => editor.chain().focus().setCellAttribute('backgroundColor', '#f3f4f6').run()}>
-                    <div className="w-4 h-4 mr-2 rounded bg-gray-100 border" /> Grau
-                  </DropdownMenuItem>
+                <DropdownMenuSubContent className="p-2">
+                  <div className="grid grid-cols-5 gap-1 mb-2">
+                    {[
+                      { color: '#fef3c7', name: 'Gelb' },
+                      { color: '#fde68a', name: 'Gelb kräftig' },
+                      { color: '#fed7aa', name: 'Orange' },
+                      { color: '#fecaca', name: 'Rot' },
+                      { color: '#fce7f3', name: 'Rosa' },
+                      { color: '#e9d5ff', name: 'Violett' },
+                      { color: '#dbeafe', name: 'Blau' },
+                      { color: '#bfdbfe', name: 'Blau kräftig' },
+                      { color: '#a7f3d0', name: 'Türkis' },
+                      { color: '#dcfce7', name: 'Grün' },
+                      { color: '#bbf7d0', name: 'Grün kräftig' },
+                      { color: '#f3f4f6', name: 'Hellgrau' },
+                      { color: '#d1d5db', name: 'Grau' },
+                      { color: '#9ca3af', name: 'Dunkelgrau' },
+                      { color: '#1f2937', name: 'Anthrazit' },
+                    ].map(({ color, name }) => (
+                      <button
+                        key={color}
+                        onClick={() => editor.chain().focus().setCellAttribute('backgroundColor', color).run()}
+                        className="w-7 h-7 rounded border hover:scale-110 transition-transform"
+                        style={{ backgroundColor: color }}
+                        title={name}
+                      />
+                    ))}
+                  </div>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={() => editor.chain().focus().setCellAttribute('backgroundColor', null).run()}>
                     <Minus className="h-4 w-4 mr-2" /> Entfernen
@@ -2100,12 +2112,40 @@ const RichTextEditor = ({ content, onChange, placeholder = "Inhalt eingeben...",
         },
       }),
       TableRow,
-      TableCell.configure({
+      TableCell.extend({
+        addAttributes() {
+          return {
+            ...this.parent?.(),
+            backgroundColor: {
+              default: null,
+              parseHTML: element => element.style.backgroundColor || element.getAttribute('data-bg-color') || null,
+              renderHTML: attributes => {
+                if (!attributes.backgroundColor) return {};
+                return { style: `background-color: ${attributes.backgroundColor}`, 'data-bg-color': attributes.backgroundColor };
+              },
+            },
+          };
+        },
+      }).configure({
         HTMLAttributes: {
           class: 'border border-slate-300 p-3 align-top relative',
         },
       }),
-      TableHeader.configure({
+      TableHeader.extend({
+        addAttributes() {
+          return {
+            ...this.parent?.(),
+            backgroundColor: {
+              default: null,
+              parseHTML: element => element.style.backgroundColor || element.getAttribute('data-bg-color') || null,
+              renderHTML: attributes => {
+                if (!attributes.backgroundColor) return {};
+                return { style: `background-color: ${attributes.backgroundColor}`, 'data-bg-color': attributes.backgroundColor };
+              },
+            },
+          };
+        },
+      }).configure({
         HTMLAttributes: {
           class: 'border border-slate-300 p-3 bg-slate-100 font-semibold relative',
         },

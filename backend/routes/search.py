@@ -43,8 +43,26 @@ class SearchQueryModel(BaseModel):
 @router.post("")
 async def search_articles(query: SearchQueryModel, user: User = Depends(get_current_user)):
     """Search articles with keyword matching and multiple filters."""
+    # Get user groups for visibility filtering
+    user_doc = await db.users.find_one({"user_id": user.user_id}, {"group_ids": 1})
+    user_groups = user_doc.get("group_ids", []) if user_doc else []
+    
     # Build base query
     mongo_query = {"deleted_at": {"$exists": False}}
+    
+    # Visibility filter: hide group-restricted articles from non-members, hide other users' drafts
+    if user.role != "admin":
+        mongo_query["$and"] = [
+            {"$or": [
+                {"visible_to_groups": {"$exists": False}},
+                {"visible_to_groups": []},
+                {"visible_to_groups": {"$in": user_groups}} if user_groups else {"visible_to_groups": {"$size": 0}},
+            ]},
+            {"$or": [
+                {"status": {"$ne": "draft"}},
+                {"status": "draft", "created_by": user.user_id},
+            ]},
+        ]
     
     # Tag filter
     if query.tags and len(query.tags) > 0:

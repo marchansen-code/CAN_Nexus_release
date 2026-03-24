@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { API } from '@/App';
+import { API, AuthContext } from '@/App';
 import {
   CommandDialog,
   CommandEmpty,
@@ -26,6 +26,8 @@ import { Badge } from '@/components/ui/badge';
 
 const QuickSearch = () => {
   const navigate = useNavigate();
+  const { user } = useContext(AuthContext);
+  const isAdmin = user?.role === "admin";
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [results, setResults] = useState({
@@ -215,11 +217,11 @@ const QuickSearch = () => {
             )}
 
             {/* Categories */}
-            {results.categories.length > 0 && (
+            {results.categories.filter(c => isAdmin || !c.is_pinnwand).length > 0 && (
               <>
                 <CommandSeparator />
                 <CommandGroup heading="Kategorien">
-                  {results.categories.map((cat) => (
+                  {results.categories.filter(c => isAdmin || !c.is_pinnwand).map((cat) => (
                     <CommandItem
                       key={cat.category_id}
                       value={`cat-${cat.category_id}`}

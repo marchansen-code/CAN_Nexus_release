@@ -202,8 +202,9 @@ const Dashboard = () => {
   const [stats, setStats] = useState(null);
   const [pinnwandArticles, setPinnwandArticles] = useState([]);
   const [categories, setCategories] = useState([]);
+  const isAdmin = user?.role === "admin";
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState("pinnwand");
+  const [activeTab, setActiveTab] = useState(user?.role === "admin" ? "pinnwand" : "dashboard");
 
   useEffect(() => {
     const fetchData = async () => {
@@ -302,11 +303,13 @@ const Dashboard = () => {
 
       {/* Main Tabs: Pinnwand / Dashboard */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full max-w-md grid-cols-2">
+        <TabsList className={`grid w-full max-w-md ${isAdmin ? 'grid-cols-2' : 'grid-cols-1'}`}>
+          {isAdmin && (
           <TabsTrigger value="pinnwand" className="flex items-center gap-2" data-testid="pinnwand-tab">
             <Pin className="w-4 h-4" />
             Pinnwand
           </TabsTrigger>
+          )}
           <TabsTrigger value="dashboard" className="flex items-center gap-2" data-testid="dashboard-tab">
             <LayoutDashboard className="w-4 h-4" />
             Dashboard

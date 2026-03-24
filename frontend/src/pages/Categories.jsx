@@ -130,18 +130,16 @@ const TreeItem = ({ category, categories, level = 0, onEdit, onDelete, onAddChil
       <div 
         className={`flex items-center gap-2 p-2 rounded-lg hover:bg-muted/50 cursor-pointer group transition-colors`}
         style={{ paddingLeft: `${level * 24 + 8}px` }}
+        onClick={() => hasChildren && toggleExpand(category.category_id)}
       >
         {hasChildren ? (
-          <button 
-            onClick={() => toggleExpand(category.category_id)}
-            className="p-1 hover:bg-muted rounded"
-          >
+          <span className="p-1">
             {isExpanded ? (
               <ChevronDown className="w-4 h-4 text-muted-foreground" />
             ) : (
               <ChevronRight className="w-4 h-4 text-muted-foreground" />
             )}
-          </button>
+          </span>
         ) : (
           <span className="w-6" />
         )}
