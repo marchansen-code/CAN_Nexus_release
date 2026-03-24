@@ -219,7 +219,7 @@ const ResizableImage = Image.extend({
   },
 });
 
-const EditorToolbar = ({ editor, onImageUpload, isFullscreen, onToggleFullscreen, onMultiImageUpload, showHtmlEditor, onToggleHtmlEditor }) => {
+const EditorToolbar = ({ editor, onImageUpload, isFullscreen, onToggleFullscreen, onMultiImageUpload, showHtmlEditor, onToggleHtmlEditor, isInTable }) => {
   const [linkUrl, setLinkUrl] = React.useState('');
   const [imageUrl, setImageUrl] = React.useState('');
   const [youtubeUrl, setYoutubeUrl] = React.useState('');
@@ -1489,7 +1489,7 @@ const EditorToolbar = ({ editor, onImageUpload, isFullscreen, onToggleFullscreen
       {/* Table */}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="sm" className={cn("h-8 w-8 p-0", editor.isActive('table') && "bg-muted")} title="Tabelle">
+          <Button variant="ghost" size="sm" className={cn("h-8 w-8 p-0", isInTable && "bg-muted")} title="Tabelle">
             <TableIcon className="h-4 w-4" />
           </Button>
         </DropdownMenuTrigger>
@@ -1497,7 +1497,7 @@ const EditorToolbar = ({ editor, onImageUpload, isFullscreen, onToggleFullscreen
           <DropdownMenuItem onClick={() => setShowTableDialog(true)}>
             <Grid3X3 className="h-4 w-4 mr-2" /> Neue Tabelle einfügen...
           </DropdownMenuItem>
-          {editor.isActive('table') && (
+          {isInTable && (
             <>
               <DropdownMenuSeparator />
               
@@ -1853,6 +1853,7 @@ const RichTextEditor = ({ content, onChange, placeholder = "Inhalt eingeben...",
   const [htmlContent, setHtmlContent] = useState('');
   const [showMultiImageDialog, setShowMultiImageDialog] = useState(false);
   const [documentPreview, setDocumentPreview] = useState(null); // For document preview popup
+  const [isInTable, setIsInTable] = useState(false);
   
   // Handle clicks on document links in the editor
   const handleEditorClick = useCallback((event) => {
@@ -2221,6 +2222,10 @@ const RichTextEditor = ({ content, onChange, placeholder = "Inhalt eingeben...",
     content,
     onUpdate: ({ editor }) => {
       onChange(editor.getHTML());
+      setIsInTable(editor.isActive('table'));
+    },
+    onSelectionUpdate: ({ editor }) => {
+      setIsInTable(editor.isActive('table'));
     },
     editorProps: {
       attributes: {
@@ -2374,6 +2379,7 @@ const RichTextEditor = ({ content, onChange, placeholder = "Inhalt eingeben...",
         onMultiImageUpload={() => setShowMultiImageDialog(true)}
         showHtmlEditor={showHtmlEditor}
         onToggleHtmlEditor={() => setShowHtmlEditor(!showHtmlEditor)}
+        isInTable={isInTable}
       />
       
       {showHtmlEditor ? (
