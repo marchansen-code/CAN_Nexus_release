@@ -61,10 +61,12 @@ app.include_router(ocr.router, prefix="/api")
 app.add_middleware(SessionMiddleware, secret_key=secrets.token_urlsafe(32))
 
 # CORS middleware
+app_url = os.environ.get("APP_URL", "")
+cors_origins = [app_url] if app_url else ["*"]
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
-    allow_origins=["*"],
+    allow_origins=cors_origins,
     allow_methods=["*"],
     allow_headers=["*"],
 )
