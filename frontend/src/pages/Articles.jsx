@@ -115,7 +115,8 @@ const DroppableCategoryItem = ({
   onSelect, 
   expandedCategories, 
   toggleExpand, 
-  isAdmin, 
+  isAdmin,
+  canManageCategories, 
   onEdit, 
   onDelete, 
   onAddChild,
@@ -218,7 +219,7 @@ const DroppableCategoryItem = ({
             {category.is_pinnwand && <Pin className="w-3 h-3 shrink-0 text-amber-500" />}
           </span>
         </button>
-        {isAdmin && (
+        {canManageCategories && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button className="p-1 rounded opacity-0 group-hover:opacity-100 hover:bg-muted transition-opacity shrink-0" data-testid={`cat-menu-${category.category_id}`}>
@@ -253,6 +254,7 @@ const DroppableCategoryItem = ({
               expandedCategories={expandedCategories}
               toggleExpand={toggleExpand}
               isAdmin={isAdmin}
+              canManageCategories={canManageCategories}
               onEdit={onEdit}
               onDelete={onDelete}
               onAddChild={onAddChild}
@@ -400,6 +402,7 @@ const Articles = () => {
 
   const canEdit = user?.role === "admin" || user?.role === "editor";
   const isAdmin = user?.role === "admin";
+  const canManageCategories = canEdit; // Both admins and editors can manage categories
 
   // Category management state
   const [catDialog, setCatDialog] = useState({ open: false, mode: 'create', category: null, parentId: null });
@@ -784,7 +787,7 @@ const Articles = () => {
         </div>
         {canEdit && (
           <div className="flex gap-2">
-            {isAdmin && (
+            {canManageCategories && (
               <Button 
                 variant="outline"
                 onClick={() => openCreateCat(null)}
@@ -840,6 +843,7 @@ const Articles = () => {
                   expandedCategories={expandedCategories}
                   toggleExpand={toggleExpand}
                   isAdmin={isAdmin}
+                  canManageCategories={canManageCategories}
                   onEdit={openEditCat}
                   onDelete={(cat) => setCatDeleteDialog({ open: true, category: cat })}
                   onAddChild={(cat) => openCreateCat(cat.category_id)}

@@ -646,4 +646,10 @@ Wissensmanagement-Plattform für CANUSA Touristik GmbH & Co. KG und CU-Travel.
   - Dokumente können über den separaten "Dokument einbetten"-Button eingefügt werden
   - Vereinfachte UI ohne redundante Funktionen
 
+- **Bug Fix**: Kategorie-Verwaltung jetzt auch für Editoren sichtbar
+  - Editoren sehen jetzt das Drei-Punkte-Menü beim Hover über Kategorien
+  - Editoren können Kategorien erstellen, bearbeiten und löschen
+  - "Neue Kategorie" Button ist für Editoren sichtbar
+  - Pinnwand-Checkbox im Kategorie-Dialog bleibt nur für Admins sichtbar
+
 
