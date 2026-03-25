@@ -583,3 +583,23 @@ Wissensmanagement-Plattform für CANUSA Touristik GmbH & Co. KG und CU-Travel.
   - Ursache: `cmdk`-Bibliothek filterte client-seitig nach Item-Value (nur IDs), nicht nach Titel
   - Fix: `shouldFilter={false}` an `CommandDialog` übergeben, manuelle "Keine Ergebnisse" Logik
 
+### Iteration 34 - 25.03.2026
+- **Feature**: Drag & Drop Verbesserungen für Artikel
+  - **Hover-Verzögerung bei Kategorie-Drop**: Wenn ein Artikel über eine Kategorie gezogen wird, erscheint ein Fortschrittsbalken. Der Artikel wird erst nach 600ms Hover-Zeit in die Kategorie verschoben (Bestätigungsdialog).
+  - **Per-User Artikel-Sortierung**: Benutzer können Artikel per Drag & Drop innerhalb einer Kategorie umsortieren. Die Reihenfolge wird pro Benutzer in der Datenbank gespeichert.
+  - GripVertical-Icons erscheinen links neben Artikeln, wenn eine Kategorie ausgewählt ist
+  - "Eigene Sortierung" Badge und Reset-Button werden angezeigt, wenn eine benutzerdefinierte Reihenfolge aktiv ist
+  - Toast-Benachrichtigungen: "Reihenfolge gespeichert" / "Sortierung zurückgesetzt"
+- **Neue Backend-Routen**: `/app/backend/routes/sort_preferences.py`
+  - `GET /api/sort-preferences` - Alle Sortierpreferenzen des Benutzers
+  - `GET /api/sort-preferences/{category_id}` - Sortierpreferenz für eine Kategorie
+  - `PUT /api/sort-preferences/{category_id}` - Sortierfolge speichern
+  - `DELETE /api/sort-preferences/{category_id}` - Sortierung zurücksetzen
+- **Neues Model**: `UserSortPreference` (user_id, category_id, article_order[])
+- **Frontend-Änderungen**: `Articles.jsx`
+  - `@dnd-kit/sortable` Integration für Artikel-Reordering
+  - `SortableArticle` Komponente ersetzt `DraggableArticle`
+  - `DroppableCategoryItem` erweitert um Hover-Delay-Logik mit Progress-Indikator
+  - `SortableContext` für Artikelliste
+
+
