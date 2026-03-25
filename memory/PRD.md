@@ -613,4 +613,24 @@ Wissensmanagement-Plattform für CANUSA Touristik GmbH & Co. KG und CU-Travel.
   - Info-Hinweis unter der Sektion
   - Backend: `expiring_articles` Array im `/api/stats` Endpunkt
 
+- **Feature**: Leseaufgaben-System (Reading Assignments)
+  - **Editor**: Neue "Leseaufgabe"-Karte mit Checkbox "Als Leseaufgabe zuweisen"
+    - Bei Aktivierung erscheinen Benutzer- und Gruppen-Auswahllisten
+    - Button "Leseaufgaben zuweisen & benachrichtigen" speichert und versendet E-Mails
+  - **Dashboard**: Neuer Container "Leseaufgaben" für ungelesene, zugewiesene Artikel
+    - Orange Styling mit "Ungelesen" Badge und pulsierender Animation
+    - CheckCircle2-Button zum direkten Markieren als gelesen
+    - Artikel verschwinden nach Markierung aus der Liste
+  - **Artikel-Ansicht**: Orange Banner für zugewiesene Artikel
+    - "Dieser Artikel wurde Ihnen als Leseaufgabe zugewiesen"
+    - "Als gelesen markieren"-Button
+    - Grüner Banner nach dem Markieren als gelesen
+  - **Backend-API** (`/app/backend/routes/reading_assignments.py`):
+    - `POST /api/reading-assignments` - Leseaufgaben erstellen
+    - `GET /api/reading-assignments/my-assignments` - Eigene ungelesene Artikel
+    - `POST /api/reading-assignments/mark-as-read` - Als gelesen markieren
+    - `GET /api/reading-assignments/status/{article_id}` - Lesestatus prüfen
+    - `DELETE /api/reading-assignments/{article_id}` - Zuweisungen entfernen
+  - **E-Mail-Benachrichtigung**: `send_reading_assignment_notification` im Email-Service
+
 
