@@ -148,6 +148,10 @@ class ArticleUpdate(BaseModel):
     is_important: Optional[bool] = None
     important_until: Optional[datetime] = None
     comments_enabled: Optional[bool] = None
+    # Reading assignments
+    reading_assignment_enabled: Optional[bool] = None
+    reading_assignment_user_ids: Optional[List[str]] = None
+    reading_assignment_group_ids: Optional[List[str]] = None
 
 
 # ==================== COMMENT MODELS ====================

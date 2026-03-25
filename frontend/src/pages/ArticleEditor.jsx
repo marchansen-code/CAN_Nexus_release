@@ -26,7 +26,9 @@ import {
   MessageSquare,
   Maximize2,
   FileUp,
-  Mail
+  Mail,
+  BookOpen,
+  UserCheck
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -164,7 +166,10 @@ const ArticleEditor = () => {
     review_date: null,
     is_important: false,
     important_until: null,
-    comments_enabled: true
+    comments_enabled: true,
+    reading_assignment_enabled: false,
+    reading_assignment_user_ids: [],
+    reading_assignment_group_ids: []
   });
 
   // UI state
@@ -181,6 +186,7 @@ const ArticleEditor = () => {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [showReviewDialog, setShowReviewDialog] = useState(false);
+  const [savingReadingAssignment, setSavingReadingAssignment] = useState(false);
 
   // Check for PDF import data on mount
   useEffect(() => {
@@ -240,7 +246,10 @@ const ArticleEditor = () => {
             expiry_date: data.expiry_date ? new Date(data.expiry_date) : null,
             review_date: data.review_date ? new Date(data.review_date) : null,
             important_until: data.important_until ? new Date(data.important_until) : null,
-            comments_enabled: data.comments_enabled !== false  // Default to true if not set
+            comments_enabled: data.comments_enabled !== false,  // Default to true if not set
+            reading_assignment_enabled: data.reading_assignment_enabled || false,
+            reading_assignment_user_ids: data.reading_assignment_user_ids || [],
+            reading_assignment_group_ids: data.reading_assignment_group_ids || []
           });
         } catch (error) {
           console.error("Failed to load article:", error);
@@ -373,6 +382,53 @@ const ArticleEditor = () => {
         ? prev.visible_to_groups.filter(id => id !== groupId)
         : [...prev.visible_to_groups, groupId]
     }));
+  };
+
+  // Toggle reading assignment user
+  const toggleReadingAssignmentUser = (userId) => {
+    setArticle(prev => ({
+      ...prev,
+      reading_assignment_user_ids: prev.reading_assignment_user_ids.includes(userId)
+        ? prev.reading_assignment_user_ids.filter(id => id !== userId)
+        : [...prev.reading_assignment_user_ids, userId]
+    }));
+  };
+
+  // Toggle reading assignment group
+  const toggleReadingAssignmentGroup = (groupId) => {
+    setArticle(prev => ({
+      ...prev,
+      reading_assignment_group_ids: prev.reading_assignment_group_ids.includes(groupId)
+        ? prev.reading_assignment_group_ids.filter(id => id !== groupId)
+        : [...prev.reading_assignment_group_ids, groupId]
+    }));
+  };
+
+  // Save reading assignments
+  const saveReadingAssignments = async () => {
+    if (!articleId || isNew) return;
+    
+    setSavingReadingAssignment(true);
+    try {
+      if (article.reading_assignment_enabled && 
+          (article.reading_assignment_user_ids.length > 0 || article.reading_assignment_group_ids.length > 0)) {
+        await axios.post(`${API}/reading-assignments`, {
+          article_id: articleId,
+          user_ids: article.reading_assignment_user_ids,
+          group_ids: article.reading_assignment_group_ids
+        });
+        toast.success("Leseaufgaben zugewiesen - E-Mail-Benachrichtigungen werden versendet");
+      } else if (!article.reading_assignment_enabled) {
+        // Remove assignments
+        await axios.delete(`${API}/reading-assignments/${articleId}`);
+        toast.success("Leseaufgaben entfernt");
+      }
+    } catch (error) {
+      console.error("Failed to save reading assignments:", error);
+      toast.error("Leseaufgaben konnten nicht gespeichert werden");
+    } finally {
+      setSavingReadingAssignment(false);
+    }
   };
 
   if (loading) {
@@ -770,6 +826,118 @@ const ArticleEditor = () => {
                   ))}
                 </SelectContent>
               </Select>
+            </CardContent>
+          </Card>
+
+          {/* Reading Assignment */}
+          <Card className={article.reading_assignment_enabled ? "border-orange-300 dark:border-orange-700" : ""}>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <BookOpen className="w-4 h-4" />
+                Leseaufgabe
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="reading-assignment-enabled"
+                  checked={article.reading_assignment_enabled}
+                  onCheckedChange={(checked) => setArticle(prev => ({ 
+                    ...prev, 
+                    reading_assignment_enabled: checked,
+                    reading_assignment_user_ids: checked ? prev.reading_assignment_user_ids : [],
+                    reading_assignment_group_ids: checked ? prev.reading_assignment_group_ids : []
+                  }))}
+                  data-testid="reading-assignment-checkbox"
+                />
+                <label htmlFor="reading-assignment-enabled" className="text-sm cursor-pointer">
+                  Als Leseaufgabe zuweisen
+                </label>
+              </div>
+              
+              {article.reading_assignment_enabled && (
+                <div className="space-y-4 pt-2 border-t">
+                  <p className="text-xs text-muted-foreground">
+                    Ausgewählte Benutzer/Gruppen erhalten eine E-Mail-Benachrichtigung und sehen den Artikel als "Ungelesen" auf ihrem Dashboard.
+                  </p>
+                  
+                  {/* User Selection */}
+                  <div className="space-y-2">
+                    <Label className="flex items-center gap-1">
+                      <User className="w-3 h-3" /> Benutzer
+                    </Label>
+                    <div className="max-h-32 overflow-y-auto space-y-1 border rounded-md p-2">
+                      {users.filter(u => u.user_id !== user?.user_id).map(u => (
+                        <div key={u.user_id} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={`ra-user-${u.user_id}`}
+                            checked={article.reading_assignment_user_ids.includes(u.user_id)}
+                            onCheckedChange={() => toggleReadingAssignmentUser(u.user_id)}
+                          />
+                          <label htmlFor={`ra-user-${u.user_id}`} className="text-sm cursor-pointer flex items-center gap-1">
+                            {u.name}
+                            {u.role === "admin" && <Badge variant="secondary" className="text-xs">Admin</Badge>}
+                          </label>
+                        </div>
+                      ))}
+                      {users.filter(u => u.user_id !== user?.user_id).length === 0 && (
+                        <p className="text-xs text-muted-foreground py-2">Keine anderen Benutzer vorhanden</p>
+                      )}
+                    </div>
+                  </div>
+                  
+                  {/* Group Selection */}
+                  {groups.length > 0 && (
+                    <div className="space-y-2">
+                      <Label className="flex items-center gap-1">
+                        <Users className="w-3 h-3" /> Gruppen
+                      </Label>
+                      <div className="max-h-24 overflow-y-auto space-y-1 border rounded-md p-2">
+                        {groups.map(g => (
+                          <div key={g.group_id} className="flex items-center space-x-2">
+                            <Checkbox
+                              id={`ra-group-${g.group_id}`}
+                              checked={article.reading_assignment_group_ids.includes(g.group_id)}
+                              onCheckedChange={() => toggleReadingAssignmentGroup(g.group_id)}
+                            />
+                            <label htmlFor={`ra-group-${g.group_id}`} className="text-sm cursor-pointer">
+                              {g.name}
+                            </label>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Selected count */}
+                  {(article.reading_assignment_user_ids.length > 0 || article.reading_assignment_group_ids.length > 0) && (
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground bg-orange-50 dark:bg-orange-900/20 p-2 rounded">
+                      <UserCheck className="w-4 h-4 text-orange-500" />
+                      <span>
+                        {article.reading_assignment_user_ids.length} Benutzer und {article.reading_assignment_group_ids.length} Gruppen ausgewählt
+                      </span>
+                    </div>
+                  )}
+                  
+                  {/* Save Button - Only show when editing existing article */}
+                  {!isNew && (
+                    <Button
+                      onClick={saveReadingAssignments}
+                      disabled={savingReadingAssignment || (article.reading_assignment_user_ids.length === 0 && article.reading_assignment_group_ids.length === 0)}
+                      className="w-full"
+                      variant="secondary"
+                      data-testid="save-reading-assignment-btn"
+                    >
+                      {savingReadingAssignment ? (
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      ) : (
+                        <Mail className="w-4 h-4 mr-2" />
+                      )}
+                      Leseaufgaben zuweisen & benachrichtigen
+                    </Button>
+                  )}
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>

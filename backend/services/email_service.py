@@ -270,6 +270,35 @@ class EmailService:
             f"Sie sind Ansprechpartner für \"{article_title}\"",
             body_html
         )
+    
+    async def send_reading_assignment_notification(
+        self,
+        recipient_email: str,
+        recipient_name: str,
+        assigner_name: str,
+        article_title: str,
+        article_id: str
+    ) -> bool:
+        """Send notification when user is assigned to read an article"""
+        article_url = f"{self.app_url}/articles/{article_id}"
+        body_html = f"""
+        <h2 style="color: #1e3a5f; margin-top: 0;">Neue Leseaufgabe</h2>
+        <p>Hallo <strong>{recipient_name}</strong>,</p>
+        <p><strong>{assigner_name}</strong> hat Ihnen einen Artikel zur Kenntnisnahme zugewiesen:</p>
+        <div style="background-color: #fff3e0; padding: 15px; border-radius: 6px; margin: 20px 0; border-left: 4px solid #ff9800;">
+            <p style="font-size: 16px; font-weight: 600; color: #1e3a5f; margin: 0;">📖 {article_title}</p>
+            <p style="font-size: 13px; color: #e65100; margin: 5px 0 0 0;">Bitte lesen und als gelesen markieren</p>
+        </div>
+        <p>Dieser Artikel erscheint in Ihrem Dashboard unter "Leseaufgaben", bis Sie ihn als gelesen markieren.</p>
+        <p>
+            <a href="{article_url}" style="display: inline-block; background-color: #ff9800; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 500;">Artikel lesen</a>
+        </p>
+        """
+        return await self.send_email_async(
+            recipient_email,
+            f"Neue Leseaufgabe: \"{article_title}\"",
+            body_html
+        )
 
 
 # Singleton instance

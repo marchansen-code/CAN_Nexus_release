@@ -29,7 +29,10 @@ import {
   MessageSquare,
   Bookmark,
   AlertTriangle,
-  CalendarClock
+  CalendarClock,
+  BookOpen,
+  CheckCircle2,
+  Mail
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -178,6 +181,67 @@ const ExpiringArticleCard = ({ article, onClick }) => {
   );
 };
 
+// Reading Assignment Card - shows unread articles assigned to user
+const ReadingAssignmentCard = ({ article, onMarkAsRead, onView }) => {
+  const formatDate = (dateString) => {
+    if (!dateString) return "";
+    const date = new Date(dateString);
+    return date.toLocaleDateString("de-DE", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric"
+    });
+  };
+
+  return (
+    <div
+      className="flex items-center justify-between p-3 rounded-lg border-l-4 border-l-orange-500 bg-orange-50 dark:bg-orange-900/20 hover:bg-orange-100 dark:hover:bg-orange-900/30 transition-all"
+      data-testid={`reading-assignment-${article.article_id}`}
+    >
+      <div 
+        className="flex items-center gap-3 min-w-0 flex-1 cursor-pointer"
+        onClick={onView}
+      >
+        <div className="relative">
+          <BookOpen className="w-5 h-5 text-orange-500 shrink-0" />
+          <span className="absolute -top-1 -right-1 w-2 h-2 bg-orange-500 rounded-full animate-pulse" />
+        </div>
+        <div className="space-y-1 min-w-0">
+          <p className="font-medium truncate">{article.title}</p>
+          <div className="flex items-center gap-3 text-xs text-muted-foreground">
+            <span className="flex items-center gap-1">
+              <Mail className="w-3 h-3" />
+              Von {article.assigned_by_name}
+            </span>
+            <span className="flex items-center gap-1">
+              <Clock className="w-3 h-3" />
+              {formatDate(article.assigned_at)}
+            </span>
+          </div>
+        </div>
+      </div>
+      <div className="flex items-center gap-2 shrink-0 ml-3">
+        <Badge className="bg-orange-100 text-orange-700 dark:bg-orange-800 dark:text-orange-200 text-xs font-semibold">
+          Ungelesen
+        </Badge>
+        <Button
+          size="sm"
+          variant="ghost"
+          className="h-8 px-2 text-green-600 hover:text-green-700 hover:bg-green-100"
+          onClick={(e) => {
+            e.stopPropagation();
+            onMarkAsRead();
+          }}
+          data-testid={`mark-read-${article.article_id}`}
+          title="Als gelesen markieren"
+        >
+          <CheckCircle2 className="w-4 h-4" />
+        </Button>
+      </div>
+    </div>
+  );
+};
+
 // Pinnwand Article Row - simple one-line display
 const PinnwandArticleRow = ({ article, onClick }) => {
   const formatDate = (dateString) => {
@@ -274,9 +338,19 @@ const Dashboard = () => {
   const [stats, setStats] = useState(null);
   const [pinnwandArticles, setPinnwandArticles] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [readingAssignments, setReadingAssignments] = useState([]);
   const isAdmin = user?.role === "admin";
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState(user?.role === "admin" ? "pinnwand" : "dashboard");
+
+  const fetchReadingAssignments = async () => {
+    try {
+      const res = await axios.get(`${API}/reading-assignments/my-assignments`);
+      setReadingAssignments(res.data.assignments || []);
+    } catch (error) {
+      console.error("Failed to fetch reading assignments:", error);
+    }
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -289,6 +363,9 @@ const Dashboard = () => {
         setStats(statsRes.data);
         setPinnwandArticles(pinnwandRes.data);
         setCategories(categoriesRes.data);
+        
+        // Fetch reading assignments
+        await fetchReadingAssignments();
       } catch (error) {
         console.error("Failed to fetch data:", error);
         toast.error("Daten konnten nicht geladen werden");
@@ -299,6 +376,19 @@ const Dashboard = () => {
 
     fetchData();
   }, []);
+
+  // Mark article as read
+  const handleMarkAsRead = async (articleId) => {
+    try {
+      await axios.post(`${API}/reading-assignments/mark-as-read`, { article_id: articleId });
+      toast.success("Artikel als gelesen markiert");
+      // Remove from local state
+      setReadingAssignments(prev => prev.filter(a => a.article_id !== articleId));
+    } catch (error) {
+      console.error("Failed to mark as read:", error);
+      toast.error("Fehler beim Markieren");
+    }
+  };
 
   // Get Pinnwand categories and group articles by category
   const pinnwandCategories = categories.filter(c => c.is_pinnwand);
@@ -449,6 +539,40 @@ const Dashboard = () => {
 
         {/* Dashboard Tab */}
         <TabsContent value="dashboard" className="mt-6 space-y-6">
+          {/* Reading Assignments Section */}
+          {readingAssignments.length > 0 && (
+            <Card className="border-l-4 border-l-orange-500 bg-gradient-to-r from-orange-50 to-transparent dark:from-orange-900/20 dark:to-transparent" data-testid="reading-assignments-section">
+              <CardHeader className="flex flex-row items-center justify-between pb-3">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <BookOpen className="w-5 h-5 text-orange-500" />
+                  <span>Leseaufgaben</span>
+                  <Badge variant="secondary" className="ml-2 bg-orange-100 text-orange-700 dark:bg-orange-800 dark:text-orange-200 animate-pulse">
+                    {readingAssignments.length} Ungelesen
+                  </Badge>
+                </CardTitle>
+                <span className="text-xs text-muted-foreground">
+                  Artikel, die Sie lesen und bestätigen sollen
+                </span>
+              </CardHeader>
+              <CardContent>
+                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {readingAssignments.map((article) => (
+                    <ReadingAssignmentCard
+                      key={article.article_id}
+                      article={article}
+                      onView={() => navigate(`/articles/${article.article_id}`)}
+                      onMarkAsRead={() => handleMarkAsRead(article.article_id)}
+                    />
+                  ))}
+                </div>
+                <p className="text-xs text-muted-foreground mt-3 flex items-center gap-1">
+                  <Info className="w-3 h-3" />
+                  Klicken Sie auf "✓", um einen Artikel als gelesen zu markieren und aus dieser Liste zu entfernen.
+                </p>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Expiring Articles Warning Section */}
           {stats?.expiring_articles?.length > 0 && (
             <Card className="border-l-4 border-l-amber-500 bg-gradient-to-r from-amber-50 to-transparent dark:from-amber-900/20 dark:to-transparent" data-testid="expiring-articles-section">

@@ -27,7 +27,9 @@ import {
   TrendingDown,
   Minus,
   X,
-  History
+  History,
+  BookOpen,
+  CheckCircle2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -118,6 +120,9 @@ const ArticleView = () => {
   
   // Document preview state
   const [documentPreview, setDocumentPreview] = useState(null);
+  
+  // Reading assignment state
+  const [readingStatus, setReadingStatus] = useState(null);
 
   // Ref for article content to post-process embedded documents
   const contentRef = useRef(null);
@@ -182,6 +187,10 @@ const ArticleView = () => {
     // Check Google Drive status
     axios.get(`${API}/drive/status`)
       .then(res => setDriveConnected(res.data.connected))
+      .catch(() => {});
+    // Check reading assignment status
+    axios.get(`${API}/reading-assignments/status/${id}`)
+      .then(res => setReadingStatus(res.data))
       .catch(() => {});
   }, [id]);
 
@@ -315,6 +324,18 @@ const ArticleView = () => {
     } catch (error) {
       console.error("Failed to toggle favorite:", error);
       toast.error("Fehler beim Aktualisieren der Favoriten");
+    }
+  };
+
+  // Mark article as read (reading assignment)
+  const handleMarkAsRead = async () => {
+    try {
+      await axios.post(`${API}/reading-assignments/mark-as-read`, { article_id: id });
+      setReadingStatus(prev => ({ ...prev, is_read: true, read_at: new Date().toISOString() }));
+      toast.success("Artikel als gelesen markiert");
+    } catch (error) {
+      console.error("Failed to mark as read:", error);
+      toast.error("Fehler beim Markieren");
     }
   };
 
@@ -467,6 +488,45 @@ const ArticleView = () => {
           <Users className="w-4 h-4 text-amber-600" />
           <span className="text-sm text-amber-700">
             Wird gerade von {activeEditors.map(e => e.name).join(', ')} bearbeitet.
+          </span>
+        </div>
+      )}
+
+      {/* Reading Assignment Banner */}
+      {readingStatus?.has_assignment && !readingStatus?.is_read && (
+        <div className="flex items-center justify-between gap-2 px-4 py-3 bg-orange-50 border border-orange-200 rounded-lg mb-6" data-testid="reading-assignment-banner">
+          <div className="flex items-center gap-3">
+            <div className="relative">
+              <BookOpen className="w-5 h-5 text-orange-600" />
+              <span className="absolute -top-1 -right-1 w-2 h-2 bg-orange-500 rounded-full animate-pulse" />
+            </div>
+            <div>
+              <span className="text-sm font-medium text-orange-800">
+                Dieser Artikel wurde Ihnen als Leseaufgabe zugewiesen
+              </span>
+              <p className="text-xs text-orange-600">
+                Bitte lesen Sie den Artikel und markieren Sie ihn als gelesen
+              </p>
+            </div>
+          </div>
+          <Button 
+            onClick={handleMarkAsRead}
+            className="bg-orange-500 hover:bg-orange-600 text-white"
+            size="sm"
+            data-testid="mark-as-read-btn"
+          >
+            <CheckCircle2 className="w-4 h-4 mr-1.5" />
+            Als gelesen markieren
+          </Button>
+        </div>
+      )}
+
+      {/* Already Read Info */}
+      {readingStatus?.has_assignment && readingStatus?.is_read && (
+        <div className="flex items-center gap-2 px-4 py-2 bg-green-50 border border-green-200 rounded-lg mb-6">
+          <CheckCircle2 className="w-4 h-4 text-green-600" />
+          <span className="text-sm text-green-700">
+            Sie haben diesen Artikel am {formatDate(readingStatus.read_at)} als gelesen markiert
           </span>
         </div>
       )}
