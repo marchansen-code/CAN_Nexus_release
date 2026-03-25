@@ -848,7 +848,7 @@ const EditorToolbar = ({ editor, onImageUpload, isFullscreen, onToggleFullscreen
         <LinkIcon className="h-4 w-4" />
       </Button>
 
-      {/* Extended Link Dialog */}
+      {/* Link Dialog - URL only (Dokument einbetten has its own button) */}
       <Dialog open={showLinkDialog} onOpenChange={setShowLinkDialog}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
@@ -864,269 +864,41 @@ const EditorToolbar = ({ editor, onImageUpload, isFullscreen, onToggleFullscreen
             </DialogDescription>
           </DialogHeader>
 
-          <Tabs value={linkTab} onValueChange={setLinkTab}>
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="url">
-                <ExternalLink className="w-4 h-4 mr-2" />
-                URL
-              </TabsTrigger>
-              <TabsTrigger value="document">
-                <FileText className="w-4 h-4 mr-2" />
-                Dokument
-              </TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="url" className="space-y-4 mt-4">
+          <div className="space-y-4 mt-4">
+            <div className="space-y-2">
+              <Label>Link URL</Label>
+              <Input
+                placeholder="https://..."
+                value={linkUrl}
+                onChange={(e) => setLinkUrl(e.target.value)}
+              />
+            </div>
+            {!hasSelectedText && (
               <div className="space-y-2">
-                <Label>Link URL</Label>
+                <Label>Anzeigetext (optional)</Label>
                 <Input
-                  placeholder="https://..."
-                  value={linkUrl}
-                  onChange={(e) => setLinkUrl(e.target.value)}
+                  placeholder="Text für den Link..."
+                  value={linkText}
+                  onChange={(e) => setLinkText(e.target.value)}
                 />
+                <p className="text-xs text-muted-foreground">
+                  Leer lassen für gekürzten Link
+                </p>
               </div>
-              {!hasSelectedText && (
-                <div className="space-y-2">
-                  <Label>Anzeigetext (optional)</Label>
-                  <Input
-                    placeholder="Text für den Link..."
-                    value={linkText}
-                    onChange={(e) => setLinkText(e.target.value)}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Leer lassen für gekürzten Link
-                  </p>
-                </div>
-              )}
-            </TabsContent>
+            )}
+          </div>
 
-            <TabsContent value="document" className="space-y-4 mt-4">
-              {/* Search */}
-              <div className="space-y-2">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Dokument suchen..."
-                    value={documentSearch}
-                    onChange={(e) => {
-                      setDocumentSearch(e.target.value);
-                      if (e.target.value) {
-                        // Search all documents
-                        loadDocuments(null, e.target.value);
-                      } else {
-                        // Return to current folder
-                        loadDocuments(currentFolderId);
-                      }
-                    }}
-                    className="pl-9"
-                  />
-                </div>
-              </div>
-
-              {/* Breadcrumb Navigation */}
-              {!documentSearch && (
-                <div className="flex items-center gap-1 text-sm flex-wrap">
-                  <button 
-                    onClick={() => navigateToBreadcrumb(-1)}
-                    className={cn(
-                      "flex items-center gap-1 px-2 py-1 rounded hover:bg-muted transition-colors",
-                      folderPath.length === 0 && "font-medium text-indigo-600"
-                    )}
-                  >
-                    <Home className="w-4 h-4" />
-                    <span>Dokumente</span>
-                  </button>
-                  {folderPath.map((folder, index) => (
-                    <React.Fragment key={folder.folder_id}>
-                      <ChevronRight className="w-4 h-4 text-muted-foreground" />
-                      <button
-                        onClick={() => navigateToBreadcrumb(index)}
-                        className={cn(
-                          "px-2 py-1 rounded hover:bg-muted transition-colors",
-                          index === folderPath.length - 1 && "font-medium text-indigo-600"
-                        )}
-                      >
-                        {folder.name}
-                      </button>
-                    </React.Fragment>
-                  ))}
-                </div>
-              )}
-
-              {/* Folder and Document List */}
-              <ScrollArea className="h-[220px] border rounded-md">
-                {loadingDocuments ? (
-                  <div className="text-center py-8 text-muted-foreground">Laden...</div>
-                ) : (
-                  <div className="p-2 space-y-1">
-                    {/* Subfolders */}
-                    {!documentSearch && getCurrentSubfolders().map(folder => (
-                      <button
-                        key={folder.folder_id}
-                        onClick={() => navigateToFolder(folder)}
-                        className="w-full flex items-center gap-3 p-2 rounded text-left text-sm hover:bg-muted transition-colors"
-                      >
-                        <Folder className="w-5 h-5 text-amber-500 shrink-0" />
-                        <div className="flex-1 min-w-0">
-                          <p className="truncate font-medium">{folder.name}</p>
-                          {folder.description && (
-                            <p className="text-xs text-muted-foreground truncate">{folder.description}</p>
-                          )}
-                        </div>
-                        <ChevronRight className="w-4 h-4 text-muted-foreground" />
-                      </button>
-                    ))}
-                    
-                    {/* Documents */}
-                    {documents.map(doc => (
-                      <button
-                        key={doc.document_id}
-                        onClick={() => setSelectedDocument(doc)}
-                        className={cn(
-                          "w-full flex items-center gap-3 p-2 rounded text-left text-sm hover:bg-muted transition-colors",
-                          selectedDocument?.document_id === doc.document_id && "bg-indigo-50 border border-indigo-200"
-                        )}
-                      >
-                        {doc.is_image ? (
-                          <div className="w-8 h-8 rounded overflow-hidden bg-muted shrink-0">
-                            <img 
-                              src={`${API}/images/${doc.image_id}`} 
-                              alt="" 
-                              className="w-full h-full object-cover"
-                            />
-                          </div>
-                        ) : (
-                          <FileText className="w-5 h-5 text-muted-foreground shrink-0" />
-                        )}
-                        <div className="flex-1 min-w-0">
-                          <p className="truncate font-medium">{doc.filename}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {doc.file_type} {doc.file_size ? `• ${(doc.file_size / 1024).toFixed(1)} KB` : ''}
-                          </p>
-                        </div>
-                      </button>
-                    ))}
-                    
-                    {/* Empty state */}
-                    {!documentSearch && getCurrentSubfolders().length === 0 && documents.length === 0 && (
-                      <div className="text-center py-8 text-muted-foreground">
-                        <FolderOpen className="w-10 h-10 mx-auto mb-2 opacity-30" />
-                        <p>Dieser Ordner ist leer</p>
-                      </div>
-                    )}
-                    
-                    {documentSearch && documents.length === 0 && (
-                      <div className="text-center py-8 text-muted-foreground">
-                        <Search className="w-10 h-10 mx-auto mb-2 opacity-30" />
-                        <p>Keine Dokumente gefunden</p>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </ScrollArea>
-
-              {selectedDocument && !hasSelectedText && (
-                <div className="space-y-3 border-t pt-3">
-                  {/* Insert Mode Selection */}
-                  <div className="space-y-2">
-                    <Label>Einfügemodus</Label>
-                    <RadioGroup value={documentInsertMode} onValueChange={setDocumentInsertMode} className="flex gap-4">
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="link" id="insert-link" />
-                        <Label htmlFor="insert-link" className="cursor-pointer flex items-center gap-1.5">
-                          <ExternalLink className="w-4 h-4" />
-                          Link einfügen
-                        </Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="embed" id="insert-embed" />
-                        <Label htmlFor="insert-embed" className="cursor-pointer flex items-center gap-1.5">
-                          <FileText className="w-4 h-4" />
-                          Einbetten (Viewer)
-                        </Label>
-                      </div>
-                    </RadioGroup>
-                  </div>
-                  
-                  {/* Link Options - only show when link mode is selected */}
-                  {documentInsertMode === 'link' && (
-                    <div className="space-y-3 pl-4 border-l-2 border-muted">
-                      <Label>Link-Darstellung</Label>
-                      <RadioGroup value={documentLinkType} onValueChange={setDocumentLinkType}>
-                        {selectedDocument.is_image && (
-                          <div className="flex items-center space-x-2">
-                            <RadioGroupItem value="thumbnail" id="thumbnail" />
-                            <Label htmlFor="thumbnail" className="cursor-pointer">
-                              Vorschaubild (Thumbnail)
-                            </Label>
-                          </div>
-                        )}
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="text" id="text" />
-                          <Label htmlFor="text" className="cursor-pointer">
-                            Eigener Link-Text
-                          </Label>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="short" id="short" />
-                          <Label htmlFor="short" className="cursor-pointer">
-                            Gekürzter Dateiname
-                          </Label>
-                        </div>
-                      </RadioGroup>
-                      
-                      {documentLinkType === 'text' && (
-                        <Input
-                          placeholder="Link-Text eingeben..."
-                          value={linkText}
-                          onChange={(e) => setLinkText(e.target.value)}
-                        />
-                      )}
-                    </div>
-                  )}
-                  
-                  {/* Embed Preview Info */}
-                  {documentInsertMode === 'embed' && (
-                    <div className="pl-4 border-l-2 border-amber-400 bg-amber-50 dark:bg-amber-900/20 p-3 rounded-r-lg">
-                      <p className="text-sm text-amber-800 dark:text-amber-200">
-                        Das Dokument wird als interaktiver Viewer direkt im Artikel eingebettet. 
-                        Leser können das Dokument durchblättern, ohne die Seite zu verlassen.
-                      </p>
-                    </div>
-                  )}
-                </div>
-              )}
-            </TabsContent>
-          </Tabs>
-
-          <DialogFooter>
+          <DialogFooter className="mt-4">
             <Button variant="outline" onClick={() => setShowLinkDialog(false)}>
               Abbrechen
             </Button>
-            <Button 
-              onClick={insertLink}
-              disabled={
-                (linkTab === 'url' && !linkUrl) || 
-                (linkTab === 'document' && !selectedDocument)
-              }
-            >
+            <Button onClick={insertLink} disabled={!linkUrl}>
+              <LinkIcon className="w-4 h-4 mr-2" />
               Link einfügen
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      {/* Document Import Button */}
-      <Button 
-        variant="ghost" 
-        size="sm" 
-        className="h-8 w-8 p-0"
-        title="Dokument einbetten / verlinken"
-        onClick={openDocumentImportDialog}
-        data-testid="doc-import-btn"
-      >
-        <FileInput className="h-4 w-4" />
-      </Button>
 
       {/* Document Import Dialog */}
       <Dialog open={showDocImportDialog} onOpenChange={setShowDocImportDialog}>

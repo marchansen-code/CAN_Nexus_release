@@ -557,6 +557,7 @@ Wissensmanagement-Plattform für CANUSA Touristik GmbH & Co. KG und CU-Travel.
 - [x] ~~Pinnwand-Kategorien nur für Admins sichtbar~~ Erledigt in Iteration 31
 - [x] ~~Pinnwand-Checkbox nur für Admins im Kategorie-Dialog~~ Erledigt in Iteration 31
 - [x] ~~Ablauf-Datum Reminder auf Dashboard~~ Erledigt in Iteration 34
+- [x] ~~"Dokument" Tab aus Link-Dialog entfernen~~ Erledigt in Iteration 35
 
 ### P3 (Nice to Have)
 - [ ] Handschrift-OCR verbessern (Tesseract hat Limitationen)
@@ -639,5 +640,10 @@ Wissensmanagement-Plattform für CANUSA Touristik GmbH & Co. KG und CU-Travel.
     - `GET /api/reading-assignments/article/{article_id}/all-status` - Alle Bestätigungen (nur Autor/Admin)
     - `DELETE /api/reading-assignments/{article_id}` - Zuweisungen entfernen
   - **E-Mail-Benachrichtigung**: `send_reading_assignment_notification` im Email-Service
+
+- **Cleanup**: "Dokument" Tab aus Link-Dialog entfernt
+  - Der Link-Dialog zeigt jetzt nur noch URL-Eingabe (kein Tab-Menü mehr)
+  - Dokumente können über den separaten "Dokument einbetten"-Button eingefügt werden
+  - Vereinfachte UI ohne redundante Funktionen
 
 
