@@ -37,7 +37,6 @@ const allNavItems = [
   { path: "/search", icon: Search, label: "Suche", roles: ["admin", "editor", "viewer"] },
   { path: "/articles", icon: FileText, label: "Artikel", roles: ["admin", "editor", "viewer"] },
   { path: "/documents", icon: Upload, label: "Dokumente", roles: ["admin", "editor"] },
-  { path: "/categories", icon: FolderTree, label: "Kategorien", roles: ["admin", "editor"] },
   { path: "/users", icon: Users, label: "Benutzer", roles: ["admin"] },
   { path: "/groups", icon: UsersRound, label: "Gruppen", roles: ["admin"] },
   { path: "/trash", icon: Trash2, label: "Papierkorb", roles: ["admin"] },
