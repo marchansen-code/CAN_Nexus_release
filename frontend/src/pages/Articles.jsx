@@ -32,11 +32,16 @@ import {
   ArrowUpDown,
   MoveRight,
   GripVertical,
-  Check
+  Check,
+  FolderPlus,
+  Pin
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
@@ -95,8 +100,8 @@ const StatusBadge = ({ status }) => {
 };
 
 // Droppable Category Component for Drag & Drop
-const DroppableCategoryItem = ({ category, categories, selectedCategoryId, onSelect, expandedCategories, toggleExpand }) => {
-  const childCategories = categories.filter(c => c.parent_id === category.category_id);
+const DroppableCategoryItem = ({ category, categories, selectedCategoryId, onSelect, expandedCategories, toggleExpand, isAdmin, onEdit, onDelete, onAddChild }) => {
+  const childCategories = categories.filter(c => c.parent_id === category.category_id).filter(c => isAdmin || !c.is_pinnwand);
   const hasChildren = childCategories.length > 0;
   const isExpanded = expandedCategories.has(category.category_id);
   const isSelected = selectedCategoryId === category.category_id;
@@ -108,31 +113,55 @@ const DroppableCategoryItem = ({ category, categories, selectedCategoryId, onSel
 
   return (
     <div ref={setNodeRef}>
-      <button
-        onClick={() => {
-          onSelect(category.category_id);
-          if (hasChildren) toggleExpand(category.category_id);
-        }}
-        className={cn(
-          "w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors text-left",
-          isSelected 
-            ? 'bg-primary/10 text-primary font-medium' 
-            : 'hover:bg-muted text-foreground',
-          isOver && 'bg-indigo-100 dark:bg-indigo-800/30 ring-2 ring-indigo-500'
+      <div className="flex items-center group">
+        <button
+          onClick={() => {
+            onSelect(category.category_id);
+            if (hasChildren) toggleExpand(category.category_id);
+          }}
+          className={cn(
+            "flex-1 flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors text-left min-w-0",
+            isSelected 
+              ? 'bg-primary/10 text-primary font-medium' 
+              : 'hover:bg-muted text-foreground',
+            isOver && 'bg-indigo-100 dark:bg-indigo-800/30 ring-2 ring-indigo-500'
+          )}
+        >
+          {hasChildren ? (
+            isExpanded ? <ChevronDown className="w-4 h-4 shrink-0" /> : <ChevronRight className="w-4 h-4 shrink-0" />
+          ) : (
+            <span className="w-4" />
+          )}
+          {isExpanded ? (
+            <FolderOpen className="w-4 h-4 shrink-0 text-amber-500" />
+          ) : (
+            <Folder className="w-4 h-4 shrink-0 text-amber-500" />
+          )}
+          <span className="truncate flex-1">{category.name}</span>
+          {category.is_pinnwand && <Pin className="w-3 h-3 shrink-0 text-amber-500" />}
+        </button>
+        {isAdmin && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="p-1 rounded opacity-0 group-hover:opacity-100 hover:bg-muted transition-opacity shrink-0" data-testid={`cat-menu-${category.category_id}`}>
+                <MoreHorizontal className="w-4 h-4 text-muted-foreground" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuItem onClick={() => onEdit(category)}>
+                <Edit className="w-4 h-4 mr-2" /> Bearbeiten
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onAddChild(category)}>
+                <FolderPlus className="w-4 h-4 mr-2" /> Unterkategorie
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem className="text-red-600" onClick={() => onDelete(category)}>
+                <Trash2 className="w-4 h-4 mr-2" /> Löschen
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         )}
-      >
-        {hasChildren ? (
-          isExpanded ? <ChevronDown className="w-4 h-4 shrink-0" /> : <ChevronRight className="w-4 h-4 shrink-0" />
-        ) : (
-          <span className="w-4" />
-        )}
-        {isExpanded ? (
-          <FolderOpen className="w-4 h-4 shrink-0 text-amber-500" />
-        ) : (
-          <Folder className="w-4 h-4 shrink-0 text-amber-500" />
-        )}
-        <span className="truncate flex-1">{category.name}</span>
-      </button>
+      </div>
       
       {isExpanded && hasChildren && (
         <div className="ml-4 mt-1 border-l border-slate-200 pl-2">
@@ -145,6 +174,10 @@ const DroppableCategoryItem = ({ category, categories, selectedCategoryId, onSel
               onSelect={onSelect}
               expandedCategories={expandedCategories}
               toggleExpand={toggleExpand}
+              isAdmin={isAdmin}
+              onEdit={onEdit}
+              onDelete={onDelete}
+              onAddChild={onAddChild}
             />
           ))}
         </div>
@@ -271,6 +304,13 @@ const Articles = () => {
   );
 
   const canEdit = user?.role === "admin" || user?.role === "editor";
+  const isAdmin = user?.role === "admin";
+
+  // Category management state
+  const [catDialog, setCatDialog] = useState({ open: false, mode: 'create', category: null, parentId: null });
+  const [catFormData, setCatFormData] = useState({ name: '', description: '', is_pinnwand: false });
+  const [catDeleteDialog, setCatDeleteDialog] = useState({ open: false, category: null });
+  const [catSaving, setCatSaving] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -394,6 +434,60 @@ const Articles = () => {
     setConfirmDropDialog(false);
   };
 
+  // Category CRUD
+  const openCreateCat = (parentId = null) => {
+    setCatFormData({ name: '', description: '', is_pinnwand: false });
+    setCatDialog({ open: true, mode: 'create', category: null, parentId });
+  };
+
+  const openEditCat = (category) => {
+    setCatFormData({ name: category.name, description: category.description || '', is_pinnwand: category.is_pinnwand || false });
+    setCatDialog({ open: true, mode: 'edit', category, parentId: category.parent_id });
+  };
+
+  const handleSaveCat = async () => {
+    if (!catFormData.name.trim()) return;
+    setCatSaving(true);
+    try {
+      if (catDialog.mode === 'create') {
+        await axios.post(`${API}/categories`, {
+          name: catFormData.name.trim(),
+          description: catFormData.description.trim(),
+          parent_id: catDialog.parentId || null,
+          is_pinnwand: catFormData.is_pinnwand
+        });
+        toast.success("Kategorie erstellt");
+      } else {
+        await axios.put(`${API}/categories/${catDialog.category.category_id}`, {
+          name: catFormData.name.trim(),
+          description: catFormData.description.trim(),
+          is_pinnwand: catFormData.is_pinnwand
+        });
+        toast.success("Kategorie aktualisiert");
+      }
+      fetchData();
+      setCatDialog({ open: false, mode: 'create', category: null, parentId: null });
+    } catch (error) {
+      toast.error("Fehler beim Speichern");
+    } finally {
+      setCatSaving(false);
+    }
+  };
+
+  const handleDeleteCat = async () => {
+    if (!catDeleteDialog.category) return;
+    try {
+      await axios.delete(`${API}/categories/${catDeleteDialog.category.category_id}`);
+      toast.success("Kategorie gelöscht");
+      if (selectedCategoryId === catDeleteDialog.category.category_id) setSelectedCategoryId(null);
+      fetchData();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Fehler beim Löschen");
+    } finally {
+      setCatDeleteDialog({ open: false, category: null });
+    }
+  };
+
   const toggleMoveExpand = (categoryId) => {
     const newExpanded = new Set(moveExpandedCategories);
     if (newExpanded.has(categoryId)) {
@@ -472,7 +566,7 @@ const Articles = () => {
     });
   };
 
-  const rootCategories = categories.filter(c => !c.parent_id);
+  const rootCategories = categories.filter(c => !c.parent_id).filter(c => isAdmin || !c.is_pinnwand);
 
   if (loading) {
     return (
@@ -498,29 +592,41 @@ const Articles = () => {
           <p className="text-muted-foreground mt-1">Verwalten Sie Ihre Wissensbasis</p>
         </div>
         {canEdit && (
-          <Button 
-            onClick={() => navigate("/articles/new")} 
-            className="bg-primary hover:bg-primary/90"
-            data-testid="create-article-btn"
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Neuer Artikel
-          </Button>
+          <div className="flex gap-2">
+            {isAdmin && (
+              <Button 
+                variant="outline"
+                onClick={() => openCreateCat(null)}
+                data-testid="create-category-btn"
+              >
+                <FolderPlus className="w-4 h-4 mr-2" />
+                Neue Kategorie
+              </Button>
+            )}
+            <Button 
+              onClick={() => navigate("/articles/new")} 
+              className="bg-primary hover:bg-primary/90"
+              data-testid="create-article-btn"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Neuer Artikel
+            </Button>
+          </div>
         )}
       </div>
 
       {/* Split Layout */}
       <div className="flex gap-6 h-[calc(100vh-14rem)]">
         {/* Left: Categories Tree */}
-        <Card className="w-72 shrink-0 flex flex-col">
+        <Card className="w-80 shrink-0 flex flex-col">
           <CardHeader className="py-3 border-b">
             <CardTitle className="text-base flex items-center gap-2">
               <FolderTree className="w-5 h-5 text-amber-500" />
               Kategorien
             </CardTitle>
           </CardHeader>
-          <ScrollArea className="flex-1">
-            <div className="p-3 space-y-1">
+          <ScrollArea className="flex-1" orientation="both">
+            <div className="p-3 space-y-1 min-w-fit">
               <button
                 onClick={() => setSelectedCategoryId(null)}
                 className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors text-left ${
@@ -542,6 +648,10 @@ const Articles = () => {
                   onSelect={setSelectedCategoryId}
                   expandedCategories={expandedCategories}
                   toggleExpand={toggleExpand}
+                  isAdmin={isAdmin}
+                  onEdit={openEditCat}
+                  onDelete={(cat) => setCatDeleteDialog({ open: true, category: cat })}
+                  onAddChild={(cat) => openCreateCat(cat.category_id)}
                 />
               ))}
               {rootCategories.length === 0 && (
@@ -830,6 +940,85 @@ const Articles = () => {
             <AlertDialogCancel onClick={cancelDrop}>Abbrechen</AlertDialogCancel>
             <AlertDialogAction onClick={confirmDrop} className="bg-indigo-600 hover:bg-indigo-700">
               Verschieben
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Category Create/Edit Dialog */}
+      <Dialog open={catDialog.open} onOpenChange={(open) => !open && setCatDialog({ open: false, mode: 'create', category: null, parentId: null })}>
+        <DialogContent className="sm:max-w-[450px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FolderPlus className="w-5 h-5 text-amber-500" />
+              {catDialog.mode === 'create' ? 'Neue Kategorie' : 'Kategorie bearbeiten'}
+            </DialogTitle>
+            {catDialog.parentId && catDialog.mode === 'create' && (
+              <DialogDescription>
+                Unterkategorie von "{categories.find(c => c.category_id === catDialog.parentId)?.name}"
+              </DialogDescription>
+            )}
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label htmlFor="cat-name">Name *</Label>
+              <Input
+                id="cat-name"
+                value={catFormData.name}
+                onChange={(e) => setCatFormData(prev => ({ ...prev, name: e.target.value }))}
+                placeholder="Kategoriename..."
+                data-testid="cat-name-input"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="cat-desc">Beschreibung</Label>
+              <Textarea
+                id="cat-desc"
+                value={catFormData.description}
+                onChange={(e) => setCatFormData(prev => ({ ...prev, description: e.target.value }))}
+                placeholder="Optionale Beschreibung..."
+                rows={3}
+              />
+            </div>
+            {isAdmin && (
+              <div className="flex items-center space-x-2 pt-2 border-t">
+                <Checkbox
+                  id="cat-pinnwand"
+                  checked={catFormData.is_pinnwand}
+                  onCheckedChange={(checked) => setCatFormData(prev => ({ ...prev, is_pinnwand: checked }))}
+                />
+                <Label htmlFor="cat-pinnwand" className="cursor-pointer flex items-center gap-1.5 text-sm">
+                  <Pin className="w-4 h-4 text-amber-500" />
+                  Pinnwand-Kategorie
+                </Label>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCatDialog({ open: false, mode: 'create', category: null, parentId: null })}>
+              Abbrechen
+            </Button>
+            <Button onClick={handleSaveCat} disabled={!catFormData.name.trim() || catSaving} data-testid="cat-save-btn">
+              {catSaving ? "Speichere..." : catDialog.mode === 'create' ? "Erstellen" : "Speichern"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Category Delete Dialog */}
+      <AlertDialog open={catDeleteDialog.open} onOpenChange={(open) => !open && setCatDeleteDialog({ open: false, category: null })}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Kategorie löschen?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Möchten Sie die Kategorie "{catDeleteDialog.category?.name}" wirklich löschen?
+              Untergeordnete Kategorien werden ebenfalls gelöscht.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteCat} className="bg-red-600 hover:bg-red-700">
+              Löschen
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
