@@ -341,7 +341,7 @@ const Dashboard = () => {
   const [readingAssignments, setReadingAssignments] = useState([]);
   const isAdmin = user?.role === "admin";
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState(user?.role === "admin" ? "pinnwand" : "dashboard");
+  const [activeTab, setActiveTab] = useState("pinnwand"); // Pinnwand is default for all users
 
   const fetchReadingAssignments = async () => {
     try {
@@ -465,13 +465,11 @@ const Dashboard = () => {
 
       {/* Main Tabs: Pinnwand / Dashboard */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className={`grid w-full max-w-md ${isAdmin ? 'grid-cols-2' : 'grid-cols-1'}`}>
-          {isAdmin && (
+        <TabsList className="grid w-full max-w-md grid-cols-2">
           <TabsTrigger value="pinnwand" className="flex items-center gap-2" data-testid="pinnwand-tab">
             <Pin className="w-4 h-4" />
             Pinnwand
           </TabsTrigger>
-          )}
           <TabsTrigger value="dashboard" className="flex items-center gap-2" data-testid="dashboard-tab">
             <LayoutDashboard className="w-4 h-4" />
             Dashboard

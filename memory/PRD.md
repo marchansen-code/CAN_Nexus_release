@@ -652,4 +652,8 @@ Wissensmanagement-Plattform für CANUSA Touristik GmbH & Co. KG und CU-Travel.
   - "Neue Kategorie" Button ist für Editoren sichtbar
   - Pinnwand-Checkbox im Kategorie-Dialog bleibt nur für Admins sichtbar
 
+- **Bug Fix**: Pinnwand-Tab jetzt für alle Benutzer sichtbar
+  - Pinnwand- und Dashboard-Tabs sind für alle Rollen sichtbar (Admin, Editor, Viewer)
+  - Pinnwand ist jetzt der Standard-Tab für alle Benutzer beim Öffnen der Home-Seite
+
 
