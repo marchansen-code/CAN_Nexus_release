@@ -27,7 +27,9 @@ import {
   Gift,
   Zap,
   MessageSquare,
-  Bookmark
+  Bookmark,
+  AlertTriangle,
+  CalendarClock
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -102,6 +104,76 @@ const ArticleCard = ({ article, onClick }) => {
         </div>
       </div>
       <StatusBadge status={article.status} />
+    </div>
+  );
+};
+
+// Helper function to calculate days until expiry
+const getDaysUntilExpiry = (expiryDate) => {
+  if (!expiryDate) return null;
+  const now = new Date();
+  const expiry = new Date(expiryDate);
+  const diffTime = expiry - now;
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  return diffDays;
+};
+
+// Helper function to format days remaining
+const formatDaysRemaining = (days) => {
+  if (days <= 0) return "Heute";
+  if (days === 1) return "Morgen";
+  return `${days} Tage`;
+};
+
+// Expiring Article Card with urgency styling
+const ExpiringArticleCard = ({ article, onClick }) => {
+  const daysRemaining = getDaysUntilExpiry(article.expiry_date);
+  
+  // Determine urgency level
+  let urgencyClass = "border-l-amber-500 bg-amber-50 dark:bg-amber-900/20";
+  let badgeClass = "bg-amber-100 text-amber-700 dark:bg-amber-800 dark:text-amber-200";
+  let iconColor = "text-amber-500";
+  
+  if (daysRemaining <= 3) {
+    urgencyClass = "border-l-red-500 bg-red-50 dark:bg-red-900/20";
+    badgeClass = "bg-red-100 text-red-700 dark:bg-red-800 dark:text-red-200";
+    iconColor = "text-red-500";
+  } else if (daysRemaining <= 7) {
+    urgencyClass = "border-l-orange-500 bg-orange-50 dark:bg-orange-900/20";
+    badgeClass = "bg-orange-100 text-orange-700 dark:bg-orange-800 dark:text-orange-200";
+    iconColor = "text-orange-500";
+  }
+  
+  const formatDate = (dateString) => {
+    if (!dateString) return "";
+    const date = new Date(dateString);
+    return date.toLocaleDateString("de-DE", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric"
+    });
+  };
+
+  return (
+    <div
+      className={`flex items-center justify-between p-3 rounded-lg border-l-4 ${urgencyClass} hover:opacity-90 transition-all cursor-pointer`}
+      onClick={onClick}
+      data-testid={`expiring-article-${article.article_id}`}
+    >
+      <div className="flex items-center gap-3 min-w-0 flex-1">
+        <CalendarClock className={`w-5 h-5 ${iconColor} shrink-0`} />
+        <div className="space-y-1 min-w-0">
+          <p className="font-medium truncate">{article.title}</p>
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <span>Ablauf: {formatDate(article.expiry_date)}</span>
+          </div>
+        </div>
+      </div>
+      <div className="flex items-center gap-2 shrink-0 ml-3">
+        <Badge className={`${badgeClass} text-xs font-semibold`}>
+          {daysRemaining <= 0 ? "Heute!" : `Noch ${formatDaysRemaining(daysRemaining)}`}
+        </Badge>
+      </div>
     </div>
   );
 };
@@ -377,6 +449,39 @@ const Dashboard = () => {
 
         {/* Dashboard Tab */}
         <TabsContent value="dashboard" className="mt-6 space-y-6">
+          {/* Expiring Articles Warning Section */}
+          {stats?.expiring_articles?.length > 0 && (
+            <Card className="border-l-4 border-l-amber-500 bg-gradient-to-r from-amber-50 to-transparent dark:from-amber-900/20 dark:to-transparent" data-testid="expiring-articles-section">
+              <CardHeader className="flex flex-row items-center justify-between pb-3">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <AlertTriangle className="w-5 h-5 text-amber-500" />
+                  <span>Bald ablaufende Artikel</span>
+                  <Badge variant="secondary" className="ml-2 bg-amber-100 text-amber-700 dark:bg-amber-800 dark:text-amber-200">
+                    {stats.expiring_articles.length}
+                  </Badge>
+                </CardTitle>
+                <span className="text-xs text-muted-foreground">
+                  Ihre Artikel mit Ablaufdatum in den nächsten 14 Tagen
+                </span>
+              </CardHeader>
+              <CardContent>
+                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {stats.expiring_articles.map((article) => (
+                    <ExpiringArticleCard
+                      key={article.article_id}
+                      article={article}
+                      onClick={() => navigate(`/articles/${article.article_id}/edit`)}
+                    />
+                  ))}
+                </div>
+                <p className="text-xs text-muted-foreground mt-3 flex items-center gap-1">
+                  <Info className="w-3 h-3" />
+                  Klicken Sie auf einen Artikel, um das Ablaufdatum zu verlängern oder den Artikel zu bearbeiten.
+                </p>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Favorites Section */}
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-3">

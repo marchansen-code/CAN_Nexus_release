@@ -554,9 +554,9 @@ Wissensmanagement-Plattform für CANUSA Touristik GmbH & Co. KG und CU-Travel.
 - [x] ~~OCR für gescannte PDFs~~ Erledigt in Iteration 29 mit Tesseract (kostenlos)
 - [x] ~~Eingebetteter Dokument-Viewer fehlt in veröffentlichter Artikelansicht~~ Erledigt in Iteration 31
 - [x] ~~Separater "Dokument einbetten"-Button im Editor~~ Erledigt in Iteration 31
-
 - [x] ~~Pinnwand-Kategorien nur für Admins sichtbar~~ Erledigt in Iteration 31
 - [x] ~~Pinnwand-Checkbox nur für Admins im Kategorie-Dialog~~ Erledigt in Iteration 31
+- [x] ~~Ablauf-Datum Reminder auf Dashboard~~ Erledigt in Iteration 34
 
 ### P3 (Nice to Have)
 - [ ] Handschrift-OCR verbessern (Tesseract hat Limitationen)
@@ -601,5 +601,16 @@ Wissensmanagement-Plattform für CANUSA Touristik GmbH & Co. KG und CU-Travel.
   - `SortableArticle` Komponente ersetzt `DraggableArticle`
   - `DroppableCategoryItem` erweitert um Hover-Delay-Logik mit Progress-Indikator
   - `SortableContext` für Artikelliste
+
+- **Feature**: Ablauf-Datum Reminder auf dem Dashboard
+  - Neue Sektion "Bald ablaufende Artikel" zeigt selbsterstellte Artikel mit Ablaufdatum <= 14 Tage
+  - Farbcodierte Dringlichkeit:
+    - **Rot**: <= 3 Tage verbleibend
+    - **Orange**: <= 7 Tage verbleibend
+    - **Amber**: <= 14 Tage verbleibend
+  - Zeigt verbleibende Tage als Badge ("Noch X Tage", "Morgen", "Heute!")
+  - Klick auf Artikel öffnet Editor zum Verlängern des Ablaufdatums
+  - Info-Hinweis unter der Sektion
+  - Backend: `expiring_articles` Array im `/api/stats` Endpunkt
 
 

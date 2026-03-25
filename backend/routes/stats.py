@@ -55,6 +55,22 @@ async def get_stats(user: User = Depends(get_current_user)):
     user_articles_count = await db.articles.count_documents({"created_by": user.user_id})
     user_documents_count = await db.documents.count_documents({"uploaded_by": user.user_id})
     
+    # Get articles with expiry date within 14 days (created by this user)
+    now = datetime.now(timezone.utc)
+    expiry_threshold = now + timedelta(days=14)
+    expiring_articles = await db.articles.find(
+        {
+            "created_by": user.user_id,
+            "expiry_date": {
+                "$ne": None,
+                "$lte": expiry_threshold.isoformat(),
+                "$gt": now.isoformat()
+            },
+            "status": {"$ne": "draft"}  # Only warn for non-draft articles
+        },
+        {"_id": 0}
+    ).sort("expiry_date", 1).to_list(50)
+    
     return {
         "total_articles": total_articles,
         "published_articles": published_articles,
@@ -67,6 +83,7 @@ async def get_stats(user: User = Depends(get_current_user)):
         "top_articles": top_articles,
         "favorite_articles": favorite_articles,
         "recently_viewed": recently_viewed,
+        "expiring_articles": expiring_articles,
         "user_stats": {
             "articles_created": user_articles_count,
             "documents_uploaded": user_documents_count
