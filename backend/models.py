@@ -237,3 +237,21 @@ class ArticleVersionResponse(BaseModel):
     created_by_name: str
     created_at: datetime
     change_summary: Optional[str] = None
+
+
+# ==================== USER SORT PREFERENCES ====================
+
+class UserSortPreference(BaseModel):
+    """Model for storing user-specific article sort order within a category."""
+    model_config = ConfigDict(extra="ignore")
+    preference_id: str = Field(default_factory=lambda: f"pref_{uuid.uuid4().hex[:12]}")
+    user_id: str
+    category_id: str  # The category for which this sort order applies
+    article_order: List[str] = []  # List of article_ids in user's preferred order
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+
+class UserSortPreferenceUpdate(BaseModel):
+    """Request model for updating sort preferences."""
+    article_order: List[str]

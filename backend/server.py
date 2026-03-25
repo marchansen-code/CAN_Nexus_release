@@ -17,7 +17,7 @@ from database import db, client, DEFAULT_ADMIN_EMAIL, DEFAULT_ADMIN_PASSWORD, DE
 from dependencies import get_password_hash
 
 # Route modules
-from routes import auth, users, groups, categories, articles, search, documents, document_folders, recycle_bin, images, stats, backup, exports, versions, google_auth, google_drive, notifications, ocr
+from routes import auth, users, groups, categories, articles, search, documents, document_folders, recycle_bin, images, stats, backup, exports, versions, google_auth, google_drive, notifications, ocr, sort_preferences
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -57,6 +57,7 @@ app.include_router(google_auth.router, prefix="/api")
 app.include_router(google_drive.router, prefix="/api")
 app.include_router(notifications.router, prefix="/api")
 app.include_router(ocr.router, prefix="/api")
+app.include_router(sort_preferences.router, prefix="/api")
 
 # Session middleware for OAuth (required by authlib)
 app.add_middleware(SessionMiddleware, secret_key=secrets.token_urlsafe(32))
@@ -110,6 +111,7 @@ async def startup():
     await db.user_sessions.create_index("session_token")
     await db.groups.create_index("name", unique=True)
     await db.article_versions.create_index([("article_id", 1), ("version_number", -1)])
+    await db.user_sort_preferences.create_index([("user_id", 1), ("category_id", 1)], unique=True)
     
     # Check for existing admin user
     admin_exists = await db.users.find_one({"email": DEFAULT_ADMIN_EMAIL})

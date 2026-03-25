@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from "react";
+import React, { useState, useEffect, useContext, useRef, useCallback } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import axios from "axios";
 import { API, AuthContext } from "@/App";
@@ -12,8 +12,15 @@ import {
   useSensor,
   useSensors,
   useDroppable,
-  useDraggable,
 } from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import {
   Plus,
   Search,
@@ -34,7 +41,8 @@ import {
   GripVertical,
   Check,
   FolderPlus,
-  Pin
+  Pin,
+  RotateCcw
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -99,46 +107,116 @@ const StatusBadge = ({ status }) => {
   );
 };
 
-// Droppable Category Component for Drag & Drop
-const DroppableCategoryItem = ({ category, categories, selectedCategoryId, onSelect, expandedCategories, toggleExpand, isAdmin, onEdit, onDelete, onAddChild }) => {
+// Droppable Category Component for Drag & Drop with Hover Delay
+const DroppableCategoryItem = ({ 
+  category, 
+  categories, 
+  selectedCategoryId, 
+  onSelect, 
+  expandedCategories, 
+  toggleExpand, 
+  isAdmin, 
+  onEdit, 
+  onDelete, 
+  onAddChild,
+  onHoverDrop,
+  activeDragArticle
+}) => {
   const childCategories = categories.filter(c => c.parent_id === category.category_id).filter(c => isAdmin || !c.is_pinnwand);
   const hasChildren = childCategories.length > 0;
   const isExpanded = expandedCategories.has(category.category_id);
   const isSelected = selectedCategoryId === category.category_id;
+  
+  // Hover delay state
+  const hoverTimeoutRef = useRef(null);
+  const [isHovering, setIsHovering] = useState(false);
+  const [hoverProgress, setHoverProgress] = useState(0);
+  const progressIntervalRef = useRef(null);
+  const HOVER_DELAY = 600; // 600ms delay before drop triggers
 
   const { setNodeRef, isOver } = useDroppable({
     id: `category-${category.category_id}`,
     data: { type: 'category', categoryId: category.category_id }
   });
 
+  // Handle hover delay for drag & drop
+  useEffect(() => {
+    if (isOver && activeDragArticle) {
+      // Start hover timer
+      setIsHovering(true);
+      setHoverProgress(0);
+      
+      // Progress animation
+      const startTime = Date.now();
+      progressIntervalRef.current = setInterval(() => {
+        const elapsed = Date.now() - startTime;
+        const progress = Math.min((elapsed / HOVER_DELAY) * 100, 100);
+        setHoverProgress(progress);
+      }, 16);
+      
+      hoverTimeoutRef.current = setTimeout(() => {
+        // Trigger drop after delay
+        onHoverDrop(activeDragArticle, category.category_id, category.name);
+        setIsHovering(false);
+        setHoverProgress(0);
+      }, HOVER_DELAY);
+    } else {
+      // Clear timer when not hovering
+      if (hoverTimeoutRef.current) {
+        clearTimeout(hoverTimeoutRef.current);
+        hoverTimeoutRef.current = null;
+      }
+      if (progressIntervalRef.current) {
+        clearInterval(progressIntervalRef.current);
+        progressIntervalRef.current = null;
+      }
+      setIsHovering(false);
+      setHoverProgress(0);
+    }
+    
+    return () => {
+      if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
+      if (progressIntervalRef.current) clearInterval(progressIntervalRef.current);
+    };
+  }, [isOver, activeDragArticle, category.category_id, category.name, onHoverDrop]);
+
   return (
     <div ref={setNodeRef}>
-      <div className="flex items-center group">
+      <div className="flex items-center group relative">
         <button
           onClick={() => {
             onSelect(category.category_id);
             if (hasChildren) toggleExpand(category.category_id);
           }}
           className={cn(
-            "flex-1 flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors text-left min-w-0",
+            "flex-1 flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors text-left min-w-0 relative overflow-hidden",
             isSelected 
               ? 'bg-primary/10 text-primary font-medium' 
               : 'hover:bg-muted text-foreground',
-            isOver && 'bg-indigo-100 dark:bg-indigo-800/30 ring-2 ring-indigo-500'
+            isHovering && 'ring-2 ring-indigo-500 bg-indigo-50 dark:bg-indigo-900/30'
           )}
         >
-          {hasChildren ? (
-            isExpanded ? <ChevronDown className="w-4 h-4 shrink-0" /> : <ChevronRight className="w-4 h-4 shrink-0" />
-          ) : (
-            <span className="w-4" />
+          {/* Hover progress indicator */}
+          {isHovering && (
+            <div 
+              className="absolute inset-0 bg-indigo-200 dark:bg-indigo-700/50 transition-all"
+              style={{ width: `${hoverProgress}%`, opacity: 0.5 }}
+            />
           )}
-          {isExpanded ? (
-            <FolderOpen className="w-4 h-4 shrink-0 text-amber-500" />
-          ) : (
-            <Folder className="w-4 h-4 shrink-0 text-amber-500" />
-          )}
-          <span className="truncate flex-1">{category.name}</span>
-          {category.is_pinnwand && <Pin className="w-3 h-3 shrink-0 text-amber-500" />}
+          <span className="relative flex items-center gap-2 z-10">
+            {hasChildren ? (
+              isExpanded ? <ChevronDown className="w-4 h-4 shrink-0" /> : <ChevronRight className="w-4 h-4 shrink-0" />
+            ) : (
+              <span className="w-4" />
+            )}
+            {isExpanded ? (
+              <FolderOpen className="w-4 h-4 shrink-0 text-amber-500" />
+            ) : (
+              <Folder className="w-4 h-4 shrink-0 text-amber-500" />
+            )}
+            <span className="truncate flex-1">{category.name}</span>
+            {category.is_pinnwand && <Pin className="w-3 h-3 shrink-0 text-amber-500" />}
+          </span>
         </button>
         {isAdmin && (
           <DropdownMenu>
@@ -178,6 +256,8 @@ const DroppableCategoryItem = ({ category, categories, selectedCategoryId, onSel
               onEdit={onEdit}
               onDelete={onDelete}
               onAddChild={onAddChild}
+              onHoverDrop={onHoverDrop}
+              activeDragArticle={activeDragArticle}
             />
           ))}
         </div>
@@ -186,22 +266,31 @@ const DroppableCategoryItem = ({ category, categories, selectedCategoryId, onSel
   );
 };
 
-// Draggable Article Component
-const DraggableArticle = ({ article, children }) => {
-  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
-    id: `article-${article.article_id}`,
-    data: { type: 'article', article }
+// Sortable Article Component for reordering within a category
+const SortableArticle = ({ article, children, isDragDisabled }) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({
+    id: article.article_id,
+    data: { type: 'article', article },
+    disabled: isDragDisabled
   });
 
-  const style = transform ? {
-    transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
-    zIndex: isDragging ? 1000 : undefined,
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
     opacity: isDragging ? 0.5 : 1,
-  } : undefined;
+    zIndex: isDragging ? 1000 : undefined,
+  };
 
   return (
     <div ref={setNodeRef} style={style} {...attributes}>
-      <div {...listeners} className="cursor-grab active:cursor-grabbing">
+      <div {...listeners} className={isDragDisabled ? "" : "cursor-grab active:cursor-grabbing"}>
         {children}
       </div>
     </div>
@@ -293,14 +382,20 @@ const Articles = () => {
   const [pendingDrop, setPendingDrop] = useState(null);
   const [confirmDropDialog, setConfirmDropDialog] = useState(false);
   
-  // DnD sensors
+  // User sort preferences state
+  const [userSortPreferences, setUserSortPreferences] = useState({});
+  const [hasCustomSort, setHasCustomSort] = useState(false);
+  
+  // DnD sensors - with keyboard support for sortable
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
         distance: 8,
       },
     }),
-    useSensor(KeyboardSensor)
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
   );
 
   const canEdit = user?.role === "admin" || user?.role === "editor";
@@ -314,7 +409,26 @@ const Articles = () => {
 
   useEffect(() => {
     fetchData();
+    fetchSortPreferences();
   }, []);
+
+  // Load sort preferences when category changes
+  useEffect(() => {
+    if (selectedCategoryId && userSortPreferences[selectedCategoryId]) {
+      setHasCustomSort(true);
+    } else {
+      setHasCustomSort(false);
+    }
+  }, [selectedCategoryId, userSortPreferences]);
+
+  const fetchSortPreferences = async () => {
+    try {
+      const res = await axios.get(`${API}/sort-preferences`);
+      setUserSortPreferences(res.data.preferences || {});
+    } catch (error) {
+      console.error("Failed to fetch sort preferences:", error);
+    }
+  };
 
   const fetchData = async () => {
     try {
@@ -368,6 +482,27 @@ const Articles = () => {
     }
   };
 
+  // Handler for hover-delayed drop on category (called from DroppableCategoryItem)
+  const handleHoverDrop = useCallback((article, targetCategoryId, targetCategoryName) => {
+    if (!canEdit) return;
+    
+    const currentCategoryIds = article.category_ids || (article.category_id ? [article.category_id] : []);
+    
+    // Don't move if already in this category
+    if (currentCategoryIds.includes(targetCategoryId)) {
+      return;
+    }
+    
+    // Show confirmation dialog
+    setPendingDrop({
+      article,
+      articleTitle: article.title,
+      targetCategoryId,
+      targetCategoryName
+    });
+    setConfirmDropDialog(true);
+  }, [canEdit]);
+
   // Drag & Drop handlers
   const handleDragStart = (event) => {
     const { active } = event;
@@ -379,36 +514,46 @@ const Articles = () => {
   const handleDragEnd = async (event) => {
     const { active, over } = event;
     
-    if (!over || !canEdit) {
+    if (!canEdit) {
       setActiveDragItem(null);
       return;
     }
     
-    // Check if we dropped on a category
-    if (over.data.current?.type === 'category') {
-      const targetCategoryId = over.data.current.categoryId;
-      const targetCategory = categories.find(c => c.category_id === targetCategoryId);
-      const targetCategoryName = targetCategory?.name || "Root-Kategorie";
+    // Handle reordering within the article list (sortable)
+    if (over && active.id !== over.id && selectedCategoryId) {
+      // Check if both are articles (reordering)
+      const activeArticle = active.data.current?.article;
+      const overArticle = over.data.current?.article;
       
-      // If dragging an article
-      if (active.data.current?.type === 'article') {
-        const article = active.data.current.article;
-        const currentCategoryIds = article.category_ids || (article.category_id ? [article.category_id] : []);
+      if (activeArticle && overArticle) {
+        // Get current sorted articles
+        const currentOrder = sortedArticles.map(a => a.article_id);
+        const oldIndex = currentOrder.indexOf(active.id);
+        const newIndex = currentOrder.indexOf(over.id);
         
-        // Don't move if already in this category
-        if (currentCategoryIds.includes(targetCategoryId)) {
-          setActiveDragItem(null);
-          return;
+        if (oldIndex !== -1 && newIndex !== -1) {
+          const newOrder = arrayMove(currentOrder, oldIndex, newIndex);
+          
+          // Update local state immediately for smooth UX
+          setUserSortPreferences(prev => ({
+            ...prev,
+            [selectedCategoryId]: newOrder
+          }));
+          setHasCustomSort(true);
+          
+          // Save to backend
+          try {
+            await axios.put(`${API}/sort-preferences/${selectedCategoryId}`, {
+              article_order: newOrder
+            });
+            toast.success("Reihenfolge gespeichert");
+          } catch (error) {
+            console.error("Failed to save sort order:", error);
+            toast.error("Reihenfolge konnte nicht gespeichert werden");
+            // Revert on error
+            fetchSortPreferences();
+          }
         }
-        
-        // Show confirmation dialog
-        setPendingDrop({
-          article,
-          articleTitle: article.title,
-          targetCategoryId,
-          targetCategoryName
-        });
-        setConfirmDropDialog(true);
       }
     }
     
@@ -417,6 +562,25 @@ const Articles = () => {
 
   const handleDragCancel = () => {
     setActiveDragItem(null);
+  };
+
+  // Reset custom sort order for current category
+  const resetSortOrder = async () => {
+    if (!selectedCategoryId) return;
+    
+    try {
+      await axios.delete(`${API}/sort-preferences/${selectedCategoryId}`);
+      setUserSortPreferences(prev => {
+        const newPrefs = { ...prev };
+        delete newPrefs[selectedCategoryId];
+        return newPrefs;
+      });
+      setHasCustomSort(false);
+      toast.success("Sortierung zurückgesetzt");
+    } catch (error) {
+      console.error("Failed to reset sort order:", error);
+      toast.error("Sortierung konnte nicht zurückgesetzt werden");
+    }
   };
 
   // Confirm and execute the drop
@@ -519,8 +683,35 @@ const Articles = () => {
     return matchesSearch && matchesCategory;
   });
 
-  // Sort articles
+  // Sort articles (with user's custom order if available)
   const sortedArticles = React.useMemo(() => {
+    // If we have a custom sort order for this category, use it
+    const customOrder = selectedCategoryId ? userSortPreferences[selectedCategoryId] : null;
+    
+    if (customOrder && customOrder.length > 0) {
+      // Sort by custom order
+      const orderMap = new Map(customOrder.map((id, index) => [id, index]));
+      const sorted = [...filteredArticles].sort((a, b) => {
+        const aIndex = orderMap.has(a.article_id) ? orderMap.get(a.article_id) : Infinity;
+        const bIndex = orderMap.has(b.article_id) ? orderMap.get(b.article_id) : Infinity;
+        
+        // If both have custom positions, use those
+        if (aIndex !== Infinity && bIndex !== Infinity) {
+          return aIndex - bIndex;
+        }
+        // If only one has a custom position, it comes first
+        if (aIndex !== Infinity) return -1;
+        if (bIndex !== Infinity) return 1;
+        
+        // Fall back to default sort for articles not in custom order
+        const aVal = new Date(a.updated_at || a.created_at || 0);
+        const bVal = new Date(b.updated_at || b.created_at || 0);
+        return bVal - aVal;
+      });
+      return sorted;
+    }
+    
+    // Default sorting by selected criteria
     const sorted = [...filteredArticles].sort((a, b) => {
       let aVal, bVal;
       switch (sortBy) {
@@ -544,7 +735,7 @@ const Articles = () => {
       }
     });
     return sorted;
-  }, [filteredArticles, sortBy, sortOrder]);
+  }, [filteredArticles, sortBy, sortOrder, selectedCategoryId, userSortPreferences]);
 
   // Get subcategories for selected category
   const childCategories = selectedCategoryId 
@@ -652,6 +843,8 @@ const Articles = () => {
                   onEdit={openEditCat}
                   onDelete={(cat) => setCatDeleteDialog({ open: true, category: cat })}
                   onAddChild={(cat) => openCreateCat(cat.category_id)}
+                  onHoverDrop={handleHoverDrop}
+                  activeDragArticle={activeDragItem}
                 />
               ))}
               {rootCategories.length === 0 && (
@@ -677,26 +870,48 @@ const Articles = () => {
             </div>
             
             <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground whitespace-nowrap">Sortieren:</span>
-              <Select value={sortBy} onValueChange={setSortBy}>
-                <SelectTrigger className="w-[140px] h-9">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="updated_at">Aktualisiert</SelectItem>
-                  <SelectItem value="created_at">Erstellt</SelectItem>
-                  <SelectItem value="title">Titel</SelectItem>
-                  <SelectItem value="view_count">Aufrufe</SelectItem>
-                </SelectContent>
-              </Select>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
-                className="h-9 px-2"
-              >
-                {sortOrder === "asc" ? "↑ Aufst." : "↓ Abst."}
-              </Button>
+              {hasCustomSort && selectedCategoryId ? (
+                <>
+                  <Badge variant="secondary" className="text-xs gap-1">
+                    <GripVertical className="w-3 h-3" />
+                    Eigene Sortierung
+                  </Badge>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={resetSortOrder}
+                    className="h-8 px-2 text-muted-foreground hover:text-foreground"
+                    title="Sortierung zurücksetzen"
+                    data-testid="reset-sort-btn"
+                  >
+                    <RotateCcw className="w-4 h-4" />
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <span className="text-sm text-muted-foreground whitespace-nowrap">Sortieren:</span>
+                  <Select value={sortBy} onValueChange={setSortBy} disabled={hasCustomSort}>
+                    <SelectTrigger className="w-[140px] h-9">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="updated_at">Aktualisiert</SelectItem>
+                      <SelectItem value="created_at">Erstellt</SelectItem>
+                      <SelectItem value="title">Titel</SelectItem>
+                      <SelectItem value="view_count">Aufrufe</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
+                    className="h-9 px-2"
+                    disabled={hasCustomSort}
+                  >
+                    {sortOrder === "asc" ? "↑ Aufst." : "↓ Abst."}
+                  </Button>
+                </>
+              )}
             </div>
           </div>
 
@@ -747,81 +962,90 @@ const Articles = () => {
           {/* Articles List */}
           <ScrollArea className="flex-1">
             {sortedArticles.length > 0 ? (
-              <div className="space-y-3 pr-2">
-                {sortedArticles.map((article) => (
-                  <DraggableArticle key={article.article_id} article={article}>
-                  <Card
-                    className="hover:shadow-md transition-all duration-200"
-                    data-testid={`article-card-${article.article_id}`}
-                  >
-                    <CardContent className="p-4">
-                      <div className="flex items-center justify-between gap-4">
-                        {canEdit && (
-                          <GripVertical className="w-4 h-4 text-muted-foreground cursor-grab active:cursor-grabbing shrink-0" />
-                        )}
-                        <div 
-                          className="flex-1 cursor-pointer min-w-0"
-                          onClick={() => navigate(`/articles/${article.article_id}`)}
-                        >
-                          <div className="flex items-center gap-3 mb-2">
-                            <FileText className="w-5 h-5 text-muted-foreground shrink-0" />
-                            <h3 className="font-semibold truncate">{article.title}</h3>
-                            <StatusBadge status={article.status} />
+              <SortableContext
+                items={sortedArticles.map(a => a.article_id)}
+                strategy={verticalListSortingStrategy}
+              >
+                <div className="space-y-3 pr-2">
+                  {sortedArticles.map((article) => (
+                    <SortableArticle 
+                      key={article.article_id} 
+                      article={article}
+                      isDragDisabled={!canEdit || !selectedCategoryId}
+                    >
+                    <Card
+                      className="hover:shadow-md transition-all duration-200"
+                      data-testid={`article-card-${article.article_id}`}
+                    >
+                      <CardContent className="p-4">
+                        <div className="flex items-center justify-between gap-4">
+                          {canEdit && selectedCategoryId && (
+                            <GripVertical className="w-4 h-4 text-muted-foreground cursor-grab active:cursor-grabbing shrink-0" />
+                          )}
+                          <div 
+                            className="flex-1 cursor-pointer min-w-0"
+                            onClick={() => navigate(`/articles/${article.article_id}`)}
+                          >
+                            <div className="flex items-center gap-3 mb-2">
+                              <FileText className="w-5 h-5 text-muted-foreground shrink-0" />
+                              <h3 className="font-semibold truncate">{article.title}</h3>
+                              <StatusBadge status={article.status} />
+                            </div>
+                            <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                              <span className="flex items-center gap-1">
+                                <Clock className="w-3 h-3" />
+                                {formatDate(article.updated_at)}
+                              </span>
+                              <span className="flex items-center gap-1">
+                                <Eye className="w-3 h-3" />
+                                {article.view_count || 0}
+                              </span>
+                              {!selectedCategoryId && article.category_id && (
+                                <span className="truncate max-w-[150px]">{getCategoryName(article.category_id)}</span>
+                              )}
+                            </div>
                           </div>
-                          <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                            <span className="flex items-center gap-1">
-                              <Clock className="w-3 h-3" />
-                              {formatDate(article.updated_at)}
-                            </span>
-                            <span className="flex items-center gap-1">
-                              <Eye className="w-3 h-3" />
-                              {article.view_count || 0}
-                            </span>
-                            {!selectedCategoryId && article.category_id && (
-                              <span className="truncate max-w-[150px]">{getCategoryName(article.category_id)}</span>
-                            )}
-                          </div>
+                          {canEdit && (
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" data-testid={`article-menu-${article.article_id}`}>
+                                  <MoreHorizontal className="w-4 h-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => navigate(`/articles/${article.article_id}`)}>
+                                  <Eye className="w-4 h-4 mr-2" />
+                                  Anzeigen
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => navigate(`/articles/${article.article_id}/edit`)}>
+                                  <Edit className="w-4 h-4 mr-2" />
+                                  Bearbeiten
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => {
+                                  setMoveDialog({ open: true, article });
+                                  setMoveTargetCategoryId(article.category_id || null);
+                                }}>
+                                  <MoveRight className="w-4 h-4 mr-2" />
+                                  Verschieben
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem 
+                                  className="text-red-600"
+                                  onClick={() => setDeleteDialog({ open: true, article })}
+                                >
+                                  <Trash2 className="w-4 h-4 mr-2" />
+                                  Löschen
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          )}
                         </div>
-                        {canEdit && (
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon" data-testid={`article-menu-${article.article_id}`}>
-                                <MoreHorizontal className="w-4 h-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => navigate(`/articles/${article.article_id}`)}>
-                                <Eye className="w-4 h-4 mr-2" />
-                                Anzeigen
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => navigate(`/articles/${article.article_id}/edit`)}>
-                                <Edit className="w-4 h-4 mr-2" />
-                                Bearbeiten
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => {
-                                setMoveDialog({ open: true, article });
-                                setMoveTargetCategoryId(article.category_id || null);
-                              }}>
-                                <MoveRight className="w-4 h-4 mr-2" />
-                                Verschieben
-                              </DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem 
-                                className="text-red-600"
-                                onClick={() => setDeleteDialog({ open: true, article })}
-                              >
-                                <Trash2 className="w-4 h-4 mr-2" />
-                                Löschen
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                  </DraggableArticle>
-                ))}
-              </div>
+                      </CardContent>
+                    </Card>
+                    </SortableArticle>
+                  ))}
+                </div>
+              </SortableContext>
             ) : (
               <Card className="border-dashed">
                 <CardContent className="p-12 text-center">

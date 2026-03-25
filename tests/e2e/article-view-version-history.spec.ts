@@ -6,7 +6,7 @@
  */
 import { test, expect } from '@playwright/test';
 
-const BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://knowledge-hub-549.preview.emergentagent.com';
+const BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://article-reorder.preview.emergentagent.com';
 
 test.describe('ArticleView Version History Timeline', () => {
   test.beforeEach(async ({ page }) => {

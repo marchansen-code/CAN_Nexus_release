@@ -1,93 +1,77 @@
 <analysis>**original_problem_statement:**
-The user wants to enhance their knowledge management platform, CANUSA Nexus, with several new features and bug fixes.
+The user wants to continue enhancing their knowledge management platform, CANUSA Nexus.
 
-**PRODUCT REQUIREMENTS (from this session):**
+The latest requests from this session are:
+1.  **Drag & Drop on Folder Delay:** When dragging an article over a category folder in the tree, the action to move the article into that folder should only be triggered after a short delay of hovering over the folder, not instantly.
+2.  **Per-User Article Sorting:** Implement a feature allowing users to manually reorder articles within a category using drag and drop. This custom sort order must be saved and be unique for each user. Other users will still see the default or their own custom order.
 
-1.  **Pinnwand Enhancements (Message #197, #403):**
-    *   On the Pinnwand page, group articles into separate containers for each Pinnwand category.
-    *   The title for each container should be derived from the second word of the category's name (e.g., Pinnwand NEWS -> NEWS).
-    *   Assign a relevant icon to each container title.
-    *   Arrange the containers horizontally in a grid, with a maximum of three containers per row and a 20px gap between them.
-
-2.  **Backlog Abarbeiten (Work through backlog - Message #197):**
-    *   Implement Multi-Select in the gallery view.
-    *   Implement Drag & Drop for folder reordering.
-    *   Implement a Quick Search () feature.
-    *   Implement OCR for scanned PDFs.
-
-3.  **Editor Document Import (Message #403, #454):**
-    *   In the editor, when importing a document, provide two options: Einbetten (Embed) to insert an interactive document viewer directly into the article, and Link einfügen (Insert Link) for a standard hyperlink.
-    *   The user noted confusion because this feature was added to the Link dialog, not a separate Import button. They also reported that the embedded viewer was not rendering correctly.
-
-4.  **UI/UX Changes (Message #454):**
-    *   Rename the main navigation menu item Dashboard to Home and update its icon accordingly.
-
-5.  **OCR Implementation Choice (Message #270, #378):**
-    *   Initially, the user agreed to use Google Cloud services for OCR.
-    *   When confronted with a billing account requirement, the user requested a completely free alternative.
+Additionally, several other tasks were requested and completed during the session, including bug fixes for the quick search, tag filtering, editor functionalities, and role-based visibility rules. The user also requested help debugging their production deployment, which was successfully resolved.
 
 **User's preferred language**: Deutsch
 
 **what currently exists?**
-The application is a full-stack knowledge management platform (React/FastAPI/MongoDB) with user authentication, a rich-text editor, and document management.
-
-During this session, several major features were implemented and bugs were fixed:
-- The critical bug preventing folder navigation in the Documents view has been **resolved**.
-- **Group @-Mentions** () are fully functional, including backend logic and email notifications.
-- A **Pinnwand (Notice Board)** system has been created. It now displays articles grouped by category in a responsive grid layout with custom titles and icons.
-- The **Dashboard** has been reworked into Pinnwand and Home tabs, and the main navigation link was renamed from Dashboard to Home.
-- A global **Quick Search (Ctrl+K)** feature has been implemented, allowing users to search for articles, documents, and categories from anywhere in the app.
-- **OCR functionality for PDFs** was added using the free and open-source **Tesseract OCR engine**, replacing an initial attempt with Google Cloud Vision.
-- The editor's Link dialog now supports **embedding documents** directly into articles as an interactive viewer, in addition to inserting a standard link. A custom Tiptap extension was built to ensure the embedded  renders correctly.
+The application is a full-stack knowledge management platform (React/FastAPI/MongoDB). In this session, numerous features and fixes were implemented. Key changes include:
+- A bug where the embedded document viewer () was not visible in published articles has been fixed.
+- A dedicated Dokument einbetten (Embed Document) button was added to the editor toolbar, separating it from the link dialog.
+- The Quick Search () functionality was fixed. It was not showing results due to an issue with the  library's client-side filtering.
+- Tag handling has been improved: tags with special characters (like ) are now searchable, and the original casing is preserved.
+- Role-based access control has been significantly enhanced. Pinnwand (notice board) categories are now hidden from non-admins across the entire application (category page, article editor, quick search, dashboard). Other users' drafts are also hidden from the dashboard for non-admins.
+- The main Kategorien navigation link was removed, and full Category CRUD (Create, Read, Update, Delete, Move) functionality was integrated directly into the  page's side panel, which was widened for better usability.
+- A long-standing deployment issue on the user's production server (related to CORS and environment variables) was diagnosed and resolved.
+- A bug in the editor's table functionality, where cell formatting options were unavailable when editing existing articles or pasting tables, has been fixed.
 
 **Last working item**:
-- **Last item agent was working**: The agent was addressing the user's feedback from message #454. This involved two tasks: 1) Renaming the Dashboard menu item to Home and updating its icon. 2) Fixing a bug where the embedded document viewer (an ) was not rendering in the Tiptap editor because it was being sanitized. The agent created a custom Tiptap extension to allow s and updated the editor configuration.
-- **Status**: USER VERIFICATION PENDING
-- **Agent Testing Done**: Y
-- **Which testing method agent to use?**: frontend testing agent. The agent should verify that the Home link is present in the navigation bar and that embedding a PDF in the editor results in a visible and functional  viewer.
+- **Last item agent was working**: The agent was analyzing the user's new drag-and-drop feature requests from message #591. The agent had started to review the existing dnd-kit implementation in  to plan the implementation for both the hover-delay on category drop targets and the per-user article sorting.
+- **Status**: NOT STARTED
+- **Agent Testing Done**: N
+- **Which testing method agent to use?**: frontend testing agent. The tests should cover dragging an article and holding it over a category to trigger a move, as well as reordering articles within a list and verifying the new order persists for that user only.
 - **User Testing Done**: N
 
 **All Pending/In progress Issue list**:
-- **Issue 1: Document viewer not rendering in editor (P0)**
-- **Issue 2: Dashboard menu item needs renaming to Home (P0)**
-- **Issue 3: Google Drive - Export to Shared Drive Fails (P2)**
-- **Issue 4: Google Drive - Incorrect file list in export dialog (P2)**
+- **Issue 1: Implement Drag & Drop Improvements (P0)**
+- **Issue 2: Fix Google Drive Bugs (P1)**
+- **Issue 3: Remove Dokument tab from Link Dialog (P2)**
 
 **Issues Detail:**
-- **Issue 1: Document viewer not rendering in editor**
-  - **Attempted fixes**: The agent correctly identified that Tiptap's default behavior sanitizes and removes  elements. A custom Tiptap Node extension was created in  and integrated into  to correctly render the . The agent verified the fix with a screenshot showing the viewer successfully embedded.
-  - **Next debug checklist**: Await user verification. If the user still reports an issue, check the browser's developer console for any new errors and re-verify the  extension logic.
-  - **Why fix this issue and what will be achieved with the fix?**: This is a core part of the new document embedding feature requested by the user.
-  - **Status**: USER VERIFICATION PENDING
-  - **Is recurring issue?**: N
-  - **Should Test frontend/backend/both after fix?**: Frontend.
-  - **Blocked on other issue**: None.
-
-- **Issue 2: Dashboard menu item needs renaming to Home**
-  - **Attempted fixes**: The agent replaced all instances of Dashboard with Home in  and , and updated the icon to a Home icon. This was verified via screenshot.
-  - **Next debug checklist**: Await user verification.
-  - **Why fix this issue and what will be achieved with the fix?**: A direct UI/UX request from the user.
-  - **Status**: USER VERIFICATION PENDING
-  - **Is recurring issue?**: N
-  - **Should Test frontend/backend/both after fix?**: Frontend.
-  - **Blocked on other issue**: None.
-
-- **Issue 3: Google Drive - Export to Shared Drive Fails**
-  - **Attempted fixes**: None in this session. This is a carry-over from the previous handoff.
-  - **Next debug checklist**: Investigate  and verify if the Google Drive API call includes the  parameter.
-  - **Why fix this issue and what will be achieved with the fix?**: It will enable a key integration feature for users who rely on Google Shared Drives.
-  - **Status**: NOT STARTED
-  - **Is recurring issue?**: N
-  - **Should Test frontend/backend/both after fix?**: Backend.
-  - **Blocked on other issue**: None.
-
-- **Issue 4: Google Drive - Incorrect file list in export dialog**
-  - **Attempted fixes**: None in this session. This is a carry-over from the previous handoff.
-  - **Next debug checklist**: Review the API endpoint in  that fetches the file list and the corresponding component on the frontend to ensure correct filtering and display.
-  - **Why fix this issue and what will be achieved with the fix?**: This will fix a data integrity and usability issue within the Google Drive export feature.
+- **Issue 1: Implement Drag & Drop Improvements**
+  - **Description**: The user has two requests for the drag-and-drop functionality on the Articles page:
+    1.  When dragging an article onto a category in the side panel, the move should only happen after a short hover delay. Currently, it happens instantly on hover.
+    2.  Users should be able to drag and drop articles within the article list of a specific category to create a custom sort order. This order should be saved per-user.
+  - **Attempted fixes**: None. The agent was in the analysis phase.
+  - **Next debug checklist**:
+    1.  **Backend**: Create a new model/collection (e.g., ) to store . Create new API endpoints to get and set this sort order for a user and category.
+    2.  **Backend**: Modify the main article fetching endpoint () to accept the custom sort order and apply it if present for the logged-in user.
+    3.  **Frontend ()**: Implement the per-user sorting using 's sortable preset. On , update the local article state and call the new backend endpoint to save the order.
+    4.  **Frontend ()**: For the folder drop delay, investigate 's properties or use a / mechanism within the  event handler to detect a sustained hover before setting the drop target.
+  - **Why fix this issue and what will be achieved with the fix?**: This will significantly improve the user experience of organizing articles, making it more intuitive and personalized.
   - **Status**: NOT STARTED
   - **Is recurring issue?**: N
   - **Should Test frontend/backend/both after fix?**: Both.
+  - **Blocked on other issue**: None.
+
+- **Issue 2: Fix Google Drive Bugs**
+  - **Description**: Two bugs from a previous session remain: Export to a Google Shared Drive fails, and the file list in the export dialog is incorrect.
+  - **Attempted fixes**: None in this session.
+  - **Next debug checklist**:
+    - For Shared Drive failure: Investigate  and verify the Google Drive API call includes the  parameter.
+    - For incorrect file list: Review the API endpoint in  that fetches the file list to ensure correct filtering.
+  - **Why fix this issue and what will be achieved with the fix?**: Enables a key integration for users relying on Google Shared Drives.
+  - **Status**: NOT STARTED
+  - **Is recurring issue?**: Y
+  - **Should Test frontend/backend/both after fix?**: Both.
+  - **Blocked on other issue**: None.
+
+- **Issue 3: Remove Dokument tab from Link Dialog**
+  - **Description**: After creating a dedicated Dokument einbetten button in the editor toolbar, the Dokument tab inside the Link dialog is now redundant and should be removed to avoid confusion.
+  - **Attempted fixes**: None.
+  - **Next debug checklist**:
+    - Edit .
+    - Locate the  component for the link functionality.
+    - Remove the  and  related to the Dokument tab.
+  - **Why fix this issue and what will be achieved with the fix?**: Improves UI/UX by removing a redundant and potentially confusing element.
+  - **Status**: NOT STARTED
+  - **Is recurring issue?**: N
+  - **Should Test frontend/backend/both after fix?**: Frontend.
   - **Blocked on other issue**: None.
 
 **In progress Task List**:
@@ -95,102 +79,111 @@ During this session, several major features were implemented and bugs were fixed
 
 **Upcoming and Future Tasks**
 - **Upcoming Tasks**:
-    - **P1: Fix Google Drive - Export to Shared Drive Fails**: As described in Issue #3.
-    - **P1: Fix Google Drive - Incorrect file list in export dialog**: As described in Issue #4.
-- **Future Tasks**:
-    - **P2: Editor UX Improvement**: The user expressed confusion that the Embed Document feature is located in the Link dialog, not an Import button. Propose adding a dedicated Import Document button to the editor's toolbar that opens this dialog.
+    - **P1**: Fix Google Drive - Export to Shared Drive Fails.
+    - **P1**: Fix Google Drive - Incorrect file list in export dialog.
+    - **P2**: Remove redundant Dokument tab from link dialog.
+- **Future Tasks (On Hold by User)**:
+    - **Ablauf-Datum Reminder**: Implement a reminder on the dashboard for authors when their articles are due to expire (within 14 days).
+    - **Handschrift-OCR verbessern**: The current Tesseract implementation has limitations with handwriting.
 
 **Completed work in this session**
-- **Pinnwand Feature**: Implemented the full Pinnwand system, including backend logic, UI for management, and a dashboard view that groups articles by category in a responsive grid with icons.
-- **Dashboard Rework**: Reorganized the dashboard into Pinnwand and Home tabs and removed the Schnellzugriff section.
-- **Group @-Mentions**: Implemented  mentions with email notifications.
-- **Quick Search (Ctrl+K)**: Built a global search dialog for articles, documents, and categories.
-- **PDF OCR with Tesseract**: Integrated a free, server-side OCR solution using Tesseract for extracting text from PDFs.
-- **Editor Document Embedding**: Enhanced the editor to allow embedding PDFs as an interactive  viewer and fixed the bug preventing it from rendering.
-- **UI Renaming**: Changed the main Dashboard navigation item to Home.
-- **Bug Fix**: Resolved the critical bug where folder navigation in the Documents section was broken.
-- **Project Sync**: Successfully pulled the latest codebase from the user's GitHub repository to work on the correct version.
+- **Bug Fix**: Fixed the embedded document  viewer not rendering in published articles by post-processing the HTML in .
+- **Feature**: Added a dedicated Dokument einbetten button to the editor toolbar.
+- **Bug Fix**: Resolved the Quick Search () issue where results were being incorrectly filtered on the client-side by setting .
+- **Bug Fix**: Fixed an issue where tags with special characters () were not found in search. Also fixed an issue where tags were being converted to lowercase on input.
+- **UI Cleanup**: Removed a redundant Importieren button from the  header. Removed the PDF hochladen button from the Dashboard.
+- **RBAC**: Implemented strict role-based visibility for Pinnwand categories, hiding them from non-admins on the category page, article editor, quick search, and dashboard.
+- **RBAC**: Hid other users' drafts from the dashboard for non-admins by adding a filter on the backend  endpoint.
+- **RBAC**: Hid action buttons (Neuer Artikel) on the dashboard for users with the viewer role.
+- **Feature**: Overhauled the HTML mode in the rich-text editor with automatic code formatting (pretty-printing) and a toolbar for inserting common HTML5 tags.
+- **Deployment Support**: Successfully diagnosed and provided a fix for the user's production server deployment, resolving a CORS error ( with ) and a build issue where the  was .
+- **Bug Fix**: Fixed a  crash in  introduced by a previous agent fix.
+- **Bug Fix**: Resolved an issue where table cell formatting options were unavailable in the editor when editing existing articles. The fix involved tracking  in a state variable to prevent loss of context on menu focus change.
+- **Feature**: Integrated full category management (CRUD operations via dialogs and context menus) directly into the  page, making the old  page redundant.
+- **UI Cleanup**: Removed the main Kategorien navigation link from the application layout.
 
 **Earlier issues found/mentioned but not fixed**
 - **Issue 1: Exporting to a Google Shared Drive fails**
   - **Debug checklist**: Verify the  call in  includes .
   - **Why to solve this issue and what will be achieved with this?**: This is a key part of the Google Drive integration that is currently not working.
   - **Should Test frontend/backend/both after fix?**: Backend.
-  - **Is recurring issue?**: N
+  - **Is recurring issue?**: Y
 - **Issue 2: Incorrect file list in Google Drive export dialog**
-  - **Debug checklist**: Verify the API call to  in  is correctly filtering for files owned by the user.
+  - **Debug checklist**: Verify the API call in  is correctly filtering for files.
   - **Why to solve this issue and what will be achieved with this?**: Ensures correct functionality and data privacy.
   - **Should Test frontend/backend/both after fix?**: Both.
-  - **Is recurring issue?**: N
+  - **Is recurring issue?**: Y
 
 **Known issue recurrence from previous fork**
-- **Issue recurrence in previous fork**: The Google Drive import dialog has a history of UI bugs. No new regressions were reported, but caution is advised when modifying it.
+- **Issue recurrence in previous fork**: The Google Drive import/export functionality has a history of bugs. The two mentioned above are still pending.
 - **Recurrence count**: 3+
-- **Status**: RESOLVED (for now)
+- **Status**: NOT STARTED
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
-- **Tesseract OCR**: Switched from a paid API (Google Vision) to a free, open-source engine () for server-side OCR processing. This required installing  and  on the backend container.
-- **Custom Tiptap Extension**: Created a custom Tiptap Node to render  elements, bypassing the editor's default HTML sanitization. This was essential for the Embed Document feature.
-- **Git Repository Sync**: Used  and  to overwrite the local workspace with the user's provided repository, ensuring work was done on the correct codebase.
-- **Shadcn UI**: Leveraged , , and  components for building the new UI features.
+- ****: Used for all drag-and-drop functionality. The next task requires implementing a custom sortable list and potentially a hover-delay mechanism.
+- **Tiptap State Management**: Fixed a bug where  failed due to focus loss. The solution was to use the  event to track the table status in a React state variable ().
+- ** Filtering**: Solved a search bug by passing  to the  component to disable its internal filtering mechanism, relying solely on server-side search results.
+- **Frontend Role-Based Access Control (RBAC)**: Extensive use of  to conditionally render UI elements (buttons, checkboxes, list items, tabs).
+- **Backend RBAC**: Modified API endpoints (, ) to filter results based on the user's role () and group memberships ().
+- **Production Debugging**: Diagnosed and solved real-world deployment issues involving Nginx Proxy Manager, Docker Compose build arguments,  file precedence (), and CORS policies in FastAPI.
 
 **key DB schema**
-- **categories**:  (Field added to identify Pinnwand categories).
+- No database schema changes were made in this session.
 
 **All files of reference**
-- : For editor features, including document embedding.
-- : The custom extension for rendering s.
-- : Contains the logic for the Pinnwand grid layout.
-- : For the Home navigation item change.
-- : The new global search component.
-- : The Tesseract OCR implementation.
-- : Contains the new global search endpoint.
-- : The API route for the OCR service.
+- : The main workspace for the next tasks. It now contains all logic for displaying articles and managing categories.
+- : Was heavily modified to fix table bugs and improve HTML mode.
+- : Was modified to implement role-based visibility.
+- : Was modified to fix a search bug and implement role-based visibility.
+- : Was modified to filter search results based on user group permissions.
+- : Was modified to filter dashboard statistics for non-admins.
+- : Was modified to fix a production CORS issue.
+- : This directory contains user-provided files for their production environment, which were analyzed for debugging.
 
 **Critical Info for New Agent**
-- **You MUST respond in German.** The user is a native German speaker.
-- **Address the Google Drive issues next.** These are the highest-priority items remaining from the original backlog.
-- **Clarify the Import button UX.** The user was confused about where to find the new document embedding feature. Ask if they would prefer a dedicated Import Document button in the editor toolbar instead of having it inside the Link dialog.
+- **You MUST respond in German.** The user is a native German speaker and technically proficient.
+- The immediate priority is to implement the two Drag & Drop enhancements requested in message #591. This will involve both frontend () and backend (new model/API for saving sort order) work.
+- The Google Drive bugs are the next highest priority after the Drag & Drop tasks.
+- Two tasks are explicitly on hold by the user: Ablauf-Datum Reminder and Handschrift-OCR verbessern. Do not work on these unless the user reprioritizes them.
 
 **documents and test reports created in this job**
 - 
 - 
 - 
-- 
-- 
+-  (Updated)
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **User (#403)**: Requested Pinnwand layout changes (grid, gap, icons) and a document embedding feature for the editor. **Status: COMPLETED**.
-2.  **User (#454)**: Reported that the Dashboard menu item should be Home and that the embedded document viewer was not rendering correctly. **Status: USER VERIFICATION PENDING**.
-3.  **User (#403)**: Requested Pinnwand layout changes (grid, gap, icons) and a document embedding feature for the editor. **Status: COMPLETED**.
-4.  **User (#378)**: Asked for a free OCR alternative after being prompted for a Google Cloud billing account. **Status: COMPLETED**.
-5.  **User (#289)**: Provided Google Cloud Vision credentials and asked if further permissions were needed. **Status: ACTIONED/SUPERSEDED**.
-6.  **User (#270)**: Agreed to use Google services for OCR. **Status: ACTIONED/SUPERSEDED**.
-7.  **User (#197)**: Requested Pinnwand containers, dynamic titles, and to work through the backlog (Quick Search, OCR). **Status: COMPLETED**.
-8.  **User (#90)**: Pointed out the agent was working on an old codebase and provided a GitHub link to the latest version. **Status: COMPLETED**.
-9.  **User (#5)**: Confirmed a previous fix and that an issue was resolved on their live server. **Status: COMPLETED**.
-10. **User (#2)**: Approved the agent's initial plan. **Status: COMPLETED**.
+1.  **User #591**: **(PENDING)** Requested two D&D improvements: a hover-delay for dropping articles into folders and a per-user custom article sort order within categories.
+2.  **User #580**: Requested the removal of the main Kategorien menu item. **Status: COMPLETED**.
+3.  **User #527**: Requested moving all category management functionality to the Articles page, widening the container, and adding a New Category button. **Status: COMPLETED**.
+4.  **User #458**: Reported a bug where table cell formatting was not available for existing/pasted tables. **Status: COMPLETED**.
+5.  **User #376**: **(PARTIALLY ON HOLD)** Reported a large batch of issues: category expand click area, Pinnwand visibility, restricted articles in search, expiry date reminders (on hold), D&D sorting (now active as of #591), and broken table cell colors. **Status: Mostly COMPLETED**.
+6.  **User #352**: Asked why they couldn't log into the preview environment. **Status: RESOLVED** (Agent had introduced a backend crash).
+7.  **User #346**: Confirmed that the  was  in the built frontend code on their production server and asked for a fix in the . **Status: RESOLVED**.
+8.  **User #342**: Confirmed the backend/CORS was fixed but the login still failed, with no network request being fired. Correctly deduced the issue was a broken URL in the frontend. **Status: RESOLVED**.
+9.  **User #332**: Confirmed the  test was successful and correctly identified the CORS misconfiguration ( with ) as the root cause of the browser login failure. **Status: RESOLVED**.
+10. **User #324**: Reported that after fixing the SSL/proxy issue, the login (both manual and Google) was failing. **Status: RESOLVED**.
 
 **Project Health Check:**
 - **Broken**:
-    - Google Drive export to Shared Drives is non-functional.
-    - The file list in the Google Drive export dialog is incorrect.
+    - Google Drive export to Shared Drives.
+    - Incorrect file list in the Google Drive export dialog.
 - **Mocked**: None.
 
 **3rd Party Integrations**
-- **Google OAuth**: Integrated and functional.
-- **Google Drive API**: Integrated for import/export, but has two known, pending bugs (Shared Drive export, incorrect file list).
-- **SMTP (Gmail)**: Fully integrated and functional.
-- **Tesseract OCR**: Newly integrated via  as a free, server-side OCR solution.
+- **dnd-kit**: Heavily used in . The next tasks require a deeper integration with it.
+- **Tiptap**: Used for the rich text editor.
+- **Shadcn/UI & **: Used for UI components and command palettes.
+- **Google OAuth/Drive API**: Integrated but has known bugs.
+- **Tesseract OCR**: Integrated.
 
 **Testing status**
-- **Testing agent used after significant changes**: YES. The agent was used multiple times to validate large feature sets like the Pinnwand, Quick Search, and Document Embedding. All tests passed.
+- **Testing agent used after significant changes**: YES. The agent was used multiple times to validate features like category management and role-based visibility, with all tests passing.
 - **Troubleshoot agent used after agent stuck in loop**: NO.
 - **Test files created**:
-    - 
     - 
     - 
     - 
@@ -199,8 +192,8 @@ During this session, several major features were implemented and bugs were fixed
 **Credentials to test flow:**
 - **Admin Email**: 
 - **Admin Password**: 
-- **Google Client ID/Secret**: In .
-- **SMTP Credentials**: In .
+- **Editor Email**: 
+- **Editor Password**: 
 
 **What agent forgot to execute**
-- The agent did not address the two pending Google Drive bugs mentioned in the initial handoff summary (exporting to a Shared Drive and the incorrect file list in the export dialog). These tasks were carried over but not started.</analysis>
+- The agent correctly prioritized user requests. The outstanding Google Drive bugs and the removal of the redundant Dokument tab were lower priority than the tasks completed in this session and are correctly listed as pending.</analysis>
