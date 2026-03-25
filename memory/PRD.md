@@ -625,11 +625,18 @@ Wissensmanagement-Plattform für CANUSA Touristik GmbH & Co. KG und CU-Travel.
     - "Dieser Artikel wurde Ihnen als Leseaufgabe zugewiesen"
     - "Als gelesen markieren"-Button
     - Grüner Banner nach dem Markieren als gelesen
+  - **Lesebestätigungs-Analyse** (nur für Autor/Admin sichtbar):
+    - Neuer Bereich neben der Änderungshistorie in der Artikelansicht
+    - Badge zeigt X/Y (bestätigt/gesamt) mit Farbcodierung (grün/orange)
+    - **Ausstehende Bestätigungen**: Orange Box mit User-Avataren (Initialen), Namen und Zuweisungsdatum
+    - **Bestätigt**: Grüne Box mit User-Avataren (Initialen), Namen und Lesedatum
+    - **Erfolgsmeldung**: Grüne Box wenn alle bestätigt haben ("Alle Lesebestätigungen erhalten")
   - **Backend-API** (`/app/backend/routes/reading_assignments.py`):
     - `POST /api/reading-assignments` - Leseaufgaben erstellen
     - `GET /api/reading-assignments/my-assignments` - Eigene ungelesene Artikel
     - `POST /api/reading-assignments/mark-as-read` - Als gelesen markieren
     - `GET /api/reading-assignments/status/{article_id}` - Lesestatus prüfen
+    - `GET /api/reading-assignments/article/{article_id}/all-status` - Alle Bestätigungen (nur Autor/Admin)
     - `DELETE /api/reading-assignments/{article_id}` - Zuweisungen entfernen
   - **E-Mail-Benachrichtigung**: `send_reading_assignment_notification` im Email-Service
 

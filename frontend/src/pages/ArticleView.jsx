@@ -29,7 +29,10 @@ import {
   X,
   History,
   BookOpen,
-  CheckCircle2
+  CheckCircle2,
+  UserCheck,
+  UserX,
+  ClipboardCheck
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -123,6 +126,8 @@ const ArticleView = () => {
   
   // Reading assignment state
   const [readingStatus, setReadingStatus] = useState(null);
+  const [allReadingStatuses, setAllReadingStatuses] = useState([]);
+  const [readingStatusesLoading, setReadingStatusesLoading] = useState(false);
 
   // Ref for article content to post-process embedded documents
   const contentRef = useRef(null);
@@ -131,6 +136,25 @@ const ArticleView = () => {
   const isAdmin = user?.role === "admin";
   const isAuthor = article?.created_by === user?.user_id;
   const canViewAnalytics = isAdmin || isAuthor;
+  const canViewReadingAnalysis = isAdmin || isAuthor;
+
+  // Fetch all reading statuses for this article (for author/admin only)
+  const fetchAllReadingStatuses = async () => {
+    if (!canViewReadingAnalysis) return;
+    
+    setReadingStatusesLoading(true);
+    try {
+      const response = await axios.get(`${API}/reading-assignments/article/${id}/all-status`);
+      setAllReadingStatuses(response.data.statuses || []);
+    } catch (error) {
+      // 403 is expected if user is not author/admin
+      if (error.response?.status !== 403) {
+        console.error("Failed to fetch reading statuses:", error);
+      }
+    } finally {
+      setReadingStatusesLoading(false);
+    }
+  };
 
   // Post-process embedded document divs to render iframes in published view
   useEffect(() => {
@@ -238,6 +262,21 @@ const ArticleView = () => {
       
       // Load version history
       fetchVersions();
+      
+      // Load reading statuses for analysis (author/admin only)
+      // We need to check based on article data, not state yet
+      const articleData = articleRes.data;
+      if (user?.role === "admin" || articleData.created_by === user?.user_id) {
+        try {
+          const statusRes = await axios.get(`${API}/reading-assignments/article/${id}/all-status`);
+          setAllReadingStatuses(statusRes.data.statuses || []);
+        } catch (e) {
+          // 403 is expected if no reading assignments exist
+          if (e.response?.status !== 403) {
+            console.error("Failed to fetch reading statuses:", e);
+          }
+        }
+      }
     } catch (error) {
       console.error("Failed to fetch data:", error);
       toast.error("Artikel konnte nicht geladen werden");
@@ -748,65 +787,169 @@ const ArticleView = () => {
           </div>
         )}
 
-        {/* Version History */}
-        {versions.length > 0 && (
-          <div className="mt-12 border-t pt-8" data-testid="version-history-section">
-            <div className="flex items-center gap-2 mb-4">
-              <History className="w-5 h-5 text-muted-foreground" />
-              <h3 className="font-semibold text-lg">Änderungshistorie</h3>
-            </div>
-            <div className="relative">
-              {/* Timeline line */}
-              <div className="absolute left-[11px] top-3 bottom-3 w-0.5 bg-slate-200 dark:bg-slate-700" />
-              
-              <div className="space-y-4">
-                {versions.map((version, index) => (
-                  <div 
-                    key={version.version_id} 
-                    className="flex gap-4 relative"
-                    data-testid={`version-entry-${version.version_number}`}
-                  >
-                    {/* Timeline dot */}
-                    <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 z-10 ${
-                      index === 0 
-                        ? 'bg-indigo-500 text-white' 
-                        : 'bg-slate-200 dark:bg-slate-700 text-slate-500'
-                    }`}>
-                      <span className="text-xs font-medium">{version.version_number}</span>
-                    </div>
+        {/* Version History & Reading Analysis Grid */}
+        {(versions.length > 0 || (canViewReadingAnalysis && allReadingStatuses.length > 0)) && (
+          <div className="mt-12 border-t pt-8">
+            <div className={`grid gap-8 ${versions.length > 0 && canViewReadingAnalysis && allReadingStatuses.length > 0 ? 'md:grid-cols-2' : 'grid-cols-1'}`}>
+              {/* Version History */}
+              {versions.length > 0 && (
+                <div data-testid="version-history-section">
+                  <div className="flex items-center gap-2 mb-4">
+                    <History className="w-5 h-5 text-muted-foreground" />
+                    <h3 className="font-semibold text-lg">Änderungshistorie</h3>
+                  </div>
+                  <div className="relative">
+                    {/* Timeline line */}
+                    <div className="absolute left-[11px] top-3 bottom-3 w-0.5 bg-slate-200 dark:bg-slate-700" />
                     
-                    {/* Version info */}
-                    <div className="flex-1 pb-4">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-sm font-medium">
-                          {new Date(version.created_at).toLocaleDateString('de-DE', {
-                            day: '2-digit',
-                            month: 'long',
-                            year: 'numeric'
-                          })}
-                        </span>
-                        <span className="text-sm text-muted-foreground">
-                          um {new Date(version.created_at).toLocaleTimeString('de-DE', {
-                            hour: '2-digit',
-                            minute: '2-digit'
-                          })} Uhr
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2 mt-1">
-                        <User className="w-3.5 h-3.5 text-muted-foreground" />
-                        <span className="text-sm text-muted-foreground">
-                          {version.created_by_name}
-                        </span>
-                        {version.change_summary && (
-                          <Badge variant="outline" className="text-xs">
-                            {version.change_summary}
-                          </Badge>
-                        )}
-                      </div>
+                    <div className="space-y-4">
+                      {versions.map((version, index) => (
+                        <div 
+                          key={version.version_id} 
+                          className="flex gap-4 relative"
+                          data-testid={`version-entry-${version.version_number}`}
+                        >
+                          {/* Timeline dot */}
+                          <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 z-10 ${
+                            index === 0 
+                              ? 'bg-indigo-500 text-white' 
+                              : 'bg-slate-200 dark:bg-slate-700 text-slate-500'
+                          }`}>
+                            <span className="text-xs font-medium">{version.version_number}</span>
+                          </div>
+                          
+                          {/* Version info */}
+                          <div className="flex-1 pb-4">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="text-sm font-medium">
+                                {new Date(version.created_at).toLocaleDateString('de-DE', {
+                                  day: '2-digit',
+                                  month: 'long',
+                                  year: 'numeric'
+                                })}
+                              </span>
+                              <span className="text-sm text-muted-foreground">
+                                um {new Date(version.created_at).toLocaleTimeString('de-DE', {
+                                  hour: '2-digit',
+                                  minute: '2-digit'
+                                })} Uhr
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2 mt-1">
+                              <User className="w-3.5 h-3.5 text-muted-foreground" />
+                              <span className="text-sm text-muted-foreground">
+                                {version.created_by_name}
+                              </span>
+                              {version.change_summary && (
+                                <Badge variant="outline" className="text-xs">
+                                  {version.change_summary}
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </div>
-                ))}
-              </div>
+                </div>
+              )}
+
+              {/* Reading Confirmation Analysis - Only for Author/Admin */}
+              {canViewReadingAnalysis && allReadingStatuses.length > 0 && (
+                <div data-testid="reading-analysis-section">
+                  <div className="flex items-center gap-2 mb-4">
+                    <ClipboardCheck className="w-5 h-5 text-muted-foreground" />
+                    <h3 className="font-semibold text-lg">Lesebestätigungen</h3>
+                    <Badge 
+                      variant="secondary" 
+                      className={`ml-auto ${
+                        allReadingStatuses.every(s => s.is_read) 
+                          ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300' 
+                          : 'bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300'
+                      }`}
+                    >
+                      {allReadingStatuses.filter(s => s.is_read).length}/{allReadingStatuses.length}
+                    </Badge>
+                  </div>
+                  
+                  {/* Success message if all have read */}
+                  {allReadingStatuses.every(s => s.is_read) ? (
+                    <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4" data-testid="all-read-success">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-green-100 dark:bg-green-800 rounded-full flex items-center justify-center">
+                          <CheckCircle2 className="w-6 h-6 text-green-600 dark:text-green-400" />
+                        </div>
+                        <div>
+                          <p className="font-medium text-green-800 dark:text-green-200">
+                            Alle Lesebestätigungen erhalten
+                          </p>
+                          <p className="text-sm text-green-600 dark:text-green-400">
+                            {allReadingStatuses.length} {allReadingStatuses.length === 1 ? 'Person hat' : 'Personen haben'} den Artikel gelesen
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {/* Pending confirmations */}
+                      <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg p-3">
+                        <div className="flex items-center gap-2 mb-2">
+                          <UserX className="w-4 h-4 text-orange-600" />
+                          <span className="text-sm font-medium text-orange-800 dark:text-orange-200">
+                            Ausstehende Bestätigungen ({allReadingStatuses.filter(s => !s.is_read).length})
+                          </span>
+                        </div>
+                        <div className="space-y-2">
+                          {allReadingStatuses.filter(s => !s.is_read).map(status => (
+                            <div 
+                              key={status.user_id} 
+                              className="flex items-center gap-2 text-sm"
+                              data-testid={`pending-user-${status.user_id}`}
+                            >
+                              <div className="w-6 h-6 bg-orange-200 dark:bg-orange-800 rounded-full flex items-center justify-center text-xs font-medium text-orange-700 dark:text-orange-300">
+                                {status.user_name?.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2) || "?"}
+                              </div>
+                              <span className="text-orange-700 dark:text-orange-300">{status.user_name}</span>
+                              <span className="text-xs text-orange-500 ml-auto">
+                                zugewiesen: {new Date(status.assigned_at).toLocaleDateString('de-DE')}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Completed confirmations */}
+                      {allReadingStatuses.filter(s => s.is_read).length > 0 && (
+                        <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-3">
+                          <div className="flex items-center gap-2 mb-2">
+                            <UserCheck className="w-4 h-4 text-green-600" />
+                            <span className="text-sm font-medium text-green-800 dark:text-green-200">
+                              Bestätigt ({allReadingStatuses.filter(s => s.is_read).length})
+                            </span>
+                          </div>
+                          <div className="space-y-2">
+                            {allReadingStatuses.filter(s => s.is_read).map(status => (
+                              <div 
+                                key={status.user_id} 
+                                className="flex items-center gap-2 text-sm"
+                                data-testid={`confirmed-user-${status.user_id}`}
+                              >
+                                <div className="w-6 h-6 bg-green-200 dark:bg-green-800 rounded-full flex items-center justify-center text-xs font-medium text-green-700 dark:text-green-300">
+                                  {status.user_name?.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2) || "?"}
+                                </div>
+                                <span className="text-green-700 dark:text-green-300">{status.user_name}</span>
+                                <span className="text-xs text-green-500 ml-auto">
+                                  gelesen: {status.read_at ? new Date(status.read_at).toLocaleDateString('de-DE') : '–'}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         )}
