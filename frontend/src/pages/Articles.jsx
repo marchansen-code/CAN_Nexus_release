@@ -953,11 +953,13 @@ const Articles = () => {
               <FolderPlus className="w-5 h-5 text-amber-500" />
               {catDialog.mode === 'create' ? 'Neue Kategorie' : 'Kategorie bearbeiten'}
             </DialogTitle>
-            {catDialog.parentId && catDialog.mode === 'create' && (
-              <DialogDescription>
-                Unterkategorie von "{categories.find(c => c.category_id === catDialog.parentId)?.name}"
-              </DialogDescription>
-            )}
+            <DialogDescription>
+              {catDialog.mode === 'create' 
+                ? (catDialog.parentId 
+                    ? `Unterkategorie von "${categories.find(c => c.category_id === catDialog.parentId)?.name}"` 
+                    : 'Erstellen Sie eine neue Kategorie für Ihre Wissensbasis')
+                : `Bearbeiten Sie die Kategorie "${catDialog.category?.name}"`}
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-2">

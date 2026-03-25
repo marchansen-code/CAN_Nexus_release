@@ -561,7 +561,13 @@ Wissensmanagement-Plattform für CANUSA Touristik GmbH & Co. KG und CU-Travel.
 ### P3 (Nice to Have)
 - [ ] Handschrift-OCR verbessern (Tesseract hat Limitationen)
 
-### Iteration 32 - 24.03.2026
+### Iteration 33 - 25.03.2026
+- **Feature**: Kategorie-Verwaltung direkt auf der Artikel-Seite
+  - "Neue Kategorie" Button im Header (nur für Admins)
+  - Kontextmenü (Hover "...") an jeder Kategorie: Bearbeiten, Unterkategorie erstellen, Löschen
+  - Dialoge für Erstellen/Bearbeiten/Löschen mit Name, Beschreibung, Pinnwand-Checkbox
+  - Container verbreitert (w-80) mit horizontalem Scrollen
+  - Pinnwand-Filter für Nicht-Admins auch im Kategoriebaum der Artikel-Seite
 - **Fix**: Kategorien expandieren per Klick auf gesamte Zeile (nicht nur Pfeil)
 - **Fix**: Pinnwand-Kategorien überall ausgeblendet für Nicht-Admins (Dashboard-Tab, QuickSearch, ArticleEditor Kategorieauswahl)
 - **Fix**: Zellenfarbe im Editor repariert (TableCell/TableHeader um backgroundColor-Attribut erweitert) + 15 Farben im Grid
