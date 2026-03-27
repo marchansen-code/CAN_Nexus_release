@@ -149,6 +149,44 @@ async def startup():
     
     # Process expired articles and important markings
     await process_expirations()
+    
+    # Migration: Ensure all users have group_ids field
+    users_without_groups = await db.users.count_documents({"group_ids": {"$exists": False}})
+    if users_without_groups > 0:
+        result = await db.users.update_many(
+            {"group_ids": {"$exists": False}},
+            {"$set": {"group_ids": []}}
+        )
+        logger.info(f"Migration: Added group_ids to {result.modified_count} users")
+    
+    # Migration: Move document files from /tmp/docs to persistent storage
+    import shutil
+    DOCS_STORAGE_PATH = os.environ.get("DOCS_STORAGE_PATH", "/app/data/docs")
+    os.makedirs(DOCS_STORAGE_PATH, exist_ok=True)
+    
+    old_docs_path = "/tmp/docs"
+    if os.path.exists(old_docs_path) and old_docs_path != DOCS_STORAGE_PATH:
+        migrated = 0
+        for filename in os.listdir(old_docs_path):
+            old_file = os.path.join(old_docs_path, filename)
+            new_file = os.path.join(DOCS_STORAGE_PATH, filename)
+            if os.path.isfile(old_file) and not os.path.exists(new_file):
+                shutil.copy2(old_file, new_file)
+                migrated += 1
+        if migrated > 0:
+            logger.info(f"Migration: Copied {migrated} document files to persistent storage")
+    
+    # Update document records with new storage path
+    docs_with_old_path = await db.documents.count_documents({"file_path": {"$regex": "^/tmp/docs/"}})
+    if docs_with_old_path > 0:
+        async for doc in db.documents.find({"file_path": {"$regex": "^/tmp/docs/"}}):
+            old_path = doc["file_path"]
+            new_path = old_path.replace("/tmp/docs/", f"{DOCS_STORAGE_PATH}/")
+            await db.documents.update_one(
+                {"document_id": doc["document_id"]},
+                {"$set": {"file_path": new_path}}
+            )
+        logger.info(f"Migration: Updated {docs_with_old_path} document file paths")
 
 
 async def process_expirations():

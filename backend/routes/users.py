@@ -51,6 +51,7 @@ async def create_user(user_data: UserCreate, current_user: User = Depends(get_cu
         "password_hash": get_password_hash(user_data.password),
         "role": user_data.role,
         "is_blocked": False,
+        "group_ids": [],
         "recently_viewed": [],
         "created_at": datetime.now(timezone.utc).isoformat()
     }

@@ -20,6 +20,10 @@ from dependencies import get_current_user
 router = APIRouter(prefix="/documents", tags=["Documents"])
 logger = logging.getLogger(__name__)
 
+# Persistent document storage path (use /app/data/docs for container persistence)
+DOCS_STORAGE_PATH = os.environ.get("DOCS_STORAGE_PATH", "/app/data/docs")
+os.makedirs(DOCS_STORAGE_PATH, exist_ok=True)
+
 # Supported file extensions
 SUPPORTED_EXTENSIONS = {
     '.pdf': 'application/pdf',
@@ -116,9 +120,9 @@ async def upload_document(
     
     content = await file.read()
     doc_id = f"doc_{uuid.uuid4().hex[:12]}"
-    permanent_path = f"/tmp/docs/{doc_id}{ext}"
+    permanent_path = f"{DOCS_STORAGE_PATH}/{doc_id}{ext}"
     
-    os.makedirs("/tmp/docs", exist_ok=True)
+    os.makedirs(DOCS_STORAGE_PATH, exist_ok=True)
     
     with open(permanent_path, "wb") as f:
         f.write(content)

@@ -99,7 +99,9 @@ async def google_callback(request: Request, response: Response):
                 "auth_provider": "google",
                 "created_at": datetime.now(timezone.utc).isoformat(),
                 "last_login": datetime.now(timezone.utc).isoformat(),
-                "is_blocked": False
+                "is_blocked": False,
+                "group_ids": [],
+                "recently_viewed": []
             }
             await db.users.insert_one(new_user)
             role = "viewer"
