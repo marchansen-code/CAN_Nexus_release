@@ -492,6 +492,13 @@ const ArticleEditor = () => {
       const separator = article.content ? '<hr class="my-6 border-slate-300" />' : '';
       const newContent = article.content + separator + embedHtml;
       setArticle(prev => ({ ...prev, content: newContent }));
+    } else if (importData.mode === 'link') {
+      // Link mode: Insert a simple link to the document
+      const fileUrl = `${API}/documents/${importData.documentId}/file`;
+      const linkHtml = `<p><a href="${fileUrl}" target="_blank" rel="noopener noreferrer" style="color: #2563eb; text-decoration: underline;">📄 ${importData.filename}</a></p>`;
+      const separator = article.content ? '' : '';
+      const newContent = article.content + separator + linkHtml;
+      setArticle(prev => ({ ...prev, content: newContent }));
     } else {
       // Text mode: Append imported content to existing content
       const separator = article.content ? '<hr class="my-6 border-slate-300" />' : '';

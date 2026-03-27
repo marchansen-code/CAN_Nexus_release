@@ -66,7 +66,7 @@ const DocumentImportDialog = ({ open, onClose, onImport }) => {
   
   // Import state
   const [importing, setImporting] = useState(false);
-  const [importMode, setImportMode] = useState('text'); // 'text' or 'embed'
+  const [importMode, setImportMode] = useState('text'); // 'text', 'embed', or 'link'
   
   // Google Drive state
   const [driveConnected, setDriveConnected] = useState(false);
@@ -306,6 +306,15 @@ const DocumentImportDialog = ({ open, onClose, onImport }) => {
           fileUrl: selectedDoc.file_url
         });
         toast.success(`"${selectedDoc.filename}" wurde als Dokument eingebettet`);
+      } else if (importMode === 'link') {
+        // Link mode: Insert a simple link to the document
+        onImport({
+          mode: 'link',
+          documentId: selectedDoc.document_id,
+          filename: selectedDoc.filename,
+          fileType: selectedDoc.file_type
+        });
+        toast.success(`Link zu "${selectedDoc.filename}" wurde eingefügt`);
       } else {
         // Text mode: Extract and import content
         const response = await axios.get(`${API}/documents/${selectedDoc.document_id}/content`);
@@ -443,7 +452,7 @@ const DocumentImportDialog = ({ open, onClose, onImport }) => {
             {selectedDoc && (
               <div className="border rounded-lg p-3 mt-4 bg-muted/30">
                 <Label className="text-sm font-medium mb-2 block">Import-Art wählen:</Label>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-3 gap-2">
                   <button
                     onClick={() => setImportMode('text')}
                     className={cn(
@@ -455,7 +464,7 @@ const DocumentImportDialog = ({ open, onClose, onImport }) => {
                   >
                     <FileText className={cn("w-6 h-6 mb-1", importMode === 'text' ? "text-indigo-600" : "text-muted-foreground")} />
                     <span className={cn("font-medium text-sm", importMode === 'text' ? "text-indigo-700" : "")}>Als Text</span>
-                    <span className="text-xs text-muted-foreground text-center">Inhalt wird in den Editor eingefügt</span>
+                    <span className="text-xs text-muted-foreground text-center">Inhalt einfügen</span>
                   </button>
                   <button
                     onClick={() => setImportMode('embed')}
@@ -468,7 +477,22 @@ const DocumentImportDialog = ({ open, onClose, onImport }) => {
                   >
                     <File className={cn("w-6 h-6 mb-1", importMode === 'embed' ? "text-indigo-600" : "text-muted-foreground")} />
                     <span className={cn("font-medium text-sm", importMode === 'embed' ? "text-indigo-700" : "")}>Einbetten</span>
-                    <span className="text-xs text-muted-foreground text-center">Dokument als Viewer anzeigen</span>
+                    <span className="text-xs text-muted-foreground text-center">Als Viewer</span>
+                  </button>
+                  <button
+                    onClick={() => setImportMode('link')}
+                    className={cn(
+                      "flex flex-col items-center p-3 rounded-lg border-2 transition-all text-left",
+                      importMode === 'link'
+                        ? "border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20"
+                        : "border-transparent bg-background hover:bg-muted"
+                    )}
+                  >
+                    <svg className={cn("w-6 h-6 mb-1", importMode === 'link' ? "text-indigo-600" : "text-muted-foreground")} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                    </svg>
+                    <span className={cn("font-medium text-sm", importMode === 'link' ? "text-indigo-700" : "")}>Als Link</span>
+                    <span className="text-xs text-muted-foreground text-center">Nur verlinken</span>
                   </button>
                 </div>
               </div>

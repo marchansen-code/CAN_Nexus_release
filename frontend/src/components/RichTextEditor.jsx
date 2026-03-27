@@ -50,6 +50,7 @@ import {
   Undo,
   Redo,
   FileText,
+  File,
   Plus,
   Trash2,
   Minus,
@@ -231,7 +232,7 @@ const EditorToolbar = ({ editor, onImageUpload, isFullscreen, onToggleFullscreen
   
   // Extended Link Dialog State
   const [showLinkDialog, setShowLinkDialog] = React.useState(false);
-  const [linkTab, setLinkTab] = React.useState('url'); // 'url' or 'document'
+  const [linkTab, setLinkTab] = React.useState('url'); // 'url', 'document', or 'article'
   const [linkText, setLinkText] = React.useState('');
   const [hasSelectedText, setHasSelectedText] = React.useState(false);
   const [documents, setDocuments] = React.useState([]);
@@ -243,6 +244,12 @@ const EditorToolbar = ({ editor, onImageUpload, isFullscreen, onToggleFullscreen
   const [documentLinkType, setDocumentLinkType] = React.useState('text'); // 'thumbnail', 'text', 'short'
   const [documentInsertMode, setDocumentInsertMode] = React.useState('link'); // 'link' or 'embed'
   const [loadingDocuments, setLoadingDocuments] = React.useState(false);
+  
+  // Article Link State
+  const [articles, setArticles] = React.useState([]);
+  const [articleSearch, setArticleSearch] = React.useState('');
+  const [selectedArticle, setSelectedArticle] = React.useState(null);
+  const [loadingArticles, setLoadingArticles] = React.useState(false);
   
   // YouTube Dialog State
   const [showYoutubeDialog, setShowYoutubeDialog] = React.useState(false);
@@ -284,6 +291,23 @@ const EditorToolbar = ({ editor, onImageUpload, isFullscreen, onToggleFullscreen
       console.error('Failed to load documents:', error);
     } finally {
       setLoadingDocuments(false);
+    }
+  };
+
+  // Load articles for link dialog
+  const loadArticles = async (search = '') => {
+    setLoadingArticles(true);
+    try {
+      const response = await axios.get(`${API}/articles/search`, {
+        params: { q: search || '', limit: 50 }
+      });
+      const articleData = response.data?.articles || response.data || [];
+      // Only show published articles
+      setArticles(articleData.filter(a => a.status === 'published'));
+    } catch (error) {
+      console.error('Failed to load articles:', error);
+    } finally {
+      setLoadingArticles(false);
     }
   };
 
@@ -329,13 +353,16 @@ const EditorToolbar = ({ editor, onImageUpload, isFullscreen, onToggleFullscreen
     setLinkText(selectedText || '');
     setLinkUrl('');
     setSelectedDocument(null);
+    setSelectedArticle(null);
     setDocumentLinkType(selectedText ? 'text' : 'short');
     setLinkTab('url');
     setCurrentFolderId(null);
     setFolderPath([]);
     setDocumentSearch('');
+    setArticleSearch('');
     loadFolders();
     loadDocuments(null);
+    loadArticles();
     setShowLinkDialog(true);
   };
 
@@ -397,7 +424,7 @@ const EditorToolbar = ({ editor, onImageUpload, isFullscreen, onToggleFullscreen
     setShowDocImportDialog(false);
   };
 
-  // Insert link (URL or Document)
+  // Insert link (URL, Document, or Article)
   const insertLink = () => {
     if (linkTab === 'url' && linkUrl) {
       if (hasSelectedText) {
@@ -408,6 +435,26 @@ const EditorToolbar = ({ editor, onImageUpload, isFullscreen, onToggleFullscreen
         // Short URL display
         const shortUrl = linkUrl.replace(/^https?:\/\/(www\.)?/, '').substring(0, 30) + (linkUrl.length > 30 ? '...' : '');
         editor.chain().focus().insertContent(`<a href="${linkUrl}">${shortUrl}</a>`).run();
+      }
+    } else if (linkTab === 'article' && selectedArticle) {
+      // Article link
+      const articleUrl = `/articles/${selectedArticle.article_id}`;
+      
+      if (hasSelectedText) {
+        // Link the selected text to article
+        editor.chain().focus().extendMarkRange('link').setLink({ 
+          href: articleUrl,
+          'data-article-id': selectedArticle.article_id
+        }).run();
+      } else if (linkText) {
+        editor.chain().focus().insertContent(
+          `<a href="${articleUrl}" data-article-id="${selectedArticle.article_id}">${linkText}</a>`
+        ).run();
+      } else {
+        // Use article title as link text
+        editor.chain().focus().insertContent(
+          `<a href="${articleUrl}" data-article-id="${selectedArticle.article_id}">📝 ${selectedArticle.title}</a>`
+        ).run();
       }
     } else if (linkTab === 'document' && selectedDocument) {
       const docUrl = selectedDocument.image_id 
@@ -850,7 +897,7 @@ const EditorToolbar = ({ editor, onImageUpload, isFullscreen, onToggleFullscreen
 
       {/* Link Dialog - URL only (Dokument einbetten has its own button) */}
       <Dialog open={showLinkDialog} onOpenChange={setShowLinkDialog}>
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent className="sm:max-w-[550px]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <LinkIcon className="w-5 h-5" />
@@ -864,35 +911,177 @@ const EditorToolbar = ({ editor, onImageUpload, isFullscreen, onToggleFullscreen
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4 mt-4">
-            <div className="space-y-2">
-              <Label>Link URL</Label>
-              <Input
-                placeholder="https://..."
-                value={linkUrl}
-                onChange={(e) => setLinkUrl(e.target.value)}
-              />
-            </div>
-            {!hasSelectedText && (
+          {/* Tabs for URL / Document / Article */}
+          <Tabs value={linkTab} onValueChange={(v) => { setLinkTab(v); setSelectedDocument(null); setSelectedArticle(null); }} className="mt-2">
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="url" className="gap-1">
+                <LinkIcon className="w-3.5 h-3.5" />
+                URL
+              </TabsTrigger>
+              <TabsTrigger value="document" className="gap-1">
+                <File className="w-3.5 h-3.5" />
+                Dokument
+              </TabsTrigger>
+              <TabsTrigger value="article" className="gap-1">
+                <FileText className="w-3.5 h-3.5" />
+                Artikel
+              </TabsTrigger>
+            </TabsList>
+
+            {/* URL Tab */}
+            <TabsContent value="url" className="space-y-4 mt-4">
               <div className="space-y-2">
-                <Label>Anzeigetext (optional)</Label>
+                <Label>Link URL</Label>
                 <Input
-                  placeholder="Text für den Link..."
-                  value={linkText}
-                  onChange={(e) => setLinkText(e.target.value)}
+                  placeholder="https://..."
+                  value={linkUrl}
+                  onChange={(e) => setLinkUrl(e.target.value)}
                 />
-                <p className="text-xs text-muted-foreground">
-                  Leer lassen für gekürzten Link
-                </p>
               </div>
-            )}
-          </div>
+              {!hasSelectedText && (
+                <div className="space-y-2">
+                  <Label>Anzeigetext (optional)</Label>
+                  <Input
+                    placeholder="Text für den Link..."
+                    value={linkText}
+                    onChange={(e) => setLinkText(e.target.value)}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Leer lassen für gekürzten Link
+                  </p>
+                </div>
+              )}
+            </TabsContent>
+
+            {/* Document Tab */}
+            <TabsContent value="document" className="space-y-3 mt-4">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  placeholder="Dokument suchen..."
+                  value={documentSearch}
+                  onChange={(e) => {
+                    setDocumentSearch(e.target.value);
+                    loadDocuments(null, e.target.value);
+                  }}
+                  className="pl-9"
+                />
+              </div>
+              
+              {/* Document List */}
+              <div className="border rounded-lg max-h-48 overflow-y-auto">
+                {loadingDocuments ? (
+                  <div className="p-4 text-center text-sm text-muted-foreground">Laden...</div>
+                ) : documents.length === 0 ? (
+                  <div className="p-4 text-center text-sm text-muted-foreground">Keine Dokumente gefunden</div>
+                ) : (
+                  <div className="divide-y">
+                    {documents.slice(0, 10).map((doc) => (
+                      <button
+                        key={doc.document_id}
+                        onClick={() => setSelectedDocument(doc)}
+                        className={cn(
+                          "w-full flex items-center gap-3 p-2.5 hover:bg-muted/50 transition-colors text-left",
+                          selectedDocument?.document_id === doc.document_id && "bg-indigo-50 dark:bg-indigo-900/20"
+                        )}
+                      >
+                        <File className={cn("w-4 h-4 shrink-0", selectedDocument?.document_id === doc.document_id ? "text-indigo-600" : "text-amber-500")} />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">{doc.title || doc.filename}</p>
+                          <p className="text-xs text-muted-foreground truncate">{doc.filename}</p>
+                        </div>
+                        <span className="text-xs text-muted-foreground uppercase">{doc.file_type?.replace('.', '')}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {selectedDocument && !hasSelectedText && (
+                <div className="space-y-2">
+                  <Label>Anzeigetext (optional)</Label>
+                  <Input
+                    placeholder="Text für den Link..."
+                    value={linkText}
+                    onChange={(e) => setLinkText(e.target.value)}
+                  />
+                </div>
+              )}
+            </TabsContent>
+
+            {/* Article Tab */}
+            <TabsContent value="article" className="space-y-3 mt-4">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  placeholder="Artikel suchen..."
+                  value={articleSearch}
+                  onChange={(e) => {
+                    setArticleSearch(e.target.value);
+                    loadArticles(e.target.value);
+                  }}
+                  className="pl-9"
+                />
+              </div>
+              
+              {/* Article List */}
+              <div className="border rounded-lg max-h-48 overflow-y-auto">
+                {loadingArticles ? (
+                  <div className="p-4 text-center text-sm text-muted-foreground">Laden...</div>
+                ) : articles.length === 0 ? (
+                  <div className="p-4 text-center text-sm text-muted-foreground">Keine Artikel gefunden</div>
+                ) : (
+                  <div className="divide-y">
+                    {articles.slice(0, 10).map((art) => (
+                      <button
+                        key={art.article_id}
+                        onClick={() => setSelectedArticle(art)}
+                        className={cn(
+                          "w-full flex items-center gap-3 p-2.5 hover:bg-muted/50 transition-colors text-left",
+                          selectedArticle?.article_id === art.article_id && "bg-indigo-50 dark:bg-indigo-900/20"
+                        )}
+                      >
+                        <FileText className={cn("w-4 h-4 shrink-0", selectedArticle?.article_id === art.article_id ? "text-indigo-600" : "text-blue-500")} />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">{art.title}</p>
+                          {art.category_names && art.category_names.length > 0 && (
+                            <p className="text-xs text-muted-foreground truncate">{art.category_names.join(' > ')}</p>
+                          )}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {selectedArticle && !hasSelectedText && (
+                <div className="space-y-2">
+                  <Label>Anzeigetext (optional)</Label>
+                  <Input
+                    placeholder="Text für den Link..."
+                    value={linkText}
+                    onChange={(e) => setLinkText(e.target.value)}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Leer lassen für Artikeltitel
+                  </p>
+                </div>
+              )}
+            </TabsContent>
+          </Tabs>
 
           <DialogFooter className="mt-4">
             <Button variant="outline" onClick={() => setShowLinkDialog(false)}>
               Abbrechen
             </Button>
-            <Button onClick={insertLink} disabled={!linkUrl}>
+            <Button 
+              onClick={insertLink} 
+              disabled={
+                (linkTab === 'url' && !linkUrl) ||
+                (linkTab === 'document' && !selectedDocument) ||
+                (linkTab === 'article' && !selectedArticle)
+              }
+            >
               <LinkIcon className="w-4 h-4 mr-2" />
               Link einfügen
             </Button>
