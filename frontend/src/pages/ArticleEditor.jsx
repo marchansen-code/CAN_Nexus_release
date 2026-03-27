@@ -380,21 +380,18 @@ const ArticleEditor = () => {
   // Document import handler
   const handleDocumentImport = (importData) => {
     if (importData.mode === 'embed') {
-      // Embed mode: Insert an embedded document node
+      // Embed mode: Insert an embedded document viewer
+      // Use data-embedded-document attribute for ArticleView to detect and render iframe
+      const previewUrl = `${API}/documents/${importData.documentId}/preview`;
+      const fileUrl = `${API}/documents/${importData.documentId}/file`;
       const embedHtml = `
-        <div class="embedded-document my-4" data-document-id="${importData.documentId}" data-filename="${importData.filename}" data-file-type="${importData.fileType || '.pdf'}">
-          <div class="border rounded-lg p-4 bg-slate-50 dark:bg-slate-800">
-            <div class="flex items-center gap-3 mb-2">
-              <svg class="w-8 h-8 text-red-500" fill="currentColor" viewBox="0 0 24 24"><path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,18V8L14,2M18,20H6V4H13V9H18V20Z"/></svg>
-              <div>
-                <p class="font-medium">${importData.filename}</p>
-                <p class="text-sm text-muted-foreground">Eingebettetes Dokument</p>
-              </div>
-            </div>
-            <a href="${API}/documents/${importData.documentId}/file" target="_blank" class="inline-flex items-center gap-2 px-3 py-1.5 bg-primary text-primary-foreground rounded-md text-sm hover:opacity-90">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
-              Dokument öffnen
-            </a>
+        <div data-embedded-document="true" data-document-id="${importData.documentId}" data-filename="${importData.filename}" data-file-type="${importData.fileType || '.pdf'}" data-preview-url="${previewUrl}" data-file-url="${fileUrl}" style="margin: 16px 0; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; background: #fff;">
+          <div style="display: flex; align-items: center; justify-content: space-between; padding: 8px 16px; background: #f1f5f9; border-bottom: 1px solid #e2e8f0;">
+            <span style="font-weight: 500; font-size: 14px; color: #334155;">${importData.filename}</span>
+            <a href="${fileUrl}" target="_blank" rel="noopener noreferrer" style="font-size: 12px; color: #2563eb; text-decoration: none;">Öffnen ↗</a>
+          </div>
+          <div style="height: 500px; position: relative;">
+            <iframe src="${previewUrl}" style="width: 100%; height: 100%; border: 0;" title="${importData.filename}"></iframe>
           </div>
         </div>
       `;

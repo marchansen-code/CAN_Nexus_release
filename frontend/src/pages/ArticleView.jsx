@@ -224,6 +224,8 @@ const ArticleView = () => {
   // Post-process embedded document divs to render iframes in published view
   useEffect(() => {
     if (!contentRef.current || !article?.content) return;
+    
+    // Handle new format: div[data-embedded-document]
     const embeddedDocs = contentRef.current.querySelectorAll('div[data-embedded-document]');
     embeddedDocs.forEach(div => {
       // Check if already has an iframe (new format articles)
@@ -236,7 +238,32 @@ const ArticleView = () => {
         div.innerHTML = `<div style="margin:16px 0;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;background:#fff;">
           <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 16px;background:#f1f5f9;border-bottom:1px solid #e2e8f0;">
             <span style="font-weight:500;font-size:14px;color:#334155;">${filename}</span>
-            <a href="${fileUrl}" target="_blank" rel="noopener noreferrer" style="font-size:12px;color:#2563eb;text-decoration:none;">Öffnen</a>
+            <a href="${fileUrl}" target="_blank" rel="noopener noreferrer" style="font-size:12px;color:#2563eb;text-decoration:none;">Öffnen ↗</a>
+          </div>
+          <div style="height:500px;position:relative;">
+            <iframe src="${previewUrl}" style="width:100%;height:100%;border:0;" title="${filename}"></iframe>
+          </div>
+        </div>`;
+      }
+    });
+    
+    // Handle old format: div.embedded-document with data-document-id (from previous implementation)
+    const oldEmbeddedDocs = contentRef.current.querySelectorAll('div.embedded-document[data-document-id]');
+    oldEmbeddedDocs.forEach(div => {
+      // Skip if already processed or has iframe
+      if (div.querySelector('iframe') || div.hasAttribute('data-embedded-document')) return;
+      
+      const documentId = div.getAttribute('data-document-id');
+      const filename = div.getAttribute('data-filename') || 'Dokument';
+      
+      if (documentId) {
+        const previewUrl = `${API}/documents/${documentId}/preview`;
+        const fileUrl = `${API}/documents/${documentId}/file`;
+        
+        div.innerHTML = `<div style="margin:16px 0;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;background:#fff;">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 16px;background:#f1f5f9;border-bottom:1px solid #e2e8f0;">
+            <span style="font-weight:500;font-size:14px;color:#334155;">${filename}</span>
+            <a href="${fileUrl}" target="_blank" rel="noopener noreferrer" style="font-size:12px;color:#2563eb;text-decoration:none;">Öffnen ↗</a>
           </div>
           <div style="height:500px;position:relative;">
             <iframe src="${previewUrl}" style="width:100%;height:100%;border:0;" title="${filename}"></iframe>

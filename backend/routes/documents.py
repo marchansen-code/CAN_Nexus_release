@@ -454,7 +454,8 @@ async def get_document_file(document_id: str, inline: bool = False, user: User =
 
 @router.get("/{document_id}/preview")
 async def get_document_preview(document_id: str, user: User = Depends(get_current_user)):
-    """Get the document file for inline preview (no download prompt)."""
+    """Get the document file for inline preview (no download prompt).
+    Falls back to HTML content if original file is not available."""
     doc = await db.documents.find_one(
         {"document_id": document_id, "deleted_at": {"$exists": False}},
         {"_id": 0}
@@ -463,24 +464,87 @@ async def get_document_preview(document_id: str, user: User = Depends(get_curren
         raise HTTPException(status_code=404, detail="Dokument nicht gefunden")
     
     file_path = doc.get("file_path")
-    if not file_path or not os.path.exists(file_path):
-        raise HTTPException(status_code=404, detail="Datei nicht gefunden")
     
-    # Get file type and appropriate media type
-    file_type = doc.get("file_type", ".pdf")
-    media_type = SUPPORTED_EXTENSIONS.get(file_type, "application/octet-stream")
+    # If original file exists, return it
+    if file_path and os.path.exists(file_path):
+        file_type = doc.get("file_type", ".pdf")
+        media_type = SUPPORTED_EXTENSIONS.get(file_type, "application/octet-stream")
+        
+        with open(file_path, "rb") as f:
+            content = f.read()
+        
+        return Response(
+            content=content,
+            media_type=media_type,
+            headers={
+                "Content-Disposition": f"inline; filename=\"{doc.get('filename', 'document')}\""
+            }
+        )
     
-    # Return file without Content-Disposition: attachment header
-    with open(file_path, "rb") as f:
-        content = f.read()
+    # Fallback: Return HTML preview if available
+    html_content = doc.get("html_content")
+    if html_content:
+        # Wrap HTML content in a styled document preview page
+        preview_html = f"""
+        <!DOCTYPE html>
+        <html lang="de">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>{doc.get('filename', 'Dokument')}</title>
+            <style>
+                body {{
+                    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+                    line-height: 1.6;
+                    color: #334155;
+                    max-width: 900px;
+                    margin: 0 auto;
+                    padding: 24px;
+                    background: #fff;
+                }}
+                h1, h2, h3, h4 {{ color: #1e293b; margin-top: 1.5em; }}
+                table {{ border-collapse: collapse; width: 100%; margin: 1em 0; }}
+                th, td {{ border: 1px solid #e2e8f0; padding: 8px 12px; text-align: left; }}
+                th {{ background: #f8fafc; font-weight: 600; }}
+                .pdf-page {{ margin-bottom: 24px; padding-bottom: 24px; border-bottom: 1px dashed #e2e8f0; }}
+                .pdf-page:last-child {{ border-bottom: none; }}
+                p {{ margin: 0.75em 0; }}
+                .header {{ 
+                    background: #f1f5f9; 
+                    padding: 12px 20px; 
+                    border-radius: 8px; 
+                    margin-bottom: 24px;
+                    display: flex;
+                    align-items: center;
+                    gap: 12px;
+                }}
+                .header svg {{ width: 24px; height: 24px; color: #64748b; }}
+                .header-text {{ font-weight: 500; color: #475569; }}
+                .page-indicator {{
+                    color: #94a3b8;
+                    font-size: 12px;
+                    text-transform: uppercase;
+                    letter-spacing: 0.05em;
+                    margin-bottom: 8px;
+                }}
+            </style>
+        </head>
+        <body>
+            <div class="header">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                <span class="header-text">{doc.get('filename', 'Dokument')}</span>
+            </div>
+            {html_content}
+        </body>
+        </html>
+        """
+        return Response(
+            content=preview_html,
+            media_type="text/html; charset=utf-8"
+        )
     
-    return Response(
-        content=content,
-        media_type=media_type,
-        headers={
-            "Content-Disposition": f"inline; filename=\"{doc.get('filename', 'document')}\""
-        }
-    )
+    # No file and no HTML content
+    raise HTTPException(status_code=404, detail="Datei nicht gefunden")
 
 
 @router.get("/{document_id}/content")
