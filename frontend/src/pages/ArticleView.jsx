@@ -542,9 +542,9 @@ const ArticleView = () => {
       
       {/* Navigation Bar */}
       <div className="flex items-center justify-between mb-6 flex-wrap gap-3 mt-4">
-        <Button variant="ghost" onClick={() => navigate("/articles")} data-testid="back-btn">
+        <Button variant="ghost" onClick={() => navigate(-1)} data-testid="back-btn">
           <ArrowLeft className="w-4 h-4 mr-2" />
-          Zurück zu Artikeln
+          Zurück
         </Button>
         <div className="flex items-center gap-2">
           <Button

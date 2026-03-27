@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext, useRef, useCallback } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import axios from "axios";
 import { API, AuthContext } from "@/App";
 import { toast } from "sonner";
@@ -361,6 +361,7 @@ const MoveCategoryItem = ({ category, categories, selectedCategoryId, onSelect, 
 
 const Articles = () => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { user } = useContext(AuthContext);
   const [articles, setArticles] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -451,6 +452,37 @@ const Articles = () => {
       setHasCustomSort(false);
     }
   }, [selectedCategoryId, userSortPreferences]);
+
+  // Sync URL parameter with selectedCategoryId
+  useEffect(() => {
+    const categoryFromUrl = searchParams.get('category');
+    if (categoryFromUrl && categoryFromUrl !== selectedCategoryId) {
+      setSelectedCategoryId(categoryFromUrl);
+      // Expand parent categories to show the selected one
+      if (categories.length > 0) {
+        const expandParents = (catId) => {
+          const cat = categories.find(c => c.category_id === catId);
+          if (cat?.parent_id) {
+            setExpandedCategories(prev => new Set([...prev, cat.parent_id]));
+            expandParents(cat.parent_id);
+          }
+        };
+        expandParents(categoryFromUrl);
+      }
+    } else if (!categoryFromUrl && selectedCategoryId) {
+      // URL has no category but state has one - keep state (user manually selected)
+    }
+  }, [searchParams, categories]);
+
+  // Update URL when selectedCategoryId changes (user clicks in sidebar)
+  useEffect(() => {
+    const currentCat = searchParams.get('category');
+    if (selectedCategoryId && selectedCategoryId !== currentCat) {
+      setSearchParams({ category: selectedCategoryId }, { replace: true });
+    } else if (!selectedCategoryId && currentCat) {
+      setSearchParams({}, { replace: true });
+    }
+  }, [selectedCategoryId]);
 
   const fetchSortPreferences = async () => {
     try {
