@@ -732,11 +732,12 @@ Wissensmanagement-Plattform für CANUSA Touristik GmbH & Co. KG und CU-Travel.
   - Bestehende Dokumente (aus der Dokumentenverwaltung)
   - Neue Datei hochladen (PDF, DOC, DOCX, TXT, CSV, XLS, XLSX)
   - Google Drive (wenn verbunden)
-- ✅ **Zwei Import-Modi**:
+- ✅ **Drei Import-Modi**:
   - **Als Text**: Dokumentinhalt wird direkt in den Editor eingefügt (inkl. Überschriften, Tabellen, Formatierungen)
   - **Einbetten**: Dokument wird als visueller Block mit "Dokument öffnen"-Link eingefügt
+  - **Als Link**: Dokument wird als Hyperlink eingefügt (nur Verlinkung, kein Inhalt)
 - ✅ **Vollständige Formaterhaltung**: Umlaute, Sonderzeichen, Tabellen werden korrekt übernommen
-- ✅ **Neue UI-Komponente**: Mode-Auswahl-Buttons ("Als Text" / "Einbetten") erscheinen nach Dokumentauswahl
+- ✅ **Neue UI-Komponente**: Mode-Auswahl-Buttons ("Als Text" / "Einbetten" / "Als Link") erscheinen nach Dokumentauswahl
 
 ### Schnellsuche Verbesserungen (27.03.2026)
 
@@ -780,6 +781,17 @@ Wissensmanagement-Plattform für CANUSA Touristik GmbH & Co. KG und CU-Travel.
 - ✅ **Toggle-Button**: "Aufklappen" / "Zuklappen" Button in der Kategorien-Sidebar
 - ✅ **Schnelle Navigation**: Alle verschachtelten Kategorien mit einem Klick anzeigen
 - ✅ **Visuelles Feedback**: Button-Text und Icon ändern sich je nach Zustand
+
+### Erweiterter Link-Dialog im Artikel-Editor (27.03.2026)
+
+- ✅ **Tabbed Link-Dialog**: Ketten-Icon in der Toolbar öffnet Dialog mit drei Tabs:
+  - **URL**: Externe Links einfügen mit optionalem Anzeigetext
+  - **Dokument**: Interne Dokumente suchen und als Link verknüpfen
+  - **Artikel**: Veröffentlichte Artikel suchen und als Link verknüpfen
+- ✅ **Textauswahl-Erkennung**: Bei ausgewähltem Text wird dieser automatisch als Link-Text verwendet
+- ✅ **Dokument-Suche**: Live-Suche in der Dokumenten-Bibliothek
+- ✅ **Artikel-Suche**: Live-Suche in veröffentlichten Artikeln mit Kategorie-Breadcrumbs
+- ✅ **Bug-Fix**: Fehlende File-Icon-Import in lucide-react behoben
 
 ## Backlog / Verbleibende Aufgaben
 
