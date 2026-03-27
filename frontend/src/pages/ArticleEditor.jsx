@@ -191,6 +191,42 @@ const ArticleEditor = () => {
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [showReviewDialog, setShowReviewDialog] = useState(false);
   const [savingReadingAssignment, setSavingReadingAssignment] = useState(false);
+  const [returnUrl, setReturnUrl] = useState("/articles");
+
+  // Store the origin URL on mount
+  useEffect(() => {
+    // Get the referring URL or use sessionStorage
+    const referrer = sessionStorage.getItem('article_origin_url');
+    if (referrer) {
+      setReturnUrl(referrer);
+    } else {
+      // If no stored URL, use the current URL before navigation (from document.referrer)
+      // or default to articles
+      const currentPath = window.location.pathname;
+      if (!currentPath.includes('/articles/new') && !currentPath.includes('/edit')) {
+        sessionStorage.setItem('article_origin_url', currentPath);
+      }
+    }
+    
+    // Cleanup on unmount
+    return () => {
+      // Don't clear immediately, let the navigation complete
+    };
+  }, []);
+
+  // Helper function for navigation back to origin
+  const navigateToOrigin = () => {
+    const storedUrl = sessionStorage.getItem('article_origin_url');
+    sessionStorage.removeItem('article_origin_url');
+    
+    if (storedUrl) {
+      navigate(storedUrl);
+    } else if (window.history.length > 2) {
+      navigate(-1);
+    } else {
+      navigate("/articles");
+    }
+  };
 
   // Check for PDF import data on mount
   useEffect(() => {
@@ -311,12 +347,8 @@ const ArticleEditor = () => {
         toast.success("Artikel gespeichert");
       }
       
-      // Navigate back
-      if (window.history.length > 2) {
-        navigate(-1);
-      } else {
-        navigate("/articles");
-      }
+      // Navigate back to origin
+      navigateToOrigin();
     } catch (error) {
       console.error("Failed to save:", error);
       toast.error("Artikel konnte nicht gespeichert werden");
@@ -456,7 +488,7 @@ const ArticleEditor = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+          <Button variant="ghost" size="icon" onClick={navigateToOrigin} data-testid="back-btn">
             <ArrowLeft className="w-5 h-5" />
           </Button>
           <div>

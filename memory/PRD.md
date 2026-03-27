@@ -656,4 +656,63 @@ Wissensmanagement-Plattform für CANUSA Touristik GmbH & Co. KG und CU-Travel.
   - Pinnwand- und Dashboard-Tabs sind für alle Rollen sichtbar (Admin, Editor, Viewer)
   - Pinnwand ist jetzt der Standard-Tab für alle Benutzer beim Öffnen der Home-Seite
 
+### Phase 1: Große Feature-Erweiterungen (27.03.2026)
 
+- **Dashboard-Neugestaltung**: 
+  - Pinnwand ist jetzt als erste Sektion oben im Dashboard integriert (keine Tabs mehr)
+  - Neue "Abgelaufene Artikel"-Sektion mit Ausblend-Funktion pro Artikel und "Alle ausblenden"-Button
+  - Navigation zu Artikeln speichert jetzt den Ursprungsort für "Zurück"-Navigation
+
+- **Ansprechpartner Mehrfachauswahl**:
+  - Mehrere Ansprechpartner können jetzt pro Artikel ausgewählt werden
+  - Radio-Button bestimmt, welcher Ansprechpartner Mail-Benachrichtigungen erhält
+  - Kommentar-Benachrichtigungen gehen nur an den ausgewählten Benachrichtigungsempfänger
+
+- **Edit-Berechtigungen für Artikel**:
+  - Neues Feld "Bearbeitungsrechte" im ArticleEditor
+  - Benutzer und Gruppen können spezifisch für die Bearbeitung freigegeben werden
+  - Nur Berechtigte + Autor + Admins können den Artikel bearbeiten (wenn gesetzt)
+
+- **Leseaufgaben mit Mail-Option**:
+  - Neue Checkbox "Benutzer per E-Mail benachrichtigen" bei Leseaufgaben
+  - Emails werden nur versendet, wenn die Option aktiviert ist
+
+- **Lösch-Bestätigung mit "DELETE"-Eingabe**:
+  - Artikel, Kategorien und Benutzer erfordern jetzt die Eingabe von "DELETE" zur Bestätigung
+  - Zusätzlicher Schutz vor versehentlichem Löschen
+
+- **User-Löschung mit Artikelübertragung**:
+  - Bei Löschung eines Users mit Artikeln wird nach einem Zielbenutzer gefragt
+  - Alle Artikel werden automatisch auf den neuen Benutzer übertragen
+  - DELETE-Bestätigung erforderlich
+
+- **Pinnwand für Editoren freigeben**:
+  - Editoren sehen jetzt Pinnwand-Kategorien im Editor und in der Artikelübersicht
+  - Editoren können Artikel zu Pinnwand-Kategorien hinzufügen
+
+- **Kategorien-Sidebar verbessert**:
+  - Breitere Kategorien-Sidebar (w-96 statt w-80)
+  - Horizontales Scrolling bei vielen Sub-Ordnern
+
+- **Breadcrumbs in Artikelansicht**:
+  - Vollständige Kategorie-Hierarchie als Breadcrumb über dem Artikel
+  - Klickbare Links zu jeder Kategorie-Ebene
+
+- **Wiedervorlage entfernt**:
+  - Das Wiedervorlage-Feld wurde aus dem Artikel-Editor entfernt
+
+- **Änderungshistorie für Viewer ausblenden**:
+  - Viewer-Rolle sieht die Versionshistorie nicht mehr in der Artikelansicht
+
+- **Navigation zurück zum Ausgangsort**:
+  - Nach Speichern/Veröffentlichen/Abbrechen navigiert der Editor zurück zum Ursprungsort
+  - Session-basiertes Speichern der Herkunfts-URL
+
+- **Kommentar-Benachrichtigungen**:
+  - Ansprechpartner wird bei neuen Kommentaren automatisch per E-Mail benachrichtigt
+  - Bei Kommentar-Löschung wird der Kommentarersteller benachrichtigt
+
+## Backlog / Verbleibende Aufgaben
+
+- Google Drive Bugs beheben (Export zu Shared Drives, falsche Dateiliste)
+- Handschrift-OCR verbessern (ON HOLD)

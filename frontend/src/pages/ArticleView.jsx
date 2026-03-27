@@ -32,7 +32,9 @@ import {
   CheckCircle2,
   UserCheck,
   UserX,
-  ClipboardCheck
+  ClipboardCheck,
+  ChevronRight,
+  Home
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -85,6 +87,64 @@ const StatusBadge = ({ status }) => {
     <Badge variant="outline" className={`${styles[status]} border`}>
       {labels[status]}
     </Badge>
+  );
+};
+
+// Breadcrumb Component for displaying article hierarchy
+const ArticleBreadcrumb = ({ article, categories, category, navigate }) => {
+  // Build breadcrumb path from category hierarchy
+  const buildBreadcrumbPath = () => {
+    if (!category) return [];
+    
+    const path = [];
+    let currentCat = category;
+    
+    // Traverse up the category tree
+    while (currentCat) {
+      path.unshift(currentCat);
+      currentCat = categories.find(c => c.category_id === currentCat.parent_id);
+    }
+    
+    return path;
+  };
+  
+  const breadcrumbPath = buildBreadcrumbPath();
+  
+  return (
+    <div className="flex items-center gap-1 text-sm text-muted-foreground flex-wrap" data-testid="article-breadcrumb">
+      <button 
+        onClick={() => navigate("/")}
+        className="flex items-center hover:text-foreground transition-colors"
+      >
+        <Home className="w-3.5 h-3.5" />
+      </button>
+      <ChevronRight className="w-3.5 h-3.5" />
+      <button 
+        onClick={() => navigate("/articles")}
+        className="hover:text-foreground transition-colors"
+      >
+        Artikel
+      </button>
+      {breadcrumbPath.map((cat, index) => (
+        <React.Fragment key={cat.category_id}>
+          <ChevronRight className="w-3.5 h-3.5" />
+          <button
+            onClick={() => navigate(`/articles?category=${cat.category_id}`)}
+            className="hover:text-foreground transition-colors"
+          >
+            {cat.name}
+          </button>
+        </React.Fragment>
+      ))}
+      {article && (
+        <>
+          <ChevronRight className="w-3.5 h-3.5" />
+          <span className="text-foreground font-medium truncate max-w-[200px]">
+            {article.title}
+          </span>
+        </>
+      )}
+    </div>
   );
 };
 
@@ -441,8 +501,16 @@ const ArticleView = () => {
 
   return (
     <div className="animate-fadeIn" data-testid="article-view">
+      {/* Breadcrumb */}
+      <ArticleBreadcrumb 
+        article={article} 
+        categories={categories} 
+        category={category} 
+        navigate={navigate}
+      />
+      
       {/* Navigation Bar */}
-      <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
+      <div className="flex items-center justify-between mb-6 flex-wrap gap-3 mt-4">
         <Button variant="ghost" onClick={() => navigate("/articles")} data-testid="back-btn">
           <ArrowLeft className="w-4 h-4 mr-2" />
           Zurück zu Artikeln

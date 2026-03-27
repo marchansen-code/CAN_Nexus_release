@@ -426,6 +426,12 @@ const Dashboard = () => {
     fetchData();
   }, []);
 
+  // Helper function to navigate to an article while storing origin
+  const navigateToArticle = (path) => {
+    sessionStorage.setItem('article_origin_url', window.location.pathname);
+    navigate(path);
+  };
+
   // Mark article as read
   const handleMarkAsRead = async (articleId) => {
     try {
@@ -565,7 +571,7 @@ const Dashboard = () => {
                             <PinnwandArticleRow
                               key={article.article_id}
                               article={article}
-                              onClick={() => navigate(`/articles/${article.article_id}`)}
+                              onClick={() => navigateToArticle(`/articles/${article.article_id}`)}
                             />
                           ))}
                         </div>
@@ -604,7 +610,7 @@ const Dashboard = () => {
                 <ReadingAssignmentCard
                   key={article.article_id}
                   article={article}
-                  onView={() => navigate(`/articles/${article.article_id}`)}
+                  onView={() => navigateToArticle(`/articles/${article.article_id}`)}
                   onMarkAsRead={() => handleMarkAsRead(article.article_id)}
                 />
               ))}
@@ -638,7 +644,7 @@ const Dashboard = () => {
                     <ExpiringArticleCard
                       key={article.article_id}
                       article={article}
-                      onClick={() => navigate(`/articles/${article.article_id}/edit`)}
+                      onClick={() => navigateToArticle(`/articles/${article.article_id}/edit`)}
                     />
                   ))}
                 </div>
@@ -674,7 +680,7 @@ const Dashboard = () => {
                     <ExpiredArticleRow
                       key={article.article_id}
                       article={article}
-                      onClick={() => navigate(`/articles/${article.article_id}/edit`)}
+                      onClick={() => navigateToArticle(`/articles/${article.article_id}/edit`)}
                       onDismiss={handleDismissExpired}
                     />
                   ))}

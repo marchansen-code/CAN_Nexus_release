@@ -404,6 +404,12 @@ const Articles = () => {
   const isAdmin = user?.role === "admin";
   const canManageCategories = canEdit; // Both admins and editors can manage categories
 
+  // Helper function to navigate to an article while storing origin
+  const navigateToArticle = (path) => {
+    sessionStorage.setItem('article_origin_url', window.location.pathname + window.location.search);
+    navigate(path);
+  };
+
   // Category management state
   const [catDialog, setCatDialog] = useState({ open: false, mode: 'create', category: null, parentId: null });
   const [catFormData, setCatFormData] = useState({ name: '', description: '', is_pinnwand: false });
@@ -1003,7 +1009,7 @@ const Articles = () => {
                           )}
                           <div 
                             className="flex-1 cursor-pointer min-w-0"
-                            onClick={() => navigate(`/articles/${article.article_id}`)}
+                            onClick={() => navigateToArticle(`/articles/${article.article_id}`)}
                           >
                             <div className="flex items-center gap-3 mb-2">
                               <FileText className="w-5 h-5 text-muted-foreground shrink-0" />
@@ -1032,11 +1038,11 @@ const Articles = () => {
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
-                                <DropdownMenuItem onClick={() => navigate(`/articles/${article.article_id}`)}>
+                                <DropdownMenuItem onClick={() => navigateToArticle(`/articles/${article.article_id}`)}>
                                   <Eye className="w-4 h-4 mr-2" />
                                   Anzeigen
                                 </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => navigate(`/articles/${article.article_id}/edit`)}>
+                                <DropdownMenuItem onClick={() => navigateToArticle(`/articles/${article.article_id}/edit`)}>
                                   <Edit className="w-4 h-4 mr-2" />
                                   Bearbeiten
                                 </DropdownMenuItem>
