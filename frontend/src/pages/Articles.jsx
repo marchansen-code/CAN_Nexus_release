@@ -434,6 +434,9 @@ const Articles = () => {
   // Delete confirmation states
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
   const [catDeleteConfirmText, setCatDeleteConfirmText] = useState("");
+  
+  // All categories expanded state
+  const [allExpanded, setAllExpanded] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -473,6 +476,24 @@ const Articles = () => {
       toast.error("Daten konnten nicht geladen werden");
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Toggle all categories expanded/collapsed
+  const toggleAllExpanded = () => {
+    if (allExpanded) {
+      // Collapse all
+      setExpandedCategories(new Set());
+      setAllExpanded(false);
+    } else {
+      // Expand all - get all category IDs that have children
+      const allCategoryIds = new Set(
+        categories
+          .filter(cat => categories.some(c => c.parent_id === cat.category_id))
+          .map(cat => cat.category_id)
+      );
+      setExpandedCategories(allCategoryIds);
+      setAllExpanded(true);
     }
   };
 
@@ -849,10 +870,32 @@ const Articles = () => {
         {/* Left: Categories Tree */}
         <Card className="w-96 shrink-0 flex flex-col overflow-hidden">
           <CardHeader className="py-3 border-b">
-            <CardTitle className="text-base flex items-center gap-2">
-              <FolderTree className="w-5 h-5 text-amber-500" />
-              Kategorien
-            </CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base flex items-center gap-2">
+                <FolderTree className="w-5 h-5 text-amber-500" />
+                Kategorien
+              </CardTitle>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={toggleAllExpanded}
+                className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
+                title={allExpanded ? "Alle zuklappen" : "Alle aufklappen"}
+                data-testid="toggle-all-categories-btn"
+              >
+                {allExpanded ? (
+                  <>
+                    <ChevronDown className="w-3.5 h-3.5 mr-1" />
+                    Zuklappen
+                  </>
+                ) : (
+                  <>
+                    <ChevronRight className="w-3.5 h-3.5 mr-1" />
+                    Aufklappen
+                  </>
+                )}
+              </Button>
+            </div>
           </CardHeader>
           <ScrollArea className="flex-1">
             <div className="p-3 space-y-1" style={{ minWidth: "360px" }}>

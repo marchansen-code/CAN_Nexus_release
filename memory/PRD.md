@@ -775,6 +775,12 @@ Wissensmanagement-Plattform für CANUSA Touristik GmbH & Co. KG und CU-Travel.
 - ✅ **Unterstützte Viewer**: HTML, Text, und Tabellen-Viewer
 - ✅ **Such-Badge**: Anzeige der aktiven Suchbegriffe im Viewer-Header
 
+### Alle Kategorien Aufklappen/Zuklappen (27.03.2026)
+
+- ✅ **Toggle-Button**: "Aufklappen" / "Zuklappen" Button in der Kategorien-Sidebar
+- ✅ **Schnelle Navigation**: Alle verschachtelten Kategorien mit einem Klick anzeigen
+- ✅ **Visuelles Feedback**: Button-Text und Icon ändern sich je nach Zustand
+
 ## Backlog / Verbleibende Aufgaben
 
 - Google Drive Bugs beheben (Export zu Shared Drives, falsche Dateiliste) - **ON HOLD**: Benutzer muss zuerst Test-URLs in Google Console eintragen
