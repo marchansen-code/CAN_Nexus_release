@@ -378,13 +378,36 @@ const ArticleEditor = () => {
   };
 
   // Document import handler
-  const handleDocumentImport = ({ html, text, filename, fileType }) => {
-    // Append imported content to existing content
-    const separator = article.content ? '<hr class="my-6 border-slate-300" />' : '';
-    const importHeader = `<p class="text-sm text-muted-foreground mb-2"><em>Importiert aus: ${filename}</em></p>`;
-    const newContent = article.content + separator + importHeader + html;
-    
-    setArticle(prev => ({ ...prev, content: newContent }));
+  const handleDocumentImport = (importData) => {
+    if (importData.mode === 'embed') {
+      // Embed mode: Insert an embedded document node
+      const embedHtml = `
+        <div class="embedded-document my-4" data-document-id="${importData.documentId}" data-filename="${importData.filename}" data-file-type="${importData.fileType || '.pdf'}">
+          <div class="border rounded-lg p-4 bg-slate-50 dark:bg-slate-800">
+            <div class="flex items-center gap-3 mb-2">
+              <svg class="w-8 h-8 text-red-500" fill="currentColor" viewBox="0 0 24 24"><path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,18V8L14,2M18,20H6V4H13V9H18V20Z"/></svg>
+              <div>
+                <p class="font-medium">${importData.filename}</p>
+                <p class="text-sm text-muted-foreground">Eingebettetes Dokument</p>
+              </div>
+            </div>
+            <a href="${API}/documents/${importData.documentId}/file" target="_blank" class="inline-flex items-center gap-2 px-3 py-1.5 bg-primary text-primary-foreground rounded-md text-sm hover:opacity-90">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+              Dokument öffnen
+            </a>
+          </div>
+        </div>
+      `;
+      const separator = article.content ? '<hr class="my-6 border-slate-300" />' : '';
+      const newContent = article.content + separator + embedHtml;
+      setArticle(prev => ({ ...prev, content: newContent }));
+    } else {
+      // Text mode: Append imported content to existing content
+      const separator = article.content ? '<hr class="my-6 border-slate-300" />' : '';
+      const importHeader = `<p class="text-sm text-muted-foreground mb-2"><em>Importiert aus: ${importData.filename}</em></p>`;
+      const newContent = article.content + separator + importHeader + importData.html;
+      setArticle(prev => ({ ...prev, content: newContent }));
+    }
     setShowImportDialog(false);
   };
 
@@ -568,6 +591,16 @@ const ArticleEditor = () => {
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>Inhalt</CardTitle>
               <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowImportDialog(true)}
+                  data-testid="import-document-btn"
+                  title="PDF oder Office-Dokument importieren"
+                >
+                  <FileUp className="w-4 h-4 mr-1" />
+                  Dokument importieren
+                </Button>
                 <Button
                   variant="outline"
                   size="sm"

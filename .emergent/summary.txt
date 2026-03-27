@@ -1,23 +1,36 @@
 <analysis>**original_problem_statement**: 
-The user wants to continue enhancing their knowledge management platform, CANUSA Nexus. 
-Product Requirements added in this session:
-1. Drag & Drop improvements (Hover delay for category assignment and per-user custom article sorting).
-2. Expiration Reminder on the Dashboard for articles expiring in ≤ 14 days.
-3. Reading Assignment System (assigning users/groups to read an article, dashboard unread container, marking as read, email notifications).
-4. Reading Confirmation Analysis View for Authors/Admins inside the article.
-5. RBAC bug fixes for Category Management menus and Dashboard Pinnwand tabs.
+The user wants to continue enhancing their knowledge management platform, CANUSA Nexus, with a comprehensive list of features and UX improvements.
+Product Requirements requested in this session:
+1. Breadcrumbs in articles, previews, and search results.
+2. Wider categories with horizontal scrollbar in the article overview.
+3. Document Import feature in the Article Editor (Icon to open dialog, choice to import as text or embed via DocumentViewer).
+4. Multiple contact persons with a radio button to select who gets email notifications.
+5. Specific Edit permissions via user/group dropdown (only assigned users/admins can edit).
+6. Reading confirmation with an option to notify the user via email.
+7. Allow Editors to manage Pinnwand entries and see Pinnwand categories.
+8. Move Pinnwand to the top of the Dashboard (remove tabs).
+9. Remember and return to the previous navigation location after saving/publishing/canceling an article.
+10. Explicit DELETE text confirmation prompt for deleting folders and articles.
+11. Comment notifications sent to the assigned contact person.
+12. Allow authors/editors to delete comments and notify the comment creator.
+13. Hide the article version history from Viewers.
+14. Show expired articles on the Dashboard with a hide/dismiss option.
+15. Remove the Wiedervorlage (resubmission) section from the article editor.
+16. When deleting a user, prompt to reassign their articles to a new author.
+17. Add a Notification Center in the header (Agent suggestion accepted by user).
+18. Add search inputs to the contact, edit permission, and reading assignment dropdowns.
 
 **User's preferred language**: German (Deutsch)
 *(INSTRUCTION TO NEXT AGENT: You MUST respond to the user in German)*
 
 **what currently exists?** 
-A full-stack knowledge management platform (React/FastAPI/MongoDB). It features rich text editing (Tiptap), drag-and-drop category/article management (dnd-kit), role-based access control (Admin, Editor, Viewer), document embedding, a reading assignment workflow, article expiration tracking, and email notifications. 
+A full-stack React/FastAPI/MongoDB knowledge management platform. It features rich text editing (Tiptap), dnd-kit for drag-and-drop, RBAC (Admin, Editor, Viewer), document embedding, reading assignment workflows, an integrated dashboard with pinned/expiring items, and a newly added notification center.
 
 **Last working item**: 
-- **Last item agent was working**: Fixing a bug where the Pinnwand tab on the Dashboard was only visible to Admins. The agent modified  to make the Pinnwand tab visible to all users (Admin, Editor, Viewer) and set it as the default active tab.
-- **Status**: COMPLETED
-- **Agent Testing Done**: Y
-- **Which testing method agent to use?**: NA (testing is already done via screenshot validation).
+- **Last item agent was working**: Adding the Document Import Icon in the Article Editor and extending the  to allow users to choose between Als Text einfügen (Import as Text) and Als Dokument einbetten (Embed as DocumentViewer).
+- **Status**: IN PROGRESS (UI is built, but final verification of the embedding behavior inside the Tiptap editor is pending).
+- **Agent Testing Done**: Y (Verified UI via screenshot).
+- **Which testing method agent to use?**: Frontend testing agent / Screenshot tool (to verify the actual document embedding inside the editor canvas).
 - **User Testing Done**: N
 
 **All Pending/In progress Issue list**: 
@@ -44,23 +57,34 @@ Issues Detail:
    - Blocked on other issue: None
 
 **In progress Task List**: 
-None.
+Task 1: Complete Document Import Feature (P0)
+
+Task Detail:
+- Task 1: Complete Document Import Feature
+   - Where to resume:  ( function) and . The UI logic for switching between Text and Embed modes is added, but you need to ensure the  Tiptap node correctly receives the payload and renders the embedded view inside the editor canvas when Embed is chosen.
+   - What will be achieved with this?: Fulfills the user's request to allow importing PDFs/Office files as embedded viewers directly within articles.
+   - Status: TESTING PENDING
+   - Should Test frontend/backend/both after fix?: Frontend
+   - Blocked on something: None
 
 **Upcoming and Future Tasks**:
 Future Tasks:
 - Improve Handwriting OCR (P3): The current Tesseract implementation has limitations with handwriting. (Currently ON HOLD by user request).
 
 **Completed work in this session**:
-- Drag & Drop Improvements: Hover delay (600ms) for category drops, and per-user custom sorting via  &  API. (DONE)
-- Expiration Reminder: Added a section on the Dashboard showing user's articles expiring in ≤ 14 days with color-coded urgency. (DONE)
-- Reading Assignment System: Added dropdown in  to assign users/groups. Created Unread dashboard container, API routes to mark as read, and Email notification via SMTP BackgroundTask. (DONE)
-- Reading Analysis View: Added a sidebar block in  (visible only to authors/admins) tracking who has/hasn't completed their reading assignment. (DONE)
-- Removed redundant Dokument tab from the Link dialog in . (DONE)
-- Bug Fix: Category management 3-dot menu was hidden from Editors. Updated  to use  (Admin or Editor). (DONE)
-- Bug Fix: Pinnwand tab on Dashboard made visible to all user roles and set as default. (DONE)
+- Dashboard Refactor: Pinnwand moved to top, tabs removed, expired articles added with dismiss feature (DONE).
+- Article Editor Updates: Wiedervorlage removed, added multiple contact persons with email radio button, added explicit edit permissions (user/groups), added email option for reading assignments (DONE).
+- Navigation Memory: App now uses  to remember the previous view and return to it after saving/canceling an article (DONE).
+- User Deletion Transfer: Deleting a user now prompts to select a replacement author to inherit their articles (DONE).
+- Delete Confirmations: Added explicit text input requirement (DELETE) for deleting articles and folders (DONE).
+- Comment System: Added notifications to contact persons on new comments, and allowed authors/editors to delete comments with notifications to the creator (DONE).
+- Breadcrumbs: Integrated  across Search, Dashboard, Article Overview, and Article View (DONE).
+- Dropdown Search: Added search filters to the assignment dropdowns in the editor (DONE).
+- Notification Center: Added a notification bell and dropdown to the Header/Layout (DONE).
+- RBAC Adjustments: Pinnwand management enabled for Editors; version history hidden from Viewers (DONE).
 
 **Earlier issues found/mentioned but not fixed**:
-None in this session. All new user requests were completely fulfilled.
+None in this session. 
 
 **Known issue recurrence from previous fork**:
 - Issue recurrence in previous fork: Google Drive export/import functionality bugs.
@@ -71,13 +95,13 @@ None in this session. All new user requests were completely fulfilled.
 
 
 **Key Technical Concepts**:
-- **RBAC Logic**:  (strict Admin) vs  (Admin + Editor). Used heavily across the frontend to hide/show 3-dot menus, Pinnwand checkboxes, and analysis tools.
-- **dnd-kit**: Implements both  (reordering within a list) and  (folder drop targets with hover-delays using  timeouts).
-- **FastAPI BackgroundTasks**: Used in  to send SMTP emails without blocking the API response.
+- **Session Storage Navigation**: Captures the referring URL in  to intelligently route users back after editing.
+- **Tiptap Custom Extensions**: The  node view is used to render imported PDFs/Docs as inline viewers.
+- **FastAPI BackgroundTasks**: Used heavily for non-blocking email dispatches (comments, reading assignments).
 
 **key DB schema**:
-- : {article_id, user_id, assigned_by, assigned_at, is_read, read_at}
-- : {user_id, category_id, article_order (List of IDs)}
+- : Added  (List),  (String),  (List),  (List).
+- : Standard model, logic updated to transfer  references upon deletion.
 
 **changes in tech stack**:
 None.
@@ -85,42 +109,34 @@ None.
 **All files of reference**:
 -  (Created)
 -  (Created)
--  (Updated heavily for D&D and Editor RBAC)
--  (Updated for expiration reminders, reading assignments, and Pinnwand RBAC)
--  (Updated for reading assignment creation)
--  (Updated for marking articles as read and displaying author analytics)
--  (Updated to simplify Link Dialog)
--  (Updated to handle reading assignment emails)
+-  (Heavily modified for UI fields, search inputs, import icon)
+-  (Modified to support Embed vs. Text import modes)
+-  (Refactored layout)
+-  (Added DELETE confirmation, horizontal scrolling)
+-  (Added transfer user logic)
+- ,  (Updated to handle new schema fields and deletion logic)
 
 **Areas that need refactoring**: 
--  and  are extremely large (1000+ and 2500+ lines respectively). Consider component extraction in future iterations if touched extensively.
+-  and  are extremely large components (1200+ lines). Future forks should consider extracting sub-components (like the sidebar cards) to improve maintainability.
 
 **key api endpoints**:
-- 
-- 
-- 
-- 
-- 
--  (Author/Admin only)
+-  (New)
+-  (New)
+-  (Updated)
 
 **Critical Info for New Agent**: 
 - **Language**: MUST respond in German.
-- **Credentials Update**: The agent changed the Editor's password during testing to debug login. Use  for .
-- The immediate logical priority are the two pending P1 Google Drive bugs. 
+- **Document Import Logic**: The user specifically requested that PDFs/Docs can be embedded as a  inside the article. The previous agent added the UI for this in  and updated the handler in , but you must verify that the  Tiptap node actually renders the imported file successfully.
+- Ensure to check the Google Drive issues once the Document Import feature is fully wrapped up.
 
 **documents and test reports created in this job**:
--  (D&D tests)
--  (Reading Assignment tests)
+-  (Phase 1 backend/frontend tests)
 -  (Updated with completed tasks)
 
 **Last 10 User Messages and any pending HUMAN messages**: 
-1. **User #401**: Reported bug: Pinnwand is missing in the Home/Dashboard view for non-admins. Requested a fix. (COMPLETED)
-2. **User #356**: Reported bug: Category management 3-dot menu is only visible to admins; requested it be visible to Editors too. Provided screenshot. (COMPLETED)
-3. **User #299**: Requested completion of P2: removing the redundant Dokument tab from the Link dialog. (COMPLETED)
-4. **User #240**: Requested a Reading Confirmation Analysis section in the article view (next to version history) for Authors/Admins to track pending/completed reading assignments. (COMPLETED)
-5. **User #133**: Requested a complete Review/Reading Assignment feature: assign users/groups via checkbox in editor, show as Unread in a new Dashboard container, disappear when read, and send email notifications. (COMPLETED)
-6. **User #100**: Requested an Ablauf Reminder (Expiration Reminder) on the Dashboard for self-created articles expiring in ≤ 14 days, with clear visual urgency markers. (COMPLETED)
-7. **User #5**: Instructed the agent to start with P0 (Drag & Drop improvements). (COMPLETED)
+1. **User**: Welche Aufgaben sind noch offen?
+2. **Agent**: Listed remaining tasks: Document Import Icon (partially done), Google Drive Bugs (P1), Handwriting OCR (Backlog). Asked user for preference.
+3. **User**: Fahre mit dem Datei-Import fort. (Pending completion/verification).
 
 **Project Health Check:**
 - Broken: Google Drive export to Shared Drives. Incorrect file list in Google Drive export dialog.
@@ -132,16 +148,16 @@ None.
 - SMTP Email Service — requires User credentials (App Password currently present in environment)
 
 **Testing status**:
-- Testing agent used after significant changes: YES (Iterations 34 & 35)
+- Testing agent used after significant changes: YES ()
 - Troubleshoot agent used after agent stuck in loop: NO
-- Test files created: , 
+- Test files created: 
 - Known regressions: None
 
 **Credentials to test flow:**
 - Admin Email: 
 - Admin Password: 
 - Editor Email: 
-- Editor Password:  *(Note: Password was updated in this session by the agent to test RBAC)*
+- Editor Password: 
 
 **What agent forgot to execute**:
-Nothing. The agent successfully addressed and tested every new feature and bug fix requested by the user during the session. The remaining tasks are inherited from a previous fork.</analysis>
+The agent implemented the UI for the Document Import mode selection (Text vs Embed) but stopped immediately after confirming the UI with a screenshot. The actual functionality of the embedding mode inside the Tiptap editor requires final verification/testing.</analysis>

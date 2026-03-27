@@ -1,6 +1,6 @@
 import { test, expect, Page } from '@playwright/test';
 
-const BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://export-dialog-debug.preview.emergentagent.com';
+const BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://article-flow-1.preview.emergentagent.com';
 
 async function login(page: Page) {
   await page.goto('/login', { waitUntil: 'domcontentloaded' });

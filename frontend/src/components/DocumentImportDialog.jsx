@@ -66,6 +66,7 @@ const DocumentImportDialog = ({ open, onClose, onImport }) => {
   
   // Import state
   const [importing, setImporting] = useState(false);
+  const [importMode, setImportMode] = useState('text'); // 'text' or 'embed'
   
   // Google Drive state
   const [driveConnected, setDriveConnected] = useState(false);
@@ -295,14 +296,28 @@ const DocumentImportDialog = ({ open, onClose, onImport }) => {
 
     setImporting(true);
     try {
-      const response = await axios.get(`${API}/documents/${selectedDoc.document_id}/content`);
-      onImport({
-        html: response.data.html_content,
-        text: response.data.extracted_text,
-        filename: response.data.filename,
-        fileType: response.data.file_type
-      });
-      toast.success(`"${selectedDoc.filename}" wurde importiert`);
+      if (importMode === 'embed') {
+        // Embed mode: Pass document info for embedding
+        onImport({
+          mode: 'embed',
+          documentId: selectedDoc.document_id,
+          filename: selectedDoc.filename,
+          fileType: selectedDoc.file_type,
+          fileUrl: selectedDoc.file_url
+        });
+        toast.success(`"${selectedDoc.filename}" wurde als Dokument eingebettet`);
+      } else {
+        // Text mode: Extract and import content
+        const response = await axios.get(`${API}/documents/${selectedDoc.document_id}/content`);
+        onImport({
+          mode: 'text',
+          html: response.data.html_content,
+          text: response.data.extracted_text,
+          filename: response.data.filename,
+          fileType: response.data.file_type
+        });
+        toast.success(`"${selectedDoc.filename}" wurde als Text importiert`);
+      }
       onClose();
     } catch (error) {
       console.error('Import failed:', error);
@@ -423,6 +438,41 @@ const DocumentImportDialog = ({ open, onClose, onImport }) => {
                 </div>
               )}
             </ScrollArea>
+
+            {/* Import Mode Selection */}
+            {selectedDoc && (
+              <div className="border rounded-lg p-3 mt-4 bg-muted/30">
+                <Label className="text-sm font-medium mb-2 block">Import-Art wählen:</Label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    onClick={() => setImportMode('text')}
+                    className={cn(
+                      "flex flex-col items-center p-3 rounded-lg border-2 transition-all text-left",
+                      importMode === 'text'
+                        ? "border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20"
+                        : "border-transparent bg-background hover:bg-muted"
+                    )}
+                  >
+                    <FileText className={cn("w-6 h-6 mb-1", importMode === 'text' ? "text-indigo-600" : "text-muted-foreground")} />
+                    <span className={cn("font-medium text-sm", importMode === 'text' ? "text-indigo-700" : "")}>Als Text</span>
+                    <span className="text-xs text-muted-foreground text-center">Inhalt wird in den Editor eingefügt</span>
+                  </button>
+                  <button
+                    onClick={() => setImportMode('embed')}
+                    className={cn(
+                      "flex flex-col items-center p-3 rounded-lg border-2 transition-all text-left",
+                      importMode === 'embed'
+                        ? "border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20"
+                        : "border-transparent bg-background hover:bg-muted"
+                    )}
+                  >
+                    <File className={cn("w-6 h-6 mb-1", importMode === 'embed' ? "text-indigo-600" : "text-muted-foreground")} />
+                    <span className={cn("font-medium text-sm", importMode === 'embed' ? "text-indigo-700" : "")}>Einbetten</span>
+                    <span className="text-xs text-muted-foreground text-center">Dokument als Viewer anzeigen</span>
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* Import Button */}
             <div className="flex justify-end gap-2 mt-4">

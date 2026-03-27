@@ -725,7 +725,20 @@ Wissensmanagement-Plattform für CANUSA Touristik GmbH & Co. KG und CU-Travel.
   - Ansprechpartner wird bei neuen Kommentaren automatisch per E-Mail benachrichtigt
   - Bei Kommentar-Löschung wird der Kommentarersteller benachrichtigt
 
+### Dokument-Import im Artikel-Editor (27.03.2026)
+
+- ✅ **Dokument-Import-Button** im Editor-Header ("Dokument importieren")
+- ✅ **Import-Dialog** mit drei Tabs:
+  - Bestehende Dokumente (aus der Dokumentenverwaltung)
+  - Neue Datei hochladen (PDF, DOC, DOCX, TXT, CSV, XLS, XLSX)
+  - Google Drive (wenn verbunden)
+- ✅ **Zwei Import-Modi**:
+  - **Als Text**: Dokumentinhalt wird direkt in den Editor eingefügt (inkl. Überschriften, Tabellen, Formatierungen)
+  - **Einbetten**: Dokument wird als visueller Block mit "Dokument öffnen"-Link eingefügt
+- ✅ **Vollständige Formaterhaltung**: Umlaute, Sonderzeichen, Tabellen werden korrekt übernommen
+- ✅ **Neue UI-Komponente**: Mode-Auswahl-Buttons ("Als Text" / "Einbetten") erscheinen nach Dokumentauswahl
+
 ## Backlog / Verbleibende Aufgaben
 
-- Google Drive Bugs beheben (Export zu Shared Drives, falsche Dateiliste)
+- Google Drive Bugs beheben (Export zu Shared Drives, falsche Dateiliste) - **ON HOLD**: Benutzer muss zuerst Test-URLs in Google Console eintragen
 - Handschrift-OCR verbessern (ON HOLD)

@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-const BASE_URL = process.env.BASE_URL || 'https://export-dialog-debug.preview.emergentagent.com';
+const BASE_URL = process.env.BASE_URL || 'https://article-flow-1.preview.emergentagent.com';
 
 // Helper to login
 async function login(page) {
