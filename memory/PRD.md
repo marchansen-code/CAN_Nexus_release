@@ -750,6 +750,31 @@ Wissensmanagement-Plattform für CANUSA Touristik GmbH & Co. KG und CU-Travel.
 - ✅ **Artikelansicht nach Veröffentlichen**: Nach Klick auf "Veröffentlichen" wird der fertige Artikel angezeigt (nicht zurück zur Liste)
 - ✅ **Speichern bleibt gleich**: "Speichern" navigiert weiterhin zurück zur Ursprungsseite
 
+### Artikel-Übersicht Verbesserungen (27.03.2026)
+
+- ✅ **Vollständige Breadcrumbs**: Kategorien werden mit vollständigem Pfad angezeigt (z.B. "Alle > Reiseart > Unterkünfte > Ranches" statt nur "Alle > Ranches")
+- ✅ **Unterkategorie-Chips entfernt**: Die kleinen Ordner-Buttons unter der Breadcrumb-Zeile wurden entfernt
+- ✅ **Klickbare Breadcrumbs**: Jeder Teil des Pfades ist anklickbar und führt zur entsprechenden Kategorie
+
+### Drag & Drop für Dokumente (27.03.2026)
+
+- ✅ **Drag & Drop Zone im Editor**: Dokumente können direkt in den Editor-Bereich gezogen werden
+- ✅ **Unterstützte Formate**: PDF, DOC, DOCX, TXT, CSV, XLS, XLSX
+- ✅ **Automatisches Einbetten**: Dokumente werden automatisch als Viewer eingebettet
+- ✅ **Visuelles Feedback**: Beim Ziehen erscheint ein Overlay mit Hinweis "Dokument hier ablegen"
+- ✅ **Placeholder-Hinweis**: Editor-Placeholder zeigt "(oder Dokument hierher ziehen)"
+
+### Migration für alte Dokument-Einbettungen (27.03.2026)
+
+- ✅ **API-Endpoint**: `POST /api/articles/migrate-embedded-documents` (nur Admins)
+- ✅ **Automatische Konvertierung**: Alte Formate werden auf das neue iframe-basierte Format aktualisiert
+
+### Suchtreffer-Hervorhebung in Dokumenten (27.03.2026)
+
+- ✅ **Highlight-Funktion**: Suchbegriffe werden in Dokumenten gelb hervorgehoben
+- ✅ **Unterstützte Viewer**: HTML, Text, und Tabellen-Viewer
+- ✅ **Such-Badge**: Anzeige der aktiven Suchbegriffe im Viewer-Header
+
 ## Backlog / Verbleibende Aufgaben
 
 - Google Drive Bugs beheben (Export zu Shared Drives, falsche Dateiliste) - **ON HOLD**: Benutzer muss zuerst Test-URLs in Google Console eintragen

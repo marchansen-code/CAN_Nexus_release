@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useContext } from "react";
+import React, { useState, useEffect, useCallback, useContext, useRef } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import axios from "axios";
 import { API, AuthContext } from "@/App";
@@ -29,7 +29,8 @@ import {
   Mail,
   BookOpen,
   UserCheck,
-  Search
+  Search,
+  Upload
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -194,6 +195,11 @@ const ArticleEditor = () => {
   const [savingReadingAssignment, setSavingReadingAssignment] = useState(false);
   const [returnUrl, setReturnUrl] = useState("/articles");
   
+  // Drag & Drop state
+  const [isDraggingFile, setIsDraggingFile] = useState(false);
+  const [isUploadingDraggedFile, setIsUploadingDraggedFile] = useState(false);
+  const dropZoneRef = useRef(null);
+  
   // Search terms for user selection fields
   const [contactSearchTerm, setContactSearchTerm] = useState("");
   const [editPermissionSearchTerm, setEditPermissionSearchTerm] = useState("");
@@ -328,6 +334,85 @@ const ArticleEditor = () => {
       return null;
     }
   }, []);
+
+  // Drag & Drop handlers for document import
+  const handleDragOver = useCallback((e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.dataTransfer.types.includes('Files')) {
+      setIsDraggingFile(true);
+    }
+  }, []);
+
+  const handleDragLeave = useCallback((e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    // Only hide if we're leaving the drop zone entirely
+    if (!dropZoneRef.current?.contains(e.relatedTarget)) {
+      setIsDraggingFile(false);
+    }
+  }, []);
+
+  const handleDrop = useCallback(async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingFile(false);
+    
+    const files = Array.from(e.dataTransfer.files);
+    const supportedExtensions = ['.pdf', '.doc', '.docx', '.txt', '.csv', '.xls', '.xlsx'];
+    
+    // Filter for supported document types
+    const documentFiles = files.filter(file => {
+      const ext = '.' + file.name.split('.').pop().toLowerCase();
+      return supportedExtensions.includes(ext);
+    });
+    
+    if (documentFiles.length === 0) {
+      toast.error("Keine unterstützten Dokumenttypen gefunden (PDF, DOC, DOCX, TXT, CSV, XLS, XLSX)");
+      return;
+    }
+    
+    // Process each document
+    setIsUploadingDraggedFile(true);
+    
+    for (const file of documentFiles) {
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        // Upload document
+        const uploadRes = await axios.post(`${API}/documents/upload`, formData, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        });
+        
+        const doc = uploadRes.data;
+        
+        // Embed the document as viewer
+        const previewUrl = `${API}/documents/${doc.document_id}/preview`;
+        const fileUrl = `${API}/documents/${doc.document_id}/file`;
+        const embedHtml = `
+          <div data-embedded-document="true" data-document-id="${doc.document_id}" data-filename="${doc.filename}" data-file-type="${doc.file_type || '.pdf'}" data-preview-url="${previewUrl}" data-file-url="${fileUrl}" style="margin: 16px 0; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; background: #fff;">
+            <div style="display: flex; align-items: center; justify-content: space-between; padding: 8px 16px; background: #f1f5f9; border-bottom: 1px solid #e2e8f0;">
+              <span style="font-weight: 500; font-size: 14px; color: #334155;">${doc.filename}</span>
+              <a href="${fileUrl}" target="_blank" rel="noopener noreferrer" style="font-size: 12px; color: #2563eb; text-decoration: none;">Öffnen ↗</a>
+            </div>
+            <div style="height: 500px; position: relative;">
+              <iframe src="${previewUrl}" style="width: 100%; height: 100%; border: 0;" title="${doc.filename}"></iframe>
+            </div>
+          </div>
+        `;
+        const separator = article.content ? '<hr class="my-6 border-slate-300" />' : '';
+        setArticle(prev => ({ ...prev, content: prev.content + separator + embedHtml }));
+        
+        toast.success(`"${doc.filename}" wurde eingebettet`);
+      } catch (error) {
+        console.error('Document upload failed:', error);
+        toast.error(`Upload fehlgeschlagen: ${file.name}`);
+      }
+    }
+    
+    setIsUploadingDraggedFile(false);
+  }, [article.content]);
 
   // Save handler
   const handleSave = async (newStatus) => {
@@ -592,8 +677,38 @@ const ArticleEditor = () => {
             </CardContent>
           </Card>
 
-          {/* Content Editor */}
-          <Card>
+          {/* Content Editor with Drag & Drop Zone */}
+          <Card
+            ref={dropZoneRef}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+            className={cn(
+              "relative transition-all duration-200",
+              isDraggingFile && "ring-2 ring-primary ring-offset-2 bg-primary/5"
+            )}
+          >
+            {/* Drag Overlay */}
+            {isDraggingFile && (
+              <div className="absolute inset-0 z-50 flex items-center justify-center bg-primary/10 backdrop-blur-sm rounded-lg border-2 border-dashed border-primary">
+                <div className="text-center">
+                  <Upload className="w-12 h-12 mx-auto mb-3 text-primary animate-bounce" />
+                  <p className="text-lg font-medium text-primary">Dokument hier ablegen</p>
+                  <p className="text-sm text-muted-foreground mt-1">PDF, DOC, DOCX, TXT, CSV, XLS, XLSX</p>
+                </div>
+              </div>
+            )}
+            
+            {/* Upload Progress Overlay */}
+            {isUploadingDraggedFile && (
+              <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm rounded-lg">
+                <div className="text-center">
+                  <Loader2 className="w-10 h-10 mx-auto mb-3 text-primary animate-spin" />
+                  <p className="text-sm font-medium">Dokument wird hochgeladen und eingebettet...</p>
+                </div>
+              </div>
+            )}
+            
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>Inhalt</CardTitle>
               <div className="flex items-center gap-2">
@@ -622,7 +737,7 @@ const ArticleEditor = () => {
               <RichTextEditor
                 content={article.content}
                 onChange={(html) => setArticle(prev => ({ ...prev, content: html }))}
-                placeholder="Artikelinhalt eingeben..."
+                placeholder="Artikelinhalt eingeben... (oder Dokument hierher ziehen)"
                 onImageUpload={handleImageUpload}
                 onToggleFullscreen={() => setIsFullscreen(true)}
                 data-testid="article-content-editor"

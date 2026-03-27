@@ -1,16 +1,29 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { Document, Page, pdfjs } from 'react-pdf';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Loader2, ZoomIn, ZoomOut, ChevronLeft, ChevronRight, RotateCw, Download, FileText, Table, FileSpreadsheet } from "lucide-react";
+import { Loader2, ZoomIn, ZoomOut, ChevronLeft, ChevronRight, RotateCw, Download, FileText, Table, FileSpreadsheet, Search, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import axios from 'axios';
 import { API } from '@/App';
 
 // Configure PDF.js worker
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
+
+// Highlight search terms in text/HTML content
+const highlightSearchTerms = (content, searchTerms) => {
+  if (!searchTerms || searchTerms.length === 0 || !content) return content;
+  
+  let highlighted = content;
+  searchTerms.forEach(term => {
+    if (term.length < 2) return; // Skip very short terms
+    const regex = new RegExp(`(${term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+    highlighted = highlighted.replace(regex, '<mark class="bg-yellow-200 dark:bg-yellow-800 px-0.5 rounded">$1</mark>');
+  });
+  return highlighted;
+};
 
 const FileIcon = ({ fileType }) => {
   const icons = {
@@ -92,16 +105,25 @@ const PdfViewerContent = ({ url, filename }) => {
 };
 
 // HTML Content Viewer (for processed documents)
-const HtmlViewerContent = ({ content, filename }) => {
+const HtmlViewerContent = ({ content, filename, searchTerms }) => {
+  const highlightedContent = useMemo(() => {
+    return highlightSearchTerms(content, searchTerms);
+  }, [content, searchTerms]);
+  
   return (
     <div className="flex flex-col h-full">
       <div className="p-2 bg-slate-100 dark:bg-slate-800 border-b flex items-center gap-2">
         <span className="text-sm font-medium">{filename}</span>
+        {searchTerms && searchTerms.length > 0 && (
+          <span className="text-xs text-muted-foreground bg-yellow-100 dark:bg-yellow-900 px-2 py-0.5 rounded">
+            Suche: {searchTerms.join(', ')}
+          </span>
+        )}
       </div>
       <div className="flex-1 overflow-auto p-6 bg-white dark:bg-slate-950">
         <div 
           className="prose dark:prose-invert max-w-none"
-          dangerouslySetInnerHTML={{ __html: content }}
+          dangerouslySetInnerHTML={{ __html: highlightedContent }}
         />
       </div>
     </div>
@@ -109,31 +131,53 @@ const HtmlViewerContent = ({ content, filename }) => {
 };
 
 // Text Viewer
-const TextViewerContent = ({ content, filename }) => {
+const TextViewerContent = ({ content, filename, searchTerms }) => {
+  const highlightedContent = useMemo(() => {
+    if (!searchTerms || searchTerms.length === 0) return content;
+    return highlightSearchTerms(content.replace(/</g, '&lt;').replace(/>/g, '&gt;'), searchTerms);
+  }, [content, searchTerms]);
+  
   return (
     <div className="flex flex-col h-full">
       <div className="p-2 bg-slate-100 dark:bg-slate-800 border-b flex items-center gap-2">
         <span className="text-sm font-medium">{filename}</span>
+        {searchTerms && searchTerms.length > 0 && (
+          <span className="text-xs text-muted-foreground bg-yellow-100 dark:bg-yellow-900 px-2 py-0.5 rounded">
+            Suche: {searchTerms.join(', ')}
+          </span>
+        )}
       </div>
       <div className="flex-1 overflow-auto p-6 bg-white dark:bg-slate-950">
-        <pre className="whitespace-pre-wrap text-sm font-mono">{content}</pre>
+        <pre 
+          className="whitespace-pre-wrap text-sm font-mono"
+          dangerouslySetInnerHTML={{ __html: highlightedContent }}
+        />
       </div>
     </div>
   );
 };
 
 // Spreadsheet Viewer
-const SpreadsheetViewerContent = ({ content, filename }) => {
+const SpreadsheetViewerContent = ({ content, filename, searchTerms }) => {
+  const highlightedContent = useMemo(() => {
+    return highlightSearchTerms(content, searchTerms);
+  }, [content, searchTerms]);
+  
   return (
     <div className="flex flex-col h-full">
       <div className="p-2 bg-slate-100 dark:bg-slate-800 border-b flex items-center gap-2">
         <FileSpreadsheet className="w-4 h-4 text-green-600" />
         <span className="text-sm font-medium">{filename}</span>
+        {searchTerms && searchTerms.length > 0 && (
+          <span className="text-xs text-muted-foreground bg-yellow-100 dark:bg-yellow-900 px-2 py-0.5 rounded">
+            Suche: {searchTerms.join(', ')}
+          </span>
+        )}
       </div>
       <div className="flex-1 overflow-auto p-4 bg-white dark:bg-slate-950">
         <div 
           className="overflow-x-auto"
-          dangerouslySetInnerHTML={{ __html: content }}
+          dangerouslySetInnerHTML={{ __html: highlightedContent }}
         />
       </div>
     </div>
@@ -141,7 +185,7 @@ const SpreadsheetViewerContent = ({ content, filename }) => {
 };
 
 // Main Multi-Format Viewer
-const DocumentViewer = ({ documentId, url, filename, fileType, className }) => {
+const DocumentViewer = ({ documentId, url, filename, fileType, className, searchTerms }) => {
   const [content, setContent] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -189,17 +233,17 @@ const DocumentViewer = ({ documentId, url, filename, fileType, className }) => {
 
   // Word documents
   if (fileType === '.doc' || fileType === '.docx') {
-    return <HtmlViewerContent content={content?.html_content || ''} filename={filename} />;
+    return <HtmlViewerContent content={content?.html_content || ''} filename={filename} searchTerms={searchTerms} />;
   }
 
   // Text files
   if (fileType === '.txt') {
-    return <TextViewerContent content={content?.extracted_text || ''} filename={filename} />;
+    return <TextViewerContent content={content?.extracted_text || ''} filename={filename} searchTerms={searchTerms} />;
   }
 
   // Spreadsheets
   if (['.csv', '.xls', '.xlsx'].includes(fileType)) {
-    return <SpreadsheetViewerContent content={content?.html_content || ''} filename={filename} />;
+    return <SpreadsheetViewerContent content={content?.html_content || ''} filename={filename} searchTerms={searchTerms} />;
   }
 
   // Fallback
@@ -214,4 +258,4 @@ const DocumentViewer = ({ documentId, url, filename, fileType, className }) => {
 };
 
 export default DocumentViewer;
-export { FileIcon };
+export { FileIcon, highlightSearchTerms };

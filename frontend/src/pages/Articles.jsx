@@ -955,18 +955,31 @@ const Articles = () => {
             </div>
           </div>
 
-          {/* Current Location */}
+          {/* Current Location - Full Breadcrumb Path */}
           {selectedCategoryId && (
             <div className="mb-4 flex items-center justify-between">
-              <div className="flex items-center gap-2 text-sm">
+              <div className="flex items-center gap-1 text-sm flex-wrap">
                 <button 
                   onClick={() => setSelectedCategoryId(null)}
-                  className="text-muted-foreground hover:text-foreground"
+                  className="text-muted-foreground hover:text-foreground hover:underline"
                 >
                   Alle
                 </button>
-                <ChevronRight className="w-4 h-4 text-muted-foreground" />
-                <span className="font-medium">{getCategoryName(selectedCategoryId)}</span>
+                {buildCategoryPath(selectedCategoryId).map((cat, index) => (
+                  <React.Fragment key={cat.category_id}>
+                    <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                    {cat.category_id === selectedCategoryId ? (
+                      <span className="font-medium">{cat.name}</span>
+                    ) : (
+                      <button
+                        onClick={() => setSelectedCategoryId(cat.category_id)}
+                        className="text-muted-foreground hover:text-foreground hover:underline"
+                      >
+                        {cat.name}
+                      </button>
+                    )}
+                  </React.Fragment>
+                ))}
               </div>
               {canEdit && (
                 <Button 
@@ -983,21 +996,7 @@ const Articles = () => {
             </div>
           )}
 
-          {/* Subcategories (if any) */}
-          {childCategories.length > 0 && (
-            <div className="mb-4 flex flex-wrap gap-2">
-              {childCategories.map(cat => (
-                <button
-                  key={cat.category_id}
-                  onClick={() => setSelectedCategoryId(cat.category_id)}
-                  className="flex items-center gap-2 px-3 py-2 bg-muted rounded-lg hover:bg-muted/80 transition-colors text-sm"
-                >
-                  <Folder className="w-4 h-4 text-amber-500" />
-                  {cat.name}
-                </button>
-              ))}
-            </div>
-          )}
+          {/* Articles List - No subcategory chips */}
 
           {/* Articles List */}
           <ScrollArea className="flex-1">

@@ -603,3 +603,68 @@ async def get_article_analytics(article_id: str, user: User = Depends(get_curren
         "is_important": article.get("is_important", False),
         "comments_enabled": article.get("comments_enabled", True)
     }
+
+
+
+@router.post("/migrate-embedded-documents")
+async def migrate_embedded_documents(user: User = Depends(get_current_user)):
+    """Migrate old embedded document format to new format with iframe preview.
+    Only admins can run this migration."""
+    if user.role != "admin":
+        raise HTTPException(status_code=403, detail="Nur Administratoren können die Migration ausführen")
+    
+    import os
+    api_url = os.environ.get("REACT_APP_BACKEND_URL", "")
+    if not api_url:
+        # Try to construct from request or use default
+        api_url = "/api"
+    
+    # Find all articles with old embedded document format
+    articles = await db.articles.find({
+        "content": {"$regex": "class=\"embedded-document\""},
+        "deleted_at": {"$exists": False}
+    }).to_list(1000)
+    
+    migrated_count = 0
+    
+    for article in articles:
+        content = article.get("content", "")
+        original_content = content
+        
+        # Pattern to find old format:
+        # <div class="embedded-document my-4" data-document-id="..." data-filename="..." data-file-type="...">
+        old_pattern = r'<div class="embedded-document[^"]*"[^>]*data-document-id="([^"]+)"[^>]*data-filename="([^"]+)"[^>]*data-file-type="([^"]*)"[^>]*>.*?</div>'
+        
+        def replace_old_format(match):
+            doc_id = match.group(1)
+            filename = match.group(2)
+            file_type = match.group(3) or '.pdf'
+            
+            preview_url = f"{api_url}/documents/{doc_id}/preview"
+            file_url = f"{api_url}/documents/{doc_id}/file"
+            
+            return f'''<div data-embedded-document="true" data-document-id="{doc_id}" data-filename="{filename}" data-file-type="{file_type}" data-preview-url="{preview_url}" data-file-url="{file_url}" style="margin: 16px 0; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; background: #fff;">
+          <div style="display: flex; align-items: center; justify-content: space-between; padding: 8px 16px; background: #f1f5f9; border-bottom: 1px solid #e2e8f0;">
+            <span style="font-weight: 500; font-size: 14px; color: #334155;">{filename}</span>
+            <a href="{file_url}" target="_blank" rel="noopener noreferrer" style="font-size: 12px; color: #2563eb; text-decoration: none;">Öffnen ↗</a>
+          </div>
+          <div style="height: 500px; position: relative;">
+            <iframe src="{preview_url}" style="width: 100%; height: 100%; border: 0;" title="{filename}"></iframe>
+          </div>
+        </div>'''
+        
+        # Replace all occurrences
+        new_content = re.sub(old_pattern, replace_old_format, content, flags=re.DOTALL)
+        
+        if new_content != original_content:
+            await db.articles.update_one(
+                {"article_id": article["article_id"]},
+                {"$set": {"content": new_content, "updated_at": datetime.now(timezone.utc).isoformat()}}
+            )
+            migrated_count += 1
+    
+    return {
+        "message": f"Migration abgeschlossen",
+        "migrated_articles": migrated_count,
+        "total_checked": len(articles)
+    }
