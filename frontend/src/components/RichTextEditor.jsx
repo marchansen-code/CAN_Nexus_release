@@ -1809,7 +1809,7 @@ const formatHtml = (html) => {
   return result.trim();
 };
 
-const RichTextEditor = ({ content, onChange, placeholder = "Inhalt eingeben...", className, onImageUpload, isFullscreen = false, onToggleFullscreen }) => {
+const RichTextEditor = React.forwardRef(({ content, onChange, placeholder = "Inhalt eingeben...", className, onImageUpload, isFullscreen = false, onToggleFullscreen }, ref) => {
   const [showHtmlEditor, setShowHtmlEditor] = useState(false);
   const [htmlContent, setHtmlContent] = useState('');
   const [showMultiImageDialog, setShowMultiImageDialog] = useState(false);
@@ -2261,6 +2261,16 @@ const RichTextEditor = ({ content, onChange, placeholder = "Inhalt eingeben...",
     },
   });
 
+  // Expose editor instance to parent via ref
+  React.useImperativeHandle(ref, () => ({
+    getEditor: () => editor,
+    insertContent: (html) => {
+      if (editor) {
+        editor.chain().focus().insertContent(html).run();
+      }
+    }
+  }), [editor]);
+
   React.useEffect(() => {
     if (editor && content !== editor.getHTML()) {
       editor.commands.setContent(content || '');
@@ -2540,6 +2550,8 @@ const RichTextEditor = ({ content, onChange, placeholder = "Inhalt eingeben...",
       </Dialog>
     </div>
   );
-};
+});
+
+RichTextEditor.displayName = 'RichTextEditor';
 
 export default RichTextEditor;

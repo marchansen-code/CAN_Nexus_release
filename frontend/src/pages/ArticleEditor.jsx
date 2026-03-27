@@ -194,6 +194,7 @@ const ArticleEditor = () => {
   const [showReviewDialog, setShowReviewDialog] = useState(false);
   const [savingReadingAssignment, setSavingReadingAssignment] = useState(false);
   const [returnUrl, setReturnUrl] = useState("/articles");
+  const editorRef = useRef(null);
   
   // Drag & Drop state
   const [isDraggingFile, setIsDraggingFile] = useState(false);
@@ -493,12 +494,18 @@ const ArticleEditor = () => {
       const newContent = article.content + separator + embedHtml;
       setArticle(prev => ({ ...prev, content: newContent }));
     } else if (importData.mode === 'link') {
-      // Link mode: Insert a simple link to the document
+      // Link mode: Insert a link directly via the editor API
       const fileUrl = `${API}/documents/${importData.documentId}/file`;
-      const linkHtml = `<p><a href="${fileUrl}" target="_blank" rel="noopener noreferrer" style="color: #2563eb; text-decoration: underline;">📄 ${importData.filename}</a></p>`;
-      const separator = article.content ? '' : '';
-      const newContent = article.content + separator + linkHtml;
-      setArticle(prev => ({ ...prev, content: newContent }));
+      const editor = editorRef.current?.getEditor?.();
+      if (editor) {
+        editor.chain().focus().insertContent(
+          `<p><a href="${fileUrl}" target="_blank" rel="noopener noreferrer">${importData.filename}</a></p>`
+        ).run();
+      } else {
+        // Fallback: set via state
+        const linkHtml = `<p><a href="${fileUrl}" target="_blank" rel="noopener noreferrer">${importData.filename}</a></p>`;
+        setArticle(prev => ({ ...prev, content: prev.content + linkHtml }));
+      }
     } else {
       // Text mode: Append imported content to existing content
       const separator = article.content ? '<hr class="my-6 border-slate-300" />' : '';
@@ -742,6 +749,7 @@ const ArticleEditor = () => {
             </CardHeader>
             <CardContent>
               <RichTextEditor
+                ref={editorRef}
                 content={article.content}
                 onChange={(html) => setArticle(prev => ({ ...prev, content: html }))}
                 placeholder="Artikelinhalt eingeben... (oder Dokument hierher ziehen)"
