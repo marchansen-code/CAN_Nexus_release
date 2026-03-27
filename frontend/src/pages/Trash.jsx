@@ -1,20 +1,23 @@
 import React, { useState, useEffect, useContext } from "react";
 import axios from "axios";
 import { API, AuthContext } from "@/App";
-import { 
-  Trash2, 
-  RotateCcw, 
-  FileText, 
-  File, 
-  Clock, 
+import { toast } from "sonner";
+import {
+  Trash2,
+  RefreshCw,
+  Clock,
+  FileText,
+  File,
+  Folder,
   AlertTriangle,
-  Loader2,
-  RefreshCw
+  RotateCcw,
+  XCircle,
+  User
 } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -25,15 +28,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { toast } from "sonner";
 
 const Trash = () => {
   const { user } = useContext(AuthContext);
+  const [trash, setTrash] = useState({ articles: [], documents: [], categories: [] });
   const [loading, setLoading] = useState(true);
-  const [articles, setArticles] = useState([]);
-  const [documents, setDocuments] = useState([]);
   const [deleteDialog, setDeleteDialog] = useState({ open: false, type: null, id: null, title: null });
-  const [actionLoading, setActionLoading] = useState(null);
+  const [restoreDialog, setRestoreDialog] = useState({ open: false, type: null, id: null, title: null });
 
   useEffect(() => {
     fetchTrash();
@@ -41,56 +42,43 @@ const Trash = () => {
 
   const fetchTrash = async () => {
     try {
-      setLoading(true);
-      const response = await axios.get(`${API}/trash`);
-      setArticles(response.data.articles || []);
-      setDocuments(response.data.documents || []);
+      const res = await axios.get(`${API}/trash`);
+      setTrash({
+        articles: res.data.articles || [],
+        documents: res.data.documents || [],
+        categories: res.data.categories || []
+      });
     } catch (error) {
-      console.error("Error fetching trash:", error);
-      toast.error("Fehler beim Laden des Papierkorbs");
+      console.error("Failed to fetch trash:", error);
+      toast.error("Papierkorb konnte nicht geladen werden");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleRestore = async (type, id) => {
-    setActionLoading(`restore-${type}-${id}`);
+  const handleRestore = async () => {
+    const { type, id, title } = restoreDialog;
     try {
       await axios.post(`${API}/trash/restore/${type}/${id}`);
-      toast.success(type === "article" ? "Artikel wiederhergestellt" : "Dokument wiederhergestellt");
+      toast.success(`"${title}" wurde wiederhergestellt`);
       fetchTrash();
     } catch (error) {
-      toast.error("Fehler beim Wiederherstellen");
+      toast.error("Wiederherstellen fehlgeschlagen");
     } finally {
-      setActionLoading(null);
+      setRestoreDialog({ open: false, type: null, id: null, title: null });
     }
   };
 
   const handlePermanentDelete = async () => {
-    const { type, id } = deleteDialog;
-    setActionLoading(`delete-${type}-${id}`);
+    const { type, id, title } = deleteDialog;
     try {
       await axios.delete(`${API}/trash/permanent/${type}/${id}`);
-      toast.success("Endgültig gelöscht");
+      toast.success(`"${title}" wurde endgültig gelöscht`);
+      fetchTrash();
+    } catch (error) {
+      toast.error("Löschen fehlgeschlagen");
+    } finally {
       setDeleteDialog({ open: false, type: null, id: null, title: null });
-      fetchTrash();
-    } catch (error) {
-      toast.error("Fehler beim Löschen");
-    } finally {
-      setActionLoading(null);
-    }
-  };
-
-  const handleCleanup = async () => {
-    setActionLoading("cleanup");
-    try {
-      const response = await axios.post(`${API}/trash/cleanup`);
-      toast.success(`Aufgeräumt: ${response.data.deleted_articles} Artikel, ${response.data.deleted_documents} Dokumente entfernt`);
-      fetchTrash();
-    } catch (error) {
-      toast.error("Fehler beim Aufräumen");
-    } finally {
-      setActionLoading(null);
     }
   };
 
@@ -106,237 +94,232 @@ const Trash = () => {
     });
   };
 
-  const getDaysLeftBadge = (daysLeft) => {
-    if (daysLeft <= 3) {
-      return <Badge variant="destructive" className="ml-2">{daysLeft} Tage</Badge>;
-    } else if (daysLeft <= 7) {
-      return <Badge variant="warning" className="ml-2 bg-amber-500">{daysLeft} Tage</Badge>;
+  const getDaysLeftBadge = (days) => {
+    if (days <= 3) {
+      return <Badge variant="destructive" className="text-xs">{days} Tage</Badge>;
+    } else if (days <= 10) {
+      return <Badge variant="outline" className="text-xs bg-amber-50 text-amber-700 border-amber-200">{days} Tage</Badge>;
     }
-    return <Badge variant="secondary" className="ml-2">{daysLeft} Tage</Badge>;
+    return <Badge variant="outline" className="text-xs">{days} Tage</Badge>;
+  };
+
+  // Item component with deleted_by info
+  const TrashItem = ({ item, type, idField, titleField, icon: Icon, iconColor }) => {
+    const id = item[idField];
+    const title = item[titleField] || item.filename || "Unbenannt";
+    
+    return (
+      <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg hover:bg-muted transition-colors">
+        <div className="flex items-center gap-4 flex-1 min-w-0">
+          <Icon className={`w-5 h-5 shrink-0 ${iconColor}`} />
+          <div className="flex-1 min-w-0">
+            <p className="font-medium truncate">{title}</p>
+            <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1 flex-wrap">
+              <span className="flex items-center gap-1">
+                <Clock className="w-3 h-3" />
+                Gelöscht am {formatDate(item.deleted_at)}
+              </span>
+              {item.deleted_by_name && (
+                <span className="flex items-center gap-1">
+                  <User className="w-3 h-3" />
+                  von {item.deleted_by_name}
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+        <div className="flex items-center gap-3 shrink-0">
+          <div className="text-right">
+            <p className="text-xs text-muted-foreground">Verbleibend</p>
+            {getDaysLeftBadge(item.days_until_permanent_deletion)}
+          </div>
+          <div className="flex gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setRestoreDialog({ open: true, type, id, title })}
+              title="Wiederherstellen"
+            >
+              <RotateCcw className="w-4 h-4 text-green-600" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setDeleteDialog({ open: true, type, id, title })}
+              title="Endgültig löschen"
+            >
+              <XCircle className="w-4 h-4 text-red-500" />
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
   };
 
   if (user?.role !== "admin") {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[50vh] text-center">
-        <AlertTriangle className="w-16 h-16 text-amber-500 mb-4" />
-        <h2 className="text-2xl font-bold mb-2">Zugriff verweigert</h2>
+      <div className="max-w-4xl mx-auto py-12 px-4 text-center">
+        <AlertTriangle className="w-16 h-16 text-amber-500 mx-auto mb-4" />
+        <h1 className="text-2xl font-bold mb-2">Zugriff verweigert</h1>
         <p className="text-muted-foreground">Nur Administratoren können den Papierkorb einsehen.</p>
       </div>
     );
   }
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[50vh]">
-        <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
-      </div>
-    );
-  }
+  const totalItems = trash.articles.length + trash.documents.length + trash.categories.length;
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6 animate-fadeIn">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold flex items-center gap-3">
-            <Trash2 className="w-8 h-8 text-red-500" />
-            Papierkorb
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            Gelöschte Artikel und Dokumente werden nach 30 Tagen endgültig entfernt.
-          </p>
+    <div className="max-w-6xl mx-auto py-8 px-4">
+      <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center gap-3">
+          <Trash2 className="w-8 h-8 text-slate-500" />
+          <div>
+            <h1 className="text-2xl font-bold">Papierkorb</h1>
+            <p className="text-sm text-muted-foreground">
+              {totalItems} {totalItems === 1 ? "Element" : "Elemente"} • Automatische Löschung nach 30 Tagen
+            </p>
+          </div>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={fetchTrash} disabled={loading}>
-            <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-            Aktualisieren
-          </Button>
-          <Button 
-            variant="destructive" 
-            onClick={handleCleanup}
-            disabled={actionLoading === "cleanup"}
-          >
-            {actionLoading === "cleanup" ? (
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-            ) : (
-              <Trash2 className="w-4 h-4 mr-2" />
-            )}
-            Alte Einträge löschen
-          </Button>
-        </div>
+        <Button variant="outline" onClick={fetchTrash} disabled={loading}>
+          <RefreshCw className={`w-4 h-4 mr-2 ${loading ? "animate-spin" : ""}`} />
+          Aktualisieren
+        </Button>
       </div>
 
-      {/* Tabs */}
-      <Tabs defaultValue="articles" className="w-full">
-        <TabsList className="grid w-full max-w-md grid-cols-2">
-          <TabsTrigger value="articles" className="flex items-center gap-2">
+      <Tabs defaultValue="articles" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="articles" className="gap-2">
             <FileText className="w-4 h-4" />
-            Artikel ({articles.length})
+            Artikel ({trash.articles.length})
           </TabsTrigger>
-          <TabsTrigger value="documents" className="flex items-center gap-2">
+          <TabsTrigger value="documents" className="gap-2">
             <File className="w-4 h-4" />
-            Dokumente ({documents.length})
+            Dokumente ({trash.documents.length})
+          </TabsTrigger>
+          <TabsTrigger value="categories" className="gap-2">
+            <Folder className="w-4 h-4" />
+            Ordner ({trash.categories.length})
           </TabsTrigger>
         </TabsList>
 
-        {/* Articles Tab */}
-        <TabsContent value="articles" className="mt-6">
-          {articles.length === 0 ? (
-            <Card>
-              <CardContent className="flex flex-col items-center justify-center py-12">
-                <FileText className="w-12 h-12 text-muted-foreground mb-4" />
-                <p className="text-muted-foreground">Keine gelöschten Artikel</p>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="space-y-3">
-              {articles.map((article) => (
-                <Card key={article.article_id} className="group hover:shadow-md transition-shadow">
-                  <CardContent className="p-4">
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <h3 className="font-semibold text-lg truncate">{article.title}</h3>
-                          {getDaysLeftBadge(article.days_until_permanent_deletion)}
-                        </div>
-                        <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
-                          <span className="flex items-center gap-1">
-                            <Clock className="w-3.5 h-3.5" />
-                            Gelöscht: {formatDate(article.deleted_at)}
-                          </span>
-                          <Badge variant="outline" className="text-xs">
-                            {article.status === "published" ? "Veröffentlicht" : "Entwurf"}
-                          </Badge>
-                        </div>
-                      </div>
-                      <div className="flex gap-2 shrink-0">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="text-green-600 border-green-300 hover:bg-green-50"
-                          onClick={() => handleRestore("article", article.article_id)}
-                          disabled={actionLoading === `restore-article-${article.article_id}`}
-                        >
-                          {actionLoading === `restore-article-${article.article_id}` ? (
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                          ) : (
-                            <>
-                              <RotateCcw className="w-4 h-4 mr-1" />
-                              Wiederherstellen
-                            </>
-                          )}
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="destructive"
-                          onClick={() => setDeleteDialog({
-                            open: true,
-                            type: "article",
-                            id: article.article_id,
-                            title: article.title
-                          })}
-                        >
-                          <Trash2 className="w-4 h-4 mr-1" />
-                          Endgültig löschen
-                        </Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
+        <TabsContent value="articles">
+          <Card>
+            <CardHeader>
+              <CardTitle>Gelöschte Artikel</CardTitle>
+              <CardDescription>
+                Artikel können wiederhergestellt oder endgültig gelöscht werden.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {trash.articles.length === 0 ? (
+                <p className="text-center py-8 text-muted-foreground">Keine gelöschten Artikel</p>
+              ) : (
+                trash.articles.map((article) => (
+                  <TrashItem
+                    key={article.article_id}
+                    item={article}
+                    type="article"
+                    idField="article_id"
+                    titleField="title"
+                    icon={FileText}
+                    iconColor="text-blue-500"
+                  />
+                ))
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
 
-        {/* Documents Tab */}
-        <TabsContent value="documents" className="mt-6">
-          {documents.length === 0 ? (
-            <Card>
-              <CardContent className="flex flex-col items-center justify-center py-12">
-                <File className="w-12 h-12 text-muted-foreground mb-4" />
-                <p className="text-muted-foreground">Keine gelöschten Dokumente</p>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="space-y-3">
-              {documents.map((doc) => (
-                <Card key={doc.document_id} className="group hover:shadow-md transition-shadow">
-                  <CardContent className="p-4">
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <h3 className="font-semibold text-lg truncate">{doc.filename}</h3>
-                          {getDaysLeftBadge(doc.days_until_permanent_deletion)}
-                        </div>
-                        <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
-                          <span className="flex items-center gap-1">
-                            <Clock className="w-3.5 h-3.5" />
-                            Gelöscht: {formatDate(doc.deleted_at)}
-                          </span>
-                          {doc.file_size && (
-                            <span>{(doc.file_size / 1024 / 1024).toFixed(2)} MB</span>
-                          )}
-                        </div>
-                      </div>
-                      <div className="flex gap-2 shrink-0">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="text-green-600 border-green-300 hover:bg-green-50"
-                          onClick={() => handleRestore("document", doc.document_id)}
-                          disabled={actionLoading === `restore-document-${doc.document_id}`}
-                        >
-                          {actionLoading === `restore-document-${doc.document_id}` ? (
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                          ) : (
-                            <>
-                              <RotateCcw className="w-4 h-4 mr-1" />
-                              Wiederherstellen
-                            </>
-                          )}
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="destructive"
-                          onClick={() => setDeleteDialog({
-                            open: true,
-                            type: "document",
-                            id: doc.document_id,
-                            title: doc.filename
-                          })}
-                        >
-                          <Trash2 className="w-4 h-4 mr-1" />
-                          Endgültig löschen
-                        </Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
+        <TabsContent value="documents">
+          <Card>
+            <CardHeader>
+              <CardTitle>Gelöschte Dokumente</CardTitle>
+              <CardDescription>
+                Dokumente können wiederhergestellt oder endgültig gelöscht werden.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {trash.documents.length === 0 ? (
+                <p className="text-center py-8 text-muted-foreground">Keine gelöschten Dokumente</p>
+              ) : (
+                trash.documents.map((doc) => (
+                  <TrashItem
+                    key={doc.document_id}
+                    item={doc}
+                    type="document"
+                    idField="document_id"
+                    titleField="title"
+                    icon={File}
+                    iconColor="text-amber-500"
+                  />
+                ))
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="categories">
+          <Card>
+            <CardHeader>
+              <CardTitle>Gelöschte Ordner</CardTitle>
+              <CardDescription>
+                Ordner können wiederhergestellt oder endgültig gelöscht werden.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {trash.categories.length === 0 ? (
+                <p className="text-center py-8 text-muted-foreground">Keine gelöschten Ordner</p>
+              ) : (
+                trash.categories.map((cat) => (
+                  <TrashItem
+                    key={cat.category_id}
+                    item={cat}
+                    type="category"
+                    idField="category_id"
+                    titleField="name"
+                    icon={Folder}
+                    iconColor="text-emerald-500"
+                  />
+                ))
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
 
-      {/* Delete Confirmation Dialog */}
-      <AlertDialog open={deleteDialog.open} onOpenChange={(open) => !open && setDeleteDialog({ ...deleteDialog, open: false })}>
+      {/* Restore Confirmation Dialog */}
+      <AlertDialog open={restoreDialog.open} onOpenChange={(open) => !open && setRestoreDialog({ open: false, type: null, id: null, title: null })}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2 text-red-600">
-              <AlertTriangle className="w-5 h-5" />
-              Endgültig löschen?
-            </AlertDialogTitle>
+            <AlertDialogTitle>Element wiederherstellen?</AlertDialogTitle>
             <AlertDialogDescription>
-              <strong>"{deleteDialog.title}"</strong> wird unwiderruflich gelöscht. 
-              Diese Aktion kann nicht rückgängig gemacht werden.
+              Möchten Sie <strong>"{restoreDialog.title}"</strong> wiederherstellen?
+              Das Element wird an seinen ursprünglichen Ort zurückverschoben.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Abbrechen</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handlePermanentDelete}
-              className="bg-red-500 hover:bg-red-600"
-            >
+            <AlertDialogAction onClick={handleRestore} className="bg-green-600 hover:bg-green-700">
+              Wiederherstellen
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Permanent Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialog.open} onOpenChange={(open) => !open && setDeleteDialog({ open: false, type: null, id: null, title: null })}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-red-600">Endgültig löschen?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Möchten Sie <strong>"{deleteDialog.title}"</strong> endgültig löschen?
+              <br /><br />
+              <span className="text-red-500 font-medium">Diese Aktion kann nicht rückgängig gemacht werden!</span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+            <AlertDialogAction onClick={handlePermanentDelete} className="bg-red-600 hover:bg-red-700">
               Endgültig löschen
             </AlertDialogAction>
           </AlertDialogFooter>

@@ -18,17 +18,37 @@ async def get_trash(user: User = Depends(get_current_user)):
     if user.role != "admin":
         raise HTTPException(status_code=403, detail="Nur Administratoren können den Papierkorb sehen")
     
+    # Get all users for lookup
+    users_list = await db.users.find({}, {"_id": 0, "user_id": 1, "name": 1, "email": 1}).to_list(1000)
+    users_dict = {u["user_id"]: u for u in users_list}
+    
+    def get_user_name(user_id):
+        if not user_id:
+            return "Unbekannt"
+        user_data = users_dict.get(user_id)
+        return user_data.get("name", user_data.get("email", "Unbekannt")) if user_data else "Unbekannt"
+    
+    # Get deleted articles
     deleted_articles = await db.articles.find(
         {"deleted_at": {"$exists": True}},
         {"_id": 0}
     ).sort("deleted_at", -1).to_list(100)
     
+    # Get deleted documents
     deleted_documents = await db.documents.find(
         {"deleted_at": {"$exists": True}},
         {"_id": 0, "temp_path": 0}
     ).sort("deleted_at", -1).to_list(100)
     
+    # Get deleted categories
+    deleted_categories = await db.categories.find(
+        {"deleted_at": {"$exists": True}},
+        {"_id": 0}
+    ).sort("deleted_at", -1).to_list(100)
+    
     now = datetime.now(timezone.utc)
+    
+    # Process articles
     for art in deleted_articles:
         deleted_at = art.get("deleted_at")
         if deleted_at:
@@ -38,7 +58,10 @@ async def get_trash(user: User = Depends(get_current_user)):
                 deleted_at = deleted_at.replace(tzinfo=timezone.utc)
             days_left = 30 - (now - deleted_at).days
             art["days_until_permanent_deletion"] = max(0, days_left)
+        # Add deleted_by user name
+        art["deleted_by_name"] = get_user_name(art.get("deleted_by"))
     
+    # Process documents
     for doc in deleted_documents:
         deleted_at = doc.get("deleted_at")
         if deleted_at:
@@ -48,10 +71,26 @@ async def get_trash(user: User = Depends(get_current_user)):
                 deleted_at = deleted_at.replace(tzinfo=timezone.utc)
             days_left = 30 - (now - deleted_at).days
             doc["days_until_permanent_deletion"] = max(0, days_left)
+        # Add deleted_by user name
+        doc["deleted_by_name"] = get_user_name(doc.get("deleted_by"))
+    
+    # Process categories
+    for cat in deleted_categories:
+        deleted_at = cat.get("deleted_at")
+        if deleted_at:
+            if isinstance(deleted_at, str):
+                deleted_at = datetime.fromisoformat(deleted_at.replace("Z", "+00:00"))
+            if deleted_at.tzinfo is None:
+                deleted_at = deleted_at.replace(tzinfo=timezone.utc)
+            days_left = 30 - (now - deleted_at).days
+            cat["days_until_permanent_deletion"] = max(0, days_left)
+        # Add deleted_by user name
+        cat["deleted_by_name"] = get_user_name(cat.get("deleted_by"))
     
     return {
         "articles": deleted_articles,
-        "documents": deleted_documents
+        "documents": deleted_documents,
+        "categories": deleted_categories
     }
 
 
@@ -89,6 +128,23 @@ async def restore_document(document_id: str, user: User = Depends(get_current_us
     return {"message": "Dokument wiederhergestellt"}
 
 
+@router.post("/restore/category/{category_id}")
+async def restore_category(category_id: str, user: User = Depends(get_current_user)):
+    """Restore a soft-deleted category (admin only)."""
+    if user.role != "admin":
+        raise HTTPException(status_code=403, detail="Nur Administratoren können Kategorien wiederherstellen")
+    
+    cat = await db.categories.find_one({"category_id": category_id, "deleted_at": {"$exists": True}})
+    if not cat:
+        raise HTTPException(status_code=404, detail="Kategorie nicht im Papierkorb gefunden")
+    
+    await db.categories.update_one(
+        {"category_id": category_id},
+        {"$unset": {"deleted_at": "", "deleted_by": ""}}
+    )
+    return {"message": "Kategorie wiederhergestellt"}
+
+
 @router.delete("/permanent/article/{article_id}")
 async def permanently_delete_article(article_id: str, user: User = Depends(get_current_user)):
     """Permanently delete an article (admin only)."""
@@ -120,6 +176,18 @@ async def permanently_delete_document(document_id: str, user: User = Depends(get
     
     await db.documents.delete_one({"document_id": document_id})
     return {"message": "Dokument endgültig gelöscht"}
+
+
+@router.delete("/permanent/category/{category_id}")
+async def permanently_delete_category(category_id: str, user: User = Depends(get_current_user)):
+    """Permanently delete a category (admin only)."""
+    if user.role != "admin":
+        raise HTTPException(status_code=403, detail="Nur Administratoren können endgültig löschen")
+    
+    result = await db.categories.delete_one({"category_id": category_id, "deleted_at": {"$exists": True}})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Kategorie nicht im Papierkorb gefunden")
+    return {"message": "Kategorie endgültig gelöscht"}
 
 
 @router.post("/cleanup")

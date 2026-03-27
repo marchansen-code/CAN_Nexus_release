@@ -14,8 +14,11 @@ router = APIRouter(prefix="/categories", tags=["Categories"])
 
 @router.get("", response_model=List[Dict])
 async def get_categories(user: User = Depends(get_current_user)):
-    """Get all categories as a tree structure."""
-    categories = await db.categories.find({}, {"_id": 0}).to_list(1000)
+    """Get all categories as a tree structure (excluding deleted)."""
+    categories = await db.categories.find(
+        {"deleted_at": {"$exists": False}}, 
+        {"_id": 0}
+    ).to_list(1000)
     return categories
 
 
@@ -105,8 +108,19 @@ async def get_pinnwand_articles(user: User = Depends(get_current_user)):
 
 @router.delete("/{category_id}")
 async def delete_category(category_id: str, user: User = Depends(get_current_user)):
-    """Delete a category."""
-    result = await db.categories.delete_one({"category_id": category_id})
-    if result.deleted_count == 0:
+    """Soft delete a category - moves to trash for 30 days."""
+    from datetime import datetime, timezone
+    
+    category = await db.categories.find_one({"category_id": category_id, "deleted_at": {"$exists": False}})
+    if not category:
         raise HTTPException(status_code=404, detail="Kategorie nicht gefunden")
-    return {"message": "Kategorie gelöscht"}
+    
+    # Soft delete - set deleted_at and deleted_by
+    await db.categories.update_one(
+        {"category_id": category_id},
+        {"$set": {
+            "deleted_at": datetime.now(timezone.utc).isoformat(),
+            "deleted_by": user.user_id
+        }}
+    )
+    return {"message": "Kategorie in den Papierkorb verschoben"}
