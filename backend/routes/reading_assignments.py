@@ -19,6 +19,7 @@ class ReadingAssignmentCreate(BaseModel):
     article_id: str
     user_ids: List[str] = []
     group_ids: List[str] = []
+    send_email: bool = True  # Option to send email notifications
 
 
 class MarkAsReadRequest(BaseModel):
@@ -102,18 +103,20 @@ async def create_reading_assignment(
             if target_user:
                 users_notified.append(target_user_id)
                 
-                # Check if user wants reading assignment notifications
-                prefs = target_user.get("notification_preferences", {})
-                if prefs.get("reading_assignments", True):
-                    # Send email notification
-                    background_tasks.add_task(
-                        email_service.send_reading_assignment_notification,
-                        target_user["email"],
-                        target_user.get("name", "Kollege"),
-                        requester_name,
-                        article["title"],
-                        assignment.article_id
-                    )
+                # Check if email notifications are enabled for this assignment
+                if assignment.send_email:
+                    # Check if user wants reading assignment notifications
+                    prefs = target_user.get("notification_preferences", {})
+                    if prefs.get("reading_assignments", True):
+                        # Send email notification
+                        background_tasks.add_task(
+                            email_service.send_reading_assignment_notification,
+                            target_user["email"],
+                            target_user.get("name", "Kollege"),
+                            requester_name,
+                            article["title"],
+                            assignment.article_id
+                        )
     
     return {
         "message": f"Leseaufgabe an {len(users_notified)} Benutzer zugewiesen",

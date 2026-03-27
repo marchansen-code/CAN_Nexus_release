@@ -67,8 +67,8 @@ import { de } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 
 // Category Tree Item for Selection
-const CategoryTreeItem = ({ category, categories, selectedIds, onToggle, expandedIds, onToggleExpand, level = 0, isAdmin }) => {
-  const childCategories = categories.filter(c => c.parent_id === category.category_id).filter(c => isAdmin || !c.is_pinnwand);
+const CategoryTreeItem = ({ category, categories, selectedIds, onToggle, expandedIds, onToggleExpand, level = 0, canEdit }) => {
+  const childCategories = categories.filter(c => c.parent_id === category.category_id).filter(c => canEdit || !c.is_pinnwand);
   const hasChildren = childCategories.length > 0;
   const isExpanded = expandedIds.has(category.category_id);
   const isSelected = selectedIds.includes(category.category_id);
@@ -133,7 +133,7 @@ const CategoryTreeItem = ({ category, categories, selectedIds, onToggle, expande
               expandedIds={expandedIds}
               onToggleExpand={onToggleExpand}
               level={level + 1}
-              isAdmin={isAdmin}
+              canEdit={canEdit}
             />
           ))}
         </div>
@@ -161,15 +161,19 @@ const ArticleEditor = () => {
     status: "draft",
     tags: [],
     contact_person_id: null,
+    contact_person_ids: [],
+    contact_person_notify_id: null,
     visible_to_groups: [],
     expiry_date: null,
-    review_date: null,
     is_important: false,
     important_until: null,
     comments_enabled: true,
+    edit_permission_user_ids: [],
+    edit_permission_group_ids: [],
     reading_assignment_enabled: false,
     reading_assignment_user_ids: [],
-    reading_assignment_group_ids: []
+    reading_assignment_group_ids: [],
+    reading_assignment_send_email: true
   });
 
   // UI state
@@ -244,12 +248,16 @@ const ArticleEditor = () => {
             category_ids: data.category_ids || (data.category_id ? [data.category_id] : []),
             visible_to_groups: data.visible_to_groups || [],
             expiry_date: data.expiry_date ? new Date(data.expiry_date) : null,
-            review_date: data.review_date ? new Date(data.review_date) : null,
             important_until: data.important_until ? new Date(data.important_until) : null,
             comments_enabled: data.comments_enabled !== false,  // Default to true if not set
+            contact_person_ids: data.contact_person_ids || (data.contact_person_id ? [data.contact_person_id] : []),
+            contact_person_notify_id: data.contact_person_notify_id || data.contact_person_id || null,
+            edit_permission_user_ids: data.edit_permission_user_ids || [],
+            edit_permission_group_ids: data.edit_permission_group_ids || [],
             reading_assignment_enabled: data.reading_assignment_enabled || false,
             reading_assignment_user_ids: data.reading_assignment_user_ids || [],
-            reading_assignment_group_ids: data.reading_assignment_group_ids || []
+            reading_assignment_group_ids: data.reading_assignment_group_ids || [],
+            reading_assignment_send_email: data.reading_assignment_send_email !== false
           });
         } catch (error) {
           console.error("Failed to load article:", error);
@@ -291,7 +299,6 @@ const ArticleEditor = () => {
       const payload = {
         ...article,
         status: newStatus || article.status,
-        review_date: article.review_date?.toISOString() || null,
         expiry_date: article.expiry_date?.toISOString() || null,
         important_until: article.important_until?.toISOString() || null
       };
@@ -370,9 +377,10 @@ const ArticleEditor = () => {
     });
   };
 
-  // Get root categories (those without parent), filter pinnwand for non-admins
+  // Get root categories (those without parent), filter pinnwand for viewers only
   const isAdmin = user?.role === "admin";
-  const rootCategories = categories.filter(c => !c.parent_id).filter(c => isAdmin || !c.is_pinnwand);
+  const canEdit = user?.role === "admin" || user?.role === "editor";
+  const rootCategories = categories.filter(c => !c.parent_id).filter(c => canEdit || !c.is_pinnwand);
 
   // Group toggle
   const toggleGroup = (groupId) => {
@@ -415,9 +423,13 @@ const ArticleEditor = () => {
         await axios.post(`${API}/reading-assignments`, {
           article_id: articleId,
           user_ids: article.reading_assignment_user_ids,
-          group_ids: article.reading_assignment_group_ids
+          group_ids: article.reading_assignment_group_ids,
+          send_email: article.reading_assignment_send_email !== false
         });
-        toast.success("Leseaufgaben zugewiesen - E-Mail-Benachrichtigungen werden versendet");
+        toast.success(article.reading_assignment_send_email !== false 
+          ? "Leseaufgaben zugewiesen - E-Mail-Benachrichtigungen werden versendet" 
+          : "Leseaufgaben zugewiesen (ohne E-Mail)"
+        );
       } else if (!article.reading_assignment_enabled) {
         // Remove assignments
         await axios.delete(`${API}/reading-assignments/${articleId}`);
@@ -566,7 +578,7 @@ const ArticleEditor = () => {
                       onToggle={toggleCategory}
                       expandedIds={expandedCategoryIds}
                       onToggleExpand={toggleCategoryExpand}
-                      isAdmin={isAdmin}
+                      canEdit={canEdit}
                     />
                   ))}
                   {rootCategories.length === 0 && categories.length > 0 && (
@@ -710,26 +722,6 @@ const ArticleEditor = () => {
                   Nach Ablauf wird der Artikel automatisch zum Entwurf
                 </p>
               </div>
-              
-              <div className="space-y-2">
-                <Label>Wiedervorlage</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" className="w-full justify-start text-left font-normal">
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {article.review_date ? format(article.review_date, "PPP", { locale: de }) : "Keine Wiedervorlage"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
-                    <Calendar
-                      mode="single"
-                      selected={article.review_date}
-                      onSelect={(date) => setArticle(prev => ({ ...prev, review_date: date }))}
-                      locale={de}
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
             </CardContent>
           </Card>
 
@@ -798,7 +790,7 @@ const ArticleEditor = () => {
             </CardContent>
           </Card>
 
-          {/* Contact Person */}
+          {/* Contact Person - Multiple Selection with Notify Radio */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -806,26 +798,173 @@ const ArticleEditor = () => {
                 Ansprechpartner
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <Select
-                value={article.contact_person_id || "none"}
-                onValueChange={(value) => setArticle(prev => ({ 
-                  ...prev, 
-                  contact_person_id: value === "none" ? null : value 
-                }))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Ansprechpartner wählen" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Kein Ansprechpartner</SelectItem>
-                  {users.map(u => (
-                    <SelectItem key={u.user_id} value={u.user_id}>
-                      {u.name}
-                    </SelectItem>
+            <CardContent className="space-y-3">
+              <p className="text-xs text-muted-foreground">
+                Wählen Sie einen oder mehrere Ansprechpartner. Der mit dem Radio-Button markierte Benutzer wird über Änderungen und Kommentare benachrichtigt.
+              </p>
+              <div className="max-h-48 overflow-y-auto space-y-1 border rounded-md p-2">
+                {users.map(u => {
+                  const isSelected = article.contact_person_ids?.includes(u.user_id) || article.contact_person_id === u.user_id;
+                  const isNotifyPerson = article.contact_person_notify_id === u.user_id || (!article.contact_person_notify_id && article.contact_person_id === u.user_id);
+                  
+                  return (
+                    <div key={u.user_id} className={cn(
+                      "flex items-center justify-between p-2 rounded",
+                      isSelected && "bg-primary/5"
+                    )}>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`contact-${u.user_id}`}
+                          checked={isSelected}
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              // Add to contact persons
+                              const newIds = [...(article.contact_person_ids || []), u.user_id];
+                              setArticle(prev => ({ 
+                                ...prev, 
+                                contact_person_ids: newIds,
+                                contact_person_id: newIds[0], // Legacy field
+                                // If no notify person set, make this one the notify person
+                                contact_person_notify_id: prev.contact_person_notify_id || u.user_id
+                              }));
+                            } else {
+                              // Remove from contact persons
+                              const newIds = (article.contact_person_ids || []).filter(id => id !== u.user_id);
+                              setArticle(prev => ({ 
+                                ...prev, 
+                                contact_person_ids: newIds,
+                                contact_person_id: newIds[0] || null, // Legacy field
+                                // If this was the notify person, clear it or set to first remaining
+                                contact_person_notify_id: prev.contact_person_notify_id === u.user_id 
+                                  ? (newIds[0] || null) 
+                                  : prev.contact_person_notify_id
+                              }));
+                            }
+                          }}
+                        />
+                        <label htmlFor={`contact-${u.user_id}`} className="text-sm cursor-pointer">
+                          {u.name}
+                        </label>
+                      </div>
+                      {isSelected && (
+                        <div className="flex items-center gap-1">
+                          <input
+                            type="radio"
+                            id={`notify-${u.user_id}`}
+                            name="notify-contact"
+                            checked={isNotifyPerson}
+                            onChange={() => setArticle(prev => ({ ...prev, contact_person_notify_id: u.user_id }))}
+                            className="w-4 h-4 text-primary"
+                          />
+                          <label htmlFor={`notify-${u.user_id}`} className="text-xs text-muted-foreground cursor-pointer flex items-center gap-1">
+                            <Mail className="w-3 h-3" />
+                          </label>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+              {(article.contact_person_ids?.length > 0 || article.contact_person_id) && (
+                <p className="text-xs text-muted-foreground flex items-center gap-1">
+                  <Mail className="w-3 h-3" />
+                  <span>Benachrichtigung an: {users.find(u => u.user_id === (article.contact_person_notify_id || article.contact_person_id))?.name || "Niemand"}</span>
+                </p>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Edit Permissions */}
+          <Card className={((article.edit_permission_user_ids?.length > 0) || (article.edit_permission_group_ids?.length > 0)) ? "border-blue-300 dark:border-blue-700" : ""}>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FileEdit className="w-4 h-4" />
+                Bearbeitungsrechte
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <p className="text-xs text-muted-foreground">
+                Nur diese Benutzer/Gruppen (+ Autor + Admins) können diesen Artikel bearbeiten. Leer = Jeder Editor darf bearbeiten.
+              </p>
+              
+              {/* User Selection */}
+              <div className="space-y-2">
+                <Label className="flex items-center gap-1 text-sm">
+                  <User className="w-3 h-3" /> Benutzer
+                </Label>
+                <div className="max-h-32 overflow-y-auto space-y-1 border rounded-md p-2">
+                  {users.filter(u => u.role !== "viewer" && u.user_id !== user?.user_id).map(u => (
+                    <div key={u.user_id} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`edit-user-${u.user_id}`}
+                        checked={article.edit_permission_user_ids?.includes(u.user_id) || false}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setArticle(prev => ({ 
+                              ...prev, 
+                              edit_permission_user_ids: [...(prev.edit_permission_user_ids || []), u.user_id]
+                            }));
+                          } else {
+                            setArticle(prev => ({ 
+                              ...prev, 
+                              edit_permission_user_ids: (prev.edit_permission_user_ids || []).filter(id => id !== u.user_id)
+                            }));
+                          }
+                        }}
+                      />
+                      <label htmlFor={`edit-user-${u.user_id}`} className="text-sm cursor-pointer flex items-center gap-1">
+                        {u.name}
+                        {u.role === "admin" && <Badge variant="secondary" className="text-xs">Admin</Badge>}
+                        {u.role === "editor" && <Badge variant="outline" className="text-xs">Editor</Badge>}
+                      </label>
+                    </div>
                   ))}
-                </SelectContent>
-              </Select>
+                </div>
+              </div>
+
+              {/* Group Selection */}
+              {groups.length > 0 && (
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-1 text-sm">
+                    <Users className="w-3 h-3" /> Gruppen
+                  </Label>
+                  <div className="max-h-24 overflow-y-auto space-y-1 border rounded-md p-2">
+                    {groups.map(g => (
+                      <div key={g.group_id} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`edit-group-${g.group_id}`}
+                          checked={article.edit_permission_group_ids?.includes(g.group_id) || false}
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              setArticle(prev => ({ 
+                                ...prev, 
+                                edit_permission_group_ids: [...(prev.edit_permission_group_ids || []), g.group_id]
+                              }));
+                            } else {
+                              setArticle(prev => ({ 
+                                ...prev, 
+                                edit_permission_group_ids: (prev.edit_permission_group_ids || []).filter(id => id !== g.group_id)
+                              }));
+                            }
+                          }}
+                        />
+                        <label htmlFor={`edit-group-${g.group_id}`} className="text-sm cursor-pointer">
+                          {g.name}
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {((article.edit_permission_user_ids?.length > 0) || (article.edit_permission_group_ids?.length > 0)) && (
+                <div className="flex items-center gap-2 text-xs text-muted-foreground bg-blue-50 dark:bg-blue-900/20 p-2 rounded">
+                  <FileEdit className="w-4 h-4 text-blue-500" />
+                  <span>
+                    {article.edit_permission_user_ids?.length || 0} Benutzer und {article.edit_permission_group_ids?.length || 0} Gruppen haben Bearbeitungsrechte
+                  </span>
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -846,7 +985,8 @@ const ArticleEditor = () => {
                     ...prev, 
                     reading_assignment_enabled: checked,
                     reading_assignment_user_ids: checked ? prev.reading_assignment_user_ids : [],
-                    reading_assignment_group_ids: checked ? prev.reading_assignment_group_ids : []
+                    reading_assignment_group_ids: checked ? prev.reading_assignment_group_ids : [],
+                    reading_assignment_send_email: checked ? (prev.reading_assignment_send_email !== false) : false
                   }))}
                   data-testid="reading-assignment-checkbox"
                 />
@@ -857,8 +997,24 @@ const ArticleEditor = () => {
               
               {article.reading_assignment_enabled && (
                 <div className="space-y-4 pt-2 border-t">
+                  {/* Email notification option */}
+                  <div className="flex items-center space-x-2 bg-orange-50 dark:bg-orange-900/20 p-2 rounded">
+                    <Checkbox
+                      id="reading-assignment-email"
+                      checked={article.reading_assignment_send_email !== false}
+                      onCheckedChange={(checked) => setArticle(prev => ({ 
+                        ...prev, 
+                        reading_assignment_send_email: checked
+                      }))}
+                    />
+                    <label htmlFor="reading-assignment-email" className="text-sm cursor-pointer flex items-center gap-1">
+                      <Mail className="w-3 h-3" />
+                      Benutzer per E-Mail benachrichtigen
+                    </label>
+                  </div>
+                  
                   <p className="text-xs text-muted-foreground">
-                    Ausgewählte Benutzer/Gruppen erhalten eine E-Mail-Benachrichtigung und sehen den Artikel als "Ungelesen" auf ihrem Dashboard.
+                    Ausgewählte Benutzer/Gruppen sehen den Artikel als "Ungelesen" auf ihrem Dashboard.
                   </p>
                   
                   {/* User Selection */}
@@ -933,7 +1089,7 @@ const ArticleEditor = () => {
                       ) : (
                         <Mail className="w-4 h-4 mr-2" />
                       )}
-                      Leseaufgaben zuweisen & benachrichtigen
+                      Leseaufgaben zuweisen {article.reading_assignment_send_email !== false && "& benachrichtigen"}
                     </Button>
                   )}
                 </div>

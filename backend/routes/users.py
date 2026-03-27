@@ -186,8 +186,12 @@ async def toggle_user_block(
 
 
 @router.delete("/{user_id}")
-async def delete_user(user_id: str, current_user: User = Depends(get_current_user)):
-    """Delete a user permanently (admin only)."""
+async def delete_user(
+    user_id: str, 
+    transfer_to_user_id: str = None,
+    current_user: User = Depends(get_current_user)
+):
+    """Delete a user permanently (admin only). Optionally transfer articles to another user."""
     if current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Nur Administratoren können Benutzer löschen")
     
@@ -198,10 +202,68 @@ async def delete_user(user_id: str, current_user: User = Depends(get_current_use
     if not user_doc:
         raise HTTPException(status_code=404, detail="Benutzer nicht gefunden")
     
+    # Check if user has articles
+    article_count = await db.articles.count_documents({"created_by": user_id})
+    
+    if article_count > 0:
+        if not transfer_to_user_id:
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Benutzer hat {article_count} Artikel. Bitte geben Sie einen Benutzer für die Übertragung an."
+            )
+        
+        # Verify transfer target exists
+        target_user = await db.users.find_one({"user_id": transfer_to_user_id})
+        if not target_user:
+            raise HTTPException(status_code=404, detail="Zielbenutzer für Übertragung nicht gefunden")
+        
+        if transfer_to_user_id == user_id:
+            raise HTTPException(status_code=400, detail="Kann nicht auf den gleichen Benutzer übertragen")
+        
+        # Transfer all articles
+        await db.articles.update_many(
+            {"created_by": user_id},
+            {"$set": {
+                "created_by": transfer_to_user_id,
+                "updated_at": datetime.now(timezone.utc).isoformat()
+            }}
+        )
+        
+        # Also update contact_person_id and contact_person_ids if they reference the deleted user
+        await db.articles.update_many(
+            {"contact_person_id": user_id},
+            {"$set": {"contact_person_id": transfer_to_user_id}}
+        )
+        await db.articles.update_many(
+            {"contact_person_ids": user_id},
+            {"$set": {"contact_person_ids.$": transfer_to_user_id}}
+        )
+        await db.articles.update_many(
+            {"contact_person_notify_id": user_id},
+            {"$set": {"contact_person_notify_id": transfer_to_user_id}}
+        )
+    
+    # Delete user sessions and user
     await db.user_sessions.delete_many({"user_id": user_id})
+    await db.reading_assignments.delete_many({"user_id": user_id})
+    await db.dismissed_expired_articles.delete_many({"user_id": user_id})
+    await db.user_sort_preferences.delete_many({"user_id": user_id})
     await db.users.delete_one({"user_id": user_id})
     
-    return {"message": "Benutzer gelöscht"}
+    return {
+        "message": "Benutzer gelöscht",
+        "articles_transferred": article_count if transfer_to_user_id else 0
+    }
+
+
+@router.get("/{user_id}/article-count")
+async def get_user_article_count(user_id: str, current_user: User = Depends(get_current_user)):
+    """Get the count of articles created by a user (admin only)."""
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Nur Administratoren können diese Informationen abrufen")
+    
+    count = await db.articles.count_documents({"created_by": user_id})
+    return {"article_count": count}
 
 
 @router.get("/me/theme")

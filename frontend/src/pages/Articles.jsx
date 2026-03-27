@@ -51,7 +51,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import {
   Select,
@@ -115,7 +115,7 @@ const DroppableCategoryItem = ({
   onSelect, 
   expandedCategories, 
   toggleExpand, 
-  isAdmin,
+  canEdit,
   canManageCategories, 
   onEdit, 
   onDelete, 
@@ -123,7 +123,7 @@ const DroppableCategoryItem = ({
   onHoverDrop,
   activeDragArticle
 }) => {
-  const childCategories = categories.filter(c => c.parent_id === category.category_id).filter(c => isAdmin || !c.is_pinnwand);
+  const childCategories = categories.filter(c => c.parent_id === category.category_id).filter(c => canEdit || !c.is_pinnwand);
   const hasChildren = childCategories.length > 0;
   const isExpanded = expandedCategories.has(category.category_id);
   const isSelected = selectedCategoryId === category.category_id;
@@ -253,7 +253,7 @@ const DroppableCategoryItem = ({
               onSelect={onSelect}
               expandedCategories={expandedCategories}
               toggleExpand={toggleExpand}
-              isAdmin={isAdmin}
+              canEdit={canEdit}
               canManageCategories={canManageCategories}
               onEdit={onEdit}
               onDelete={onDelete}
@@ -409,6 +409,10 @@ const Articles = () => {
   const [catFormData, setCatFormData] = useState({ name: '', description: '', is_pinnwand: false });
   const [catDeleteDialog, setCatDeleteDialog] = useState({ open: false, category: null });
   const [catSaving, setCatSaving] = useState(false);
+  
+  // Delete confirmation states
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
+  const [catDeleteConfirmText, setCatDeleteConfirmText] = useState("");
 
   useEffect(() => {
     fetchData();
@@ -453,6 +457,10 @@ const Articles = () => {
 
   const handleDelete = async () => {
     if (!deleteDialog.article) return;
+    if (deleteConfirmText !== "DELETE") {
+      toast.error("Bitte geben Sie 'DELETE' ein, um die Löschung zu bestätigen");
+      return;
+    }
     
     try {
       await axios.delete(`${API}/articles/${deleteDialog.article.article_id}`);
@@ -463,6 +471,7 @@ const Articles = () => {
       toast.error("Artikel konnte nicht gelöscht werden");
     } finally {
       setDeleteDialog({ open: false, article: null });
+      setDeleteConfirmText("");
     }
   };
 
@@ -643,6 +652,10 @@ const Articles = () => {
 
   const handleDeleteCat = async () => {
     if (!catDeleteDialog.category) return;
+    if (catDeleteConfirmText !== "DELETE") {
+      toast.error("Bitte geben Sie 'DELETE' ein, um die Löschung zu bestätigen");
+      return;
+    }
     try {
       await axios.delete(`${API}/categories/${catDeleteDialog.category.category_id}`);
       toast.success("Kategorie gelöscht");
@@ -652,6 +665,7 @@ const Articles = () => {
       toast.error(error.response?.data?.detail || "Fehler beim Löschen");
     } finally {
       setCatDeleteDialog({ open: false, category: null });
+      setCatDeleteConfirmText("");
     }
   };
 
@@ -760,7 +774,7 @@ const Articles = () => {
     });
   };
 
-  const rootCategories = categories.filter(c => !c.parent_id).filter(c => isAdmin || !c.is_pinnwand);
+  const rootCategories = categories.filter(c => !c.parent_id).filter(c => canEdit || !c.is_pinnwand);
 
   if (loading) {
     return (
@@ -812,15 +826,15 @@ const Articles = () => {
       {/* Split Layout */}
       <div className="flex gap-6 h-[calc(100vh-14rem)]">
         {/* Left: Categories Tree */}
-        <Card className="w-80 shrink-0 flex flex-col">
+        <Card className="w-96 shrink-0 flex flex-col overflow-hidden">
           <CardHeader className="py-3 border-b">
             <CardTitle className="text-base flex items-center gap-2">
               <FolderTree className="w-5 h-5 text-amber-500" />
               Kategorien
             </CardTitle>
           </CardHeader>
-          <ScrollArea className="flex-1" orientation="both">
-            <div className="p-3 space-y-1 min-w-fit">
+          <ScrollArea className="flex-1">
+            <div className="p-3 space-y-1" style={{ minWidth: "360px" }}>
               <button
                 onClick={() => setSelectedCategoryId(null)}
                 className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors text-left ${
@@ -842,7 +856,7 @@ const Articles = () => {
                   onSelect={setSelectedCategoryId}
                   expandedCategories={expandedCategories}
                   toggleExpand={toggleExpand}
-                  isAdmin={isAdmin}
+                  canEdit={canEdit}
                   canManageCategories={canManageCategories}
                   onEdit={openEditCat}
                   onDelete={(cat) => setCatDeleteDialog({ open: true, category: cat })}
@@ -855,6 +869,7 @@ const Articles = () => {
                 <p className="text-sm text-muted-foreground px-3">Keine Kategorien</p>
               )}
             </div>
+            <ScrollBar orientation="horizontal" />
           </ScrollArea>
         </Card>
 
@@ -1074,18 +1089,47 @@ const Articles = () => {
       </div>
 
       {/* Delete Confirmation */}
-      <AlertDialog open={deleteDialog.open} onOpenChange={(open) => !open && setDeleteDialog({ open: false, article: null })}>
+      <AlertDialog open={deleteDialog.open} onOpenChange={(open) => {
+        if (!open) {
+          setDeleteDialog({ open: false, article: null });
+          setDeleteConfirmText("");
+        }
+      }}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Artikel löschen?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Möchten Sie den Artikel "{deleteDialog.article?.title}" wirklich löschen? 
-              Diese Aktion kann nicht rückgängig gemacht werden.
+            <AlertDialogTitle className="flex items-center gap-2 text-red-600">
+              <Trash2 className="w-5 h-5" />
+              Artikel löschen?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-3">
+              <p>
+                Möchten Sie den Artikel <strong>"{deleteDialog.article?.title}"</strong> wirklich löschen?
+              </p>
+              <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                <p className="text-red-800 font-medium mb-2">
+                  Diese Aktion kann nicht rückgängig gemacht werden.
+                </p>
+                <p className="text-red-700 text-sm mb-2">
+                  Um fortzufahren, geben Sie <strong>DELETE</strong> ein:
+                </p>
+                <Input
+                  placeholder="DELETE eingeben"
+                  value={deleteConfirmText}
+                  onChange={(e) => setDeleteConfirmText(e.target.value)}
+                  className="bg-white"
+                  data-testid="article-delete-confirm-input"
+                />
+              </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Abbrechen</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-red-600 hover:bg-red-700">
+            <AlertDialogCancel onClick={() => setDeleteConfirmText("")}>Abbrechen</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDelete} 
+              className="bg-red-600 hover:bg-red-700"
+              disabled={deleteConfirmText !== "DELETE"}
+            >
+              <Trash2 className="w-4 h-4 mr-2" />
               Löschen
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -1236,18 +1280,48 @@ const Articles = () => {
       </Dialog>
 
       {/* Category Delete Dialog */}
-      <AlertDialog open={catDeleteDialog.open} onOpenChange={(open) => !open && setCatDeleteDialog({ open: false, category: null })}>
+      <AlertDialog open={catDeleteDialog.open} onOpenChange={(open) => {
+        if (!open) {
+          setCatDeleteDialog({ open: false, category: null });
+          setCatDeleteConfirmText("");
+        }
+      }}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Kategorie löschen?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Möchten Sie die Kategorie "{catDeleteDialog.category?.name}" wirklich löschen?
-              Untergeordnete Kategorien werden ebenfalls gelöscht.
+            <AlertDialogTitle className="flex items-center gap-2 text-red-600">
+              <Trash2 className="w-5 h-5" />
+              Kategorie löschen?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-3">
+              <p>
+                Möchten Sie die Kategorie <strong>"{catDeleteDialog.category?.name}"</strong> wirklich löschen?
+                Untergeordnete Kategorien werden ebenfalls gelöscht.
+              </p>
+              <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                <p className="text-red-800 font-medium mb-2">
+                  Diese Aktion kann nicht rückgängig gemacht werden.
+                </p>
+                <p className="text-red-700 text-sm mb-2">
+                  Um fortzufahren, geben Sie <strong>DELETE</strong> ein:
+                </p>
+                <Input
+                  placeholder="DELETE eingeben"
+                  value={catDeleteConfirmText}
+                  onChange={(e) => setCatDeleteConfirmText(e.target.value)}
+                  className="bg-white"
+                  data-testid="cat-delete-confirm-input"
+                />
+              </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Abbrechen</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteCat} className="bg-red-600 hover:bg-red-700">
+            <AlertDialogCancel onClick={() => setCatDeleteConfirmText("")}>Abbrechen</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDeleteCat} 
+              className="bg-red-600 hover:bg-red-700"
+              disabled={catDeleteConfirmText !== "DELETE"}
+            >
+              <Trash2 className="w-4 h-4 mr-2" />
               Löschen
             </AlertDialogAction>
           </AlertDialogFooter>

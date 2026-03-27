@@ -18,7 +18,8 @@ import {
   Lock,
   Loader2,
   Clock,
-  Palette
+  Palette,
+  FileText
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -96,12 +97,14 @@ const UserManagement = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [editDialog, setEditDialog] = useState({ open: false, user: null });
   const [selectedRole, setSelectedRole] = useState("");
-  const [deleteDialog, setDeleteDialog] = useState({ open: false, user: null });
+  const [deleteDialog, setDeleteDialog] = useState({ open: false, user: null, articleCount: 0 });
   const [createDialog, setCreateDialog] = useState(false);
   const [passwordDialog, setPasswordDialog] = useState({ open: false, user: null });
   const [newUser, setNewUser] = useState({ email: "", name: "", password: "", role: "viewer" });
   const [newPassword, setNewPassword] = useState("");
   const [saving, setSaving] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
+  const [transferToUserId, setTransferToUserId] = useState("");
 
   useEffect(() => {
     fetchUsers();
@@ -154,15 +157,55 @@ const UserManagement = () => {
   const handleDeleteUser = async () => {
     if (!deleteDialog.user) return;
     
+    // Check if confirmation text is correct
+    if (deleteConfirmText !== "DELETE") {
+      toast.error("Bitte geben Sie 'DELETE' ein, um die Löschung zu bestätigen");
+      return;
+    }
+    
+    // Check if user has articles and transfer is required
+    if (deleteDialog.articleCount > 0 && !transferToUserId) {
+      toast.error("Bitte wählen Sie einen Benutzer für die Artikelübertragung");
+      return;
+    }
+    
+    setSaving(true);
     try {
-      await axios.delete(`${API}/users/${deleteDialog.user.user_id}`);
-      toast.success("Benutzer gelöscht");
+      let url = `${API}/users/${deleteDialog.user.user_id}`;
+      if (transferToUserId) {
+        url += `?transfer_to_user_id=${transferToUserId}`;
+      }
+      const response = await axios.delete(url);
+      toast.success(`Benutzer gelöscht${response.data.articles_transferred > 0 ? ` - ${response.data.articles_transferred} Artikel übertragen` : ""}`);
       setUsers(users.filter(u => u.user_id !== deleteDialog.user.user_id));
     } catch (error) {
       console.error("Failed to delete user:", error);
-      toast.error("Benutzer konnte nicht gelöscht werden");
+      toast.error(error.response?.data?.detail || "Benutzer konnte nicht gelöscht werden");
     } finally {
-      setDeleteDialog({ open: false, user: null });
+      setDeleteDialog({ open: false, user: null, articleCount: 0 });
+      setDeleteConfirmText("");
+      setTransferToUserId("");
+      setSaving(false);
+    }
+  };
+
+  // Open delete dialog and check for articles
+  const handleOpenDeleteDialog = async (user) => {
+    try {
+      const response = await axios.get(`${API}/users/${user.user_id}/article-count`);
+      setDeleteDialog({ 
+        open: true, 
+        user, 
+        articleCount: response.data.article_count 
+      });
+      setDeleteConfirmText("");
+      setTransferToUserId("");
+    } catch (error) {
+      console.error("Failed to check article count:", error);
+      // Still open dialog but without article count
+      setDeleteDialog({ open: true, user, articleCount: 0 });
+      setDeleteConfirmText("");
+      setTransferToUserId("");
     }
   };
 
@@ -498,7 +541,7 @@ const UserManagement = () => {
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => setDeleteDialog({ open: true, user })}
+                            onClick={() => handleOpenDeleteDialog(user)}
                             disabled={user.user_id === currentUser?.user_id}
                             className="text-red-600 hover:text-red-700 hover:bg-red-50"
                             data-testid={`delete-user-${user.user_id}`}
@@ -637,18 +680,82 @@ const UserManagement = () => {
       </Dialog>
 
       {/* Delete User Confirmation */}
-      <AlertDialog open={deleteDialog.open} onOpenChange={(open) => !open && setDeleteDialog({ open: false, user: null })}>
-        <AlertDialogContent>
+      <AlertDialog open={deleteDialog.open} onOpenChange={(open) => {
+        if (!open) {
+          setDeleteDialog({ open: false, user: null, articleCount: 0 });
+          setDeleteConfirmText("");
+          setTransferToUserId("");
+        }
+      }}>
+        <AlertDialogContent className="max-w-lg">
           <AlertDialogHeader>
-            <AlertDialogTitle>Benutzer löschen?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Möchten Sie den Benutzer "{deleteDialog.user?.name}" ({deleteDialog.user?.email}) wirklich dauerhaft löschen? 
-              Diese Aktion kann nicht rückgängig gemacht werden.
+            <AlertDialogTitle className="flex items-center gap-2 text-red-600">
+              <Trash2 className="w-5 h-5" />
+              Benutzer löschen?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-3">
+              <p>
+                Möchten Sie den Benutzer <strong>"{deleteDialog.user?.name}"</strong> ({deleteDialog.user?.email}) wirklich dauerhaft löschen?
+              </p>
+              
+              {deleteDialog.articleCount > 0 && (
+                <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                  <p className="text-amber-800 font-medium flex items-center gap-2">
+                    <FileText className="w-4 h-4" />
+                    Dieser Benutzer hat {deleteDialog.articleCount} Artikel erstellt
+                  </p>
+                  <p className="text-amber-700 text-sm mt-1">
+                    Bitte wählen Sie einen Benutzer, auf den die Artikel übertragen werden sollen:
+                  </p>
+                  <Select value={transferToUserId} onValueChange={setTransferToUserId}>
+                    <SelectTrigger className="mt-2 bg-white">
+                      <SelectValue placeholder="Zielbenutzer wählen..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {users
+                        .filter(u => u.user_id !== deleteDialog.user?.user_id)
+                        .map(u => (
+                          <SelectItem key={u.user_id} value={u.user_id}>
+                            <div className="flex items-center gap-2">
+                              <span>{u.name}</span>
+                              <Badge variant="outline" className="text-xs">{u.role}</Badge>
+                            </div>
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+              
+              <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                <p className="text-red-800 font-medium mb-2">
+                  Diese Aktion kann nicht rückgängig gemacht werden.
+                </p>
+                <p className="text-red-700 text-sm mb-2">
+                  Um fortzufahren, geben Sie <strong>DELETE</strong> ein:
+                </p>
+                <Input
+                  placeholder="DELETE eingeben"
+                  value={deleteConfirmText}
+                  onChange={(e) => setDeleteConfirmText(e.target.value)}
+                  className="bg-white"
+                  data-testid="delete-confirm-input"
+                />
+              </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Abbrechen</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteUser} className="bg-red-600 hover:bg-red-700">
+            <AlertDialogAction 
+              onClick={handleDeleteUser} 
+              className="bg-red-600 hover:bg-red-700"
+              disabled={deleteConfirmText !== "DELETE" || saving || (deleteDialog.articleCount > 0 && !transferToUserId)}
+            >
+              {saving ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <Trash2 className="w-4 h-4 mr-2" />
+              )}
               Dauerhaft löschen
             </AlertDialogAction>
           </AlertDialogFooter>

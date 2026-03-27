@@ -12,7 +12,7 @@ import json
 from datetime import datetime
 import uuid
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://article-reorder.preview.emergentagent.com').rstrip('/')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://export-dialog-debug.preview.emergentagent.com').rstrip('/')
 
 @pytest.fixture
 def session():

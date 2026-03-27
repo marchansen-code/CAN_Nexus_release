@@ -13,7 +13,7 @@ import requests
 import os
 import time
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://article-reorder.preview.emergentagent.com')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://export-dialog-debug.preview.emergentagent.com')
 
 class TestAPIEndpoints:
     """Basic API endpoint tests"""

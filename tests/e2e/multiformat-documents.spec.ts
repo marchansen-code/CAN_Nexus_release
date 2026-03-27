@@ -4,7 +4,7 @@
  */
 import { test, expect } from '@playwright/test';
 
-const BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://article-reorder.preview.emergentagent.com';
+const BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://export-dialog-debug.preview.emergentagent.com';
 
 test.describe('Multi-format Document Support', () => {
   // Login before each test

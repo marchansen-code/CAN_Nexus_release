@@ -787,8 +787,8 @@ const ArticleView = () => {
           </div>
         )}
 
-        {/* Version History & Reading Analysis Grid */}
-        {(versions.length > 0 || (canViewReadingAnalysis && allReadingStatuses.length > 0)) && (
+        {/* Version History & Reading Analysis Grid - Hidden for Viewers */}
+        {canEdit && (versions.length > 0 || (canViewReadingAnalysis && allReadingStatuses.length > 0)) && (
           <div className="mt-12 border-t pt-8">
             <div className={`grid gap-8 ${versions.length > 0 && canViewReadingAnalysis && allReadingStatuses.length > 0 ? 'md:grid-cols-2' : 'grid-cols-1'}`}>
               {/* Version History */}

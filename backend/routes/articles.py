@@ -198,11 +198,15 @@ async def create_article(article: ArticleCreate, user: User = Depends(get_curren
         status=article.status,
         tags=article.tags,
         contact_person_id=article.contact_person_id,
+        contact_person_ids=article.contact_person_ids,
+        contact_person_notify_id=article.contact_person_notify_id,
         visible_to_groups=article.visible_to_groups,
         expiry_date=article.expiry_date,
         is_important=article.is_important,
         important_until=article.important_until,
         comments_enabled=article.comments_enabled,
+        edit_permission_user_ids=article.edit_permission_user_ids,
+        edit_permission_group_ids=article.edit_permission_group_ids,
         created_by=user.user_id,
         updated_by=user.user_id
     )
@@ -381,8 +385,13 @@ async def create_comment(
 ):
     """Create a comment on an article."""
     from routes.notifications import notify_favorite_update
+    from services.email_service import email_service
     
-    article = await db.articles.find_one({"article_id": article_id}, {"_id": 0, "comments_enabled": 1, "status": 1, "title": 1, "favorited_by": 1})
+    article = await db.articles.find_one(
+        {"article_id": article_id}, 
+        {"_id": 0, "comments_enabled": 1, "status": 1, "title": 1, "favorited_by": 1, 
+         "contact_person_id": 1, "contact_person_ids": 1, "contact_person_notify_id": 1}
+    )
     if not article:
         raise HTTPException(status_code=404, detail="Artikel nicht gefunden")
     
@@ -413,18 +422,94 @@ async def create_comment(
             user.user_id
         )
     
+    # Notify the designated contact person about the new comment
+    notify_contact_id = article.get("contact_person_notify_id") or article.get("contact_person_id")
+    if notify_contact_id and notify_contact_id != user.user_id:
+        contact = await db.users.find_one(
+            {"user_id": notify_contact_id},
+            {"_id": 0, "email": 1, "name": 1, "notification_preferences": 1}
+        )
+        if contact:
+            prefs = contact.get("notification_preferences", {})
+            if prefs.get("status_changes", True):  # Use status_changes pref for now
+                background_tasks.add_task(
+                    email_service.send_comment_notification,
+                    contact["email"],
+                    contact.get("name", "Unbekannt"),
+                    article["title"],
+                    article_id,
+                    user.name,
+                    comment_data.content.strip()[:200]  # First 200 chars
+                )
+    
     return {"message": "Kommentar erstellt", "comment": comment.model_dump()}
 
 
 @router.delete("/{article_id}/comments/{comment_id}")
-async def delete_comment(article_id: str, comment_id: str, user: User = Depends(get_current_user)):
-    """Delete a comment (admin only)."""
-    if user.role != "admin":
-        raise HTTPException(status_code=403, detail="Nur Administratoren können Kommentare löschen")
+async def delete_comment(
+    article_id: str, 
+    comment_id: str, 
+    background_tasks: BackgroundTasks,
+    user: User = Depends(get_current_user)
+):
+    """Delete a comment. Allowed for admins, article author, or users with edit permissions."""
+    from services.email_service import email_service
     
+    # Get the article to check permissions
+    article = await db.articles.find_one(
+        {"article_id": article_id}, 
+        {"_id": 0, "title": 1, "created_by": 1, "edit_permission_user_ids": 1, "edit_permission_group_ids": 1}
+    )
+    if not article:
+        raise HTTPException(status_code=404, detail="Artikel nicht gefunden")
+    
+    # Get the comment to check author and notify
+    comment = await db.comments.find_one({"comment_id": comment_id, "article_id": article_id}, {"_id": 0})
+    if not comment:
+        raise HTTPException(status_code=404, detail="Kommentar nicht gefunden")
+    
+    # Check permissions
+    can_delete = False
+    if user.role == "admin":
+        can_delete = True
+    elif article.get("created_by") == user.user_id:
+        can_delete = True
+    elif user.user_id in article.get("edit_permission_user_ids", []):
+        can_delete = True
+    else:
+        # Check if user is in any edit permission group
+        user_doc = await db.users.find_one({"user_id": user.user_id}, {"group_ids": 1})
+        user_groups = user_doc.get("group_ids", []) if user_doc else []
+        edit_groups = article.get("edit_permission_group_ids", [])
+        if any(g in edit_groups for g in user_groups):
+            can_delete = True
+    
+    if not can_delete:
+        raise HTTPException(status_code=403, detail="Keine Berechtigung zum Löschen dieses Kommentars")
+    
+    # Delete the comment
     result = await db.comments.delete_one({"comment_id": comment_id, "article_id": article_id})
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Kommentar nicht gefunden")
+    
+    # Notify the comment author about deletion (if not self-delete)
+    if comment.get("author_id") and comment.get("author_id") != user.user_id:
+        comment_author = await db.users.find_one(
+            {"user_id": comment["author_id"]},
+            {"_id": 0, "email": 1, "name": 1, "notification_preferences": 1}
+        )
+        if comment_author:
+            prefs = comment_author.get("notification_preferences", {})
+            if prefs.get("status_changes", True):
+                background_tasks.add_task(
+                    email_service.send_comment_deleted_notification,
+                    comment_author["email"],
+                    comment_author.get("name", "Unbekannt"),
+                    article["title"],
+                    article_id,
+                    user.name,
+                    comment.get("content", "")[:200]
+                )
     
     return {"message": "Kommentar gelöscht"}
 

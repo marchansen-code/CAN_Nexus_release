@@ -299,6 +299,64 @@ class EmailService:
             f"Neue Leseaufgabe: \"{article_title}\"",
             body_html
         )
+    
+    async def send_comment_notification(
+        self,
+        recipient_email: str,
+        recipient_name: str,
+        article_title: str,
+        article_id: str,
+        commenter_name: str,
+        comment_preview: str
+    ) -> bool:
+        """Send notification when a comment is added to an article (to contact person)"""
+        article_url = f"{self.app_url}/articles/{article_id}"
+        body_html = f"""
+        <h2 style="color: #1e3a5f; margin-top: 0;">Neuer Kommentar</h2>
+        <p>Hallo <strong>{recipient_name}</strong>,</p>
+        <p><strong>{commenter_name}</strong> hat einen Kommentar zu einem Artikel hinterlassen, für den Sie Ansprechpartner sind:</p>
+        <div style="background-color: #e3f2fd; padding: 15px; border-radius: 6px; margin: 20px 0; border-left: 4px solid #2196f3;">
+            <p style="font-size: 16px; font-weight: 600; color: #1e3a5f; margin: 0;">💬 {article_title}</p>
+            <p style="font-size: 13px; color: #666; margin: 10px 0 0 0; font-style: italic;">"{comment_preview}..."</p>
+        </div>
+        <p>
+            <a href="{article_url}" style="display: inline-block; background-color: #2196f3; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 500;">Kommentar ansehen</a>
+        </p>
+        """
+        return await self.send_email_async(
+            recipient_email,
+            f"Neuer Kommentar zu \"{article_title}\"",
+            body_html
+        )
+    
+    async def send_comment_deleted_notification(
+        self,
+        recipient_email: str,
+        recipient_name: str,
+        article_title: str,
+        article_id: str,
+        deleted_by: str,
+        comment_preview: str
+    ) -> bool:
+        """Send notification when a user's comment is deleted"""
+        article_url = f"{self.app_url}/articles/{article_id}"
+        body_html = f"""
+        <h2 style="color: #1e3a5f; margin-top: 0;">Kommentar entfernt</h2>
+        <p>Hallo <strong>{recipient_name}</strong>,</p>
+        <p>Ihr Kommentar zum Artikel <strong>"{article_title}"</strong> wurde von <strong>{deleted_by}</strong> entfernt:</p>
+        <div style="background-color: #ffebee; padding: 15px; border-radius: 6px; margin: 20px 0; border-left: 4px solid #f44336;">
+            <p style="font-size: 13px; color: #666; margin: 0; font-style: italic; text-decoration: line-through;">"{comment_preview}..."</p>
+        </div>
+        <p style="font-size: 13px; color: #666;">Falls Sie Fragen dazu haben, wenden Sie sich bitte an den Autor oder Administrator.</p>
+        <p>
+            <a href="{article_url}" style="display: inline-block; background-color: #607d8b; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 500;">Artikel ansehen</a>
+        </p>
+        """
+        return await self.send_email_async(
+            recipient_email,
+            f"Ihr Kommentar wurde entfernt: \"{article_title}\"",
+            body_html
+        )
 
 
 # Singleton instance

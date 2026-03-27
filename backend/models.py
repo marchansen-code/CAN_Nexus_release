@@ -106,14 +106,20 @@ class Article(BaseModel):
     status: str = "draft"
     tags: List[str] = []
     source_document_id: Optional[str] = None
-    review_date: Optional[datetime] = None
     expiry_date: Optional[datetime] = None
     favorited_by: List[str] = []
+    # Multiple contact persons with one designated for notifications
+    contact_person_ids: List[str] = []
+    contact_person_notify_id: Optional[str] = None  # The one who receives notifications
+    # Legacy field for backward compatibility
     contact_person_id: Optional[str] = None
     visible_to_groups: List[str] = []
     is_important: bool = False
     important_until: Optional[datetime] = None
     comments_enabled: bool = True
+    # Edit permissions - users/groups who can edit this article
+    edit_permission_user_ids: List[str] = []
+    edit_permission_group_ids: List[str] = []
     created_by: str
     updated_by: str
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
@@ -127,12 +133,19 @@ class ArticleCreate(BaseModel):
     category_ids: List[str] = []
     status: str = "draft"
     tags: List[str] = []
+    # Multiple contact persons
+    contact_person_ids: List[str] = []
+    contact_person_notify_id: Optional[str] = None
+    # Legacy field for backward compatibility
     contact_person_id: Optional[str] = None
     visible_to_groups: List[str] = []
     expiry_date: Optional[datetime] = None
     is_important: bool = False
     important_until: Optional[datetime] = None
     comments_enabled: bool = True
+    # Edit permissions
+    edit_permission_user_ids: List[str] = []
+    edit_permission_group_ids: List[str] = []
 
 
 class ArticleUpdate(BaseModel):
@@ -141,17 +154,25 @@ class ArticleUpdate(BaseModel):
     category_ids: Optional[List[str]] = None
     status: Optional[str] = None
     tags: Optional[List[str]] = None
-    review_date: Optional[datetime] = None
     expiry_date: Optional[datetime] = None
+    # Multiple contact persons
+    contact_person_ids: Optional[List[str]] = None
+    contact_person_notify_id: Optional[str] = None
+    # Legacy field for backward compatibility
     contact_person_id: Optional[str] = None
     visible_to_groups: Optional[List[str]] = None
     is_important: Optional[bool] = None
     important_until: Optional[datetime] = None
     comments_enabled: Optional[bool] = None
+    # Edit permissions
+    edit_permission_user_ids: Optional[List[str]] = None
+    edit_permission_group_ids: Optional[List[str]] = None
     # Reading assignments
     reading_assignment_enabled: Optional[bool] = None
     reading_assignment_user_ids: Optional[List[str]] = None
     reading_assignment_group_ids: Optional[List[str]] = None
+    # Email notification option for reading assignment
+    reading_assignment_send_email: Optional[bool] = None
 
 
 # ==================== COMMENT MODELS ====================
@@ -259,3 +280,21 @@ class UserSortPreference(BaseModel):
 class UserSortPreferenceUpdate(BaseModel):
     """Request model for updating sort preferences."""
     article_order: List[str]
+
+
+
+# ==================== DISMISSED EXPIRED ARTICLES ====================
+
+class DismissedExpiredArticle(BaseModel):
+    """Model for tracking dismissed expired article notifications per user."""
+    model_config = ConfigDict(extra="ignore")
+    user_id: str
+    article_id: str
+    dismissed_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+
+# ==================== USER DELETION TRANSFER ====================
+
+class UserDeletionTransfer(BaseModel):
+    """Request model for user deletion with article transfer."""
+    transfer_to_user_id: str
