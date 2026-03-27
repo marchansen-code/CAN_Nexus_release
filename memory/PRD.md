@@ -738,6 +738,18 @@ Wissensmanagement-Plattform für CANUSA Touristik GmbH & Co. KG und CU-Travel.
 - ✅ **Vollständige Formaterhaltung**: Umlaute, Sonderzeichen, Tabellen werden korrekt übernommen
 - ✅ **Neue UI-Komponente**: Mode-Auswahl-Buttons ("Als Text" / "Einbetten") erscheinen nach Dokumentauswahl
 
+### Schnellsuche Verbesserungen (27.03.2026)
+
+- ✅ **Breadcrumbs in Suchergebnissen**: Artikel zeigen ihre Kategorie-Hierarchie (z.B. "Kanada > Westkanada")
+- ✅ **Dokumenten-Volltextsuche**: Suche durchsucht auch den extrahierten Text von Dokumenten
+- ✅ **Wortkombinationen**: Mehrere Suchbegriffe werden mit AND-Logik verknüpft (alle Wörter müssen vorkommen)
+- ✅ **Kategorie-Breadcrumbs**: Auch Kategorien zeigen ihren Eltern-Pfad an
+
+### Navigation nach Veröffentlichen (27.03.2026)
+
+- ✅ **Artikelansicht nach Veröffentlichen**: Nach Klick auf "Veröffentlichen" wird der fertige Artikel angezeigt (nicht zurück zur Liste)
+- ✅ **Speichern bleibt gleich**: "Speichern" navigiert weiterhin zurück zur Ursprungsseite
+
 ## Backlog / Verbleibende Aufgaben
 
 - Google Drive Bugs beheben (Export zu Shared Drives, falsche Dateiliste) - **ON HOLD**: Benutzer muss zuerst Test-URLs in Google Console eintragen

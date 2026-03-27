@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useContext } from 'react';
+import React, { useState, useEffect, useCallback, useContext, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { API, AuthContext } from '@/App';
@@ -20,7 +20,8 @@ import {
   FolderTree,
   Home,
   File,
-  Tag
+  Tag,
+  ChevronRight
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 
@@ -35,7 +36,45 @@ const QuickSearch = () => {
     documents: [],
     categories: []
   });
+  const [allCategories, setAllCategories] = useState([]);
   const [loading, setLoading] = useState(false);
+
+  // Load all categories for breadcrumb building
+  useEffect(() => {
+    const loadCategories = async () => {
+      try {
+        const res = await axios.get(`${API}/categories`);
+        setAllCategories(res.data || []);
+      } catch (error) {
+        console.error('Failed to load categories:', error);
+      }
+    };
+    loadCategories();
+  }, []);
+
+  // Build breadcrumb path for an article based on its category
+  const buildBreadcrumb = useCallback((categoryIds) => {
+    if (!categoryIds || categoryIds.length === 0 || allCategories.length === 0) return null;
+    
+    // Take the first category
+    const categoryId = categoryIds[0];
+    const category = allCategories.find(c => c.category_id === categoryId);
+    if (!category) return null;
+    
+    // Build path from root to this category
+    const path = [];
+    let current = category;
+    while (current) {
+      path.unshift(current.name);
+      if (current.parent_id) {
+        current = allCategories.find(c => c.category_id === current.parent_id);
+      } else {
+        current = null;
+      }
+    }
+    
+    return path;
+  }, [allCategories]);
 
   // Handle keyboard shortcut
   useEffect(() => {
@@ -137,6 +176,21 @@ const QuickSearch = () => {
     );
   };
 
+  // Breadcrumb component
+  const Breadcrumb = ({ path }) => {
+    if (!path || path.length === 0) return null;
+    return (
+      <div className="flex items-center gap-0.5 text-[10px] text-muted-foreground mt-0.5">
+        {path.map((item, index) => (
+          <React.Fragment key={index}>
+            {index > 0 && <ChevronRight className="w-2.5 h-2.5" />}
+            <span className="truncate max-w-[80px]">{item}</span>
+          </React.Fragment>
+        ))}
+      </div>
+    );
+  };
+
   return (
     <CommandDialog open={open} onOpenChange={setOpen} shouldFilter={false}>
       <CommandInput 
@@ -179,17 +233,24 @@ const QuickSearch = () => {
               <>
                 <CommandSeparator />
                 <CommandGroup heading="Artikel">
-                  {results.articles.map((article) => (
-                    <CommandItem
-                      key={article.article_id}
-                      value={`article-${article.article_id}`}
-                      onSelect={() => handleSelect('article', article)}
-                    >
-                      <FileText className="mr-2 h-4 w-4 text-blue-500" />
-                      <span className="flex-1 truncate">{article.title}</span>
-                      {getStatusBadge(article.status)}
-                    </CommandItem>
-                  ))}
+                  {results.articles.map((article) => {
+                    const breadcrumb = buildBreadcrumb(article.category_ids);
+                    return (
+                      <CommandItem
+                        key={article.article_id}
+                        value={`article-${article.article_id}`}
+                        onSelect={() => handleSelect('article', article)}
+                        className="flex-col items-start"
+                      >
+                        <div className="flex items-center w-full">
+                          <FileText className="mr-2 h-4 w-4 text-blue-500 shrink-0" />
+                          <span className="flex-1 truncate">{article.title}</span>
+                          {getStatusBadge(article.status)}
+                        </div>
+                        {breadcrumb && <Breadcrumb path={breadcrumb} />}
+                      </CommandItem>
+                    );
+                  })}
                 </CommandGroup>
               </>
             )}
@@ -204,12 +265,21 @@ const QuickSearch = () => {
                       key={doc.document_id}
                       value={`doc-${doc.document_id}`}
                       onSelect={() => handleSelect('document', doc)}
+                      className="flex-col items-start"
                     >
-                      <File className="mr-2 h-4 w-4 text-amber-500" />
-                      <span className="flex-1 truncate">{doc.title || doc.filename}</span>
-                      <span className="text-xs text-muted-foreground">
-                        {doc.file_type?.toUpperCase()}
-                      </span>
+                      <div className="flex items-center w-full">
+                        <File className="mr-2 h-4 w-4 text-amber-500 shrink-0" />
+                        <span className="flex-1 truncate">{doc.title || doc.filename}</span>
+                        <span className="text-xs text-muted-foreground">
+                          {doc.file_type?.toUpperCase().replace('.', '')}
+                        </span>
+                      </div>
+                      {doc.category && (
+                        <div className="flex items-center gap-0.5 text-[10px] text-muted-foreground mt-0.5">
+                          <Folder className="w-2.5 h-2.5" />
+                          <span>{doc.category}</span>
+                        </div>
+                      )}
                     </CommandItem>
                   ))}
                 </CommandGroup>
@@ -221,21 +291,44 @@ const QuickSearch = () => {
               <>
                 <CommandSeparator />
                 <CommandGroup heading="Kategorien">
-                  {results.categories.filter(c => isAdmin || !c.is_pinnwand).map((cat) => (
-                    <CommandItem
-                      key={cat.category_id}
-                      value={`cat-${cat.category_id}`}
-                      onSelect={() => handleSelect('category', cat)}
-                    >
-                      <Folder className="mr-2 h-4 w-4 text-emerald-500" />
-                      <span className="flex-1 truncate">{cat.name}</span>
-                      {cat.is_pinnwand && (
-                        <Badge variant="outline" className="bg-amber-50 text-amber-700 text-[10px] px-1.5 py-0">
-                          Pinnwand
-                        </Badge>
-                      )}
-                    </CommandItem>
-                  ))}
+                  {results.categories.filter(c => isAdmin || !c.is_pinnwand).map((cat) => {
+                    // Build breadcrumb for category itself
+                    const parentPath = [];
+                    let parent = allCategories.find(c => c.category_id === cat.parent_id);
+                    while (parent) {
+                      parentPath.unshift(parent.name);
+                      parent = allCategories.find(c => c.category_id === parent.parent_id);
+                    }
+                    
+                    return (
+                      <CommandItem
+                        key={cat.category_id}
+                        value={`cat-${cat.category_id}`}
+                        onSelect={() => handleSelect('category', cat)}
+                        className="flex-col items-start"
+                      >
+                        <div className="flex items-center w-full">
+                          <Folder className="mr-2 h-4 w-4 text-emerald-500 shrink-0" />
+                          <span className="flex-1 truncate">{cat.name}</span>
+                          {cat.is_pinnwand && (
+                            <Badge variant="outline" className="bg-amber-50 text-amber-700 text-[10px] px-1.5 py-0">
+                              Pinnwand
+                            </Badge>
+                          )}
+                        </div>
+                        {parentPath.length > 0 && (
+                          <div className="flex items-center gap-0.5 text-[10px] text-muted-foreground mt-0.5">
+                            {parentPath.map((item, index) => (
+                              <React.Fragment key={index}>
+                                {index > 0 && <ChevronRight className="w-2.5 h-2.5" />}
+                                <span className="truncate max-w-[80px]">{item}</span>
+                              </React.Fragment>
+                            ))}
+                          </div>
+                        )}
+                      </CommandItem>
+                    );
+                  })}
                 </CommandGroup>
               </>
             )}

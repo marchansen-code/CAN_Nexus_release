@@ -345,16 +345,25 @@ const ArticleEditor = () => {
         important_until: article.important_until?.toISOString() || null
       };
 
+      let savedArticleId = articleId;
+      
       if (isNew) {
-        await axios.post(`${API}/articles`, payload);
+        const response = await axios.post(`${API}/articles`, payload);
+        savedArticleId = response.data.article_id;
         toast.success("Artikel erstellt");
       } else {
         await axios.put(`${API}/articles/${articleId}`, payload);
         toast.success("Artikel gespeichert");
       }
       
-      // Navigate back to origin
-      navigateToOrigin();
+      // If publishing, navigate to the article view
+      if (newStatus === "published" && savedArticleId) {
+        sessionStorage.removeItem('article_origin_url');
+        navigate(`/articles/${savedArticleId}`);
+      } else {
+        // Navigate back to origin for drafts/saves
+        navigateToOrigin();
+      }
     } catch (error) {
       console.error("Failed to save:", error);
       toast.error("Artikel konnte nicht gespeichert werden");

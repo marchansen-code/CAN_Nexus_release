@@ -379,12 +379,34 @@ async def process_spreadsheet(file_path: str, file_type: str) -> dict:
 
 
 @router.get("", response_model=List[Dict])
-async def get_documents(user: User = Depends(get_current_user)):
-    """Get all documents (excluding soft-deleted)."""
+async def get_documents(
+    user: User = Depends(get_current_user),
+    search: str = None,
+    limit: int = 100
+):
+    """Get all documents (excluding soft-deleted). Supports full-text search in content."""
+    query = {"deleted_at": {"$exists": False}}
+    
+    # If search term provided, search in filename, title, and extracted text content
+    if search and search.strip():
+        search_terms = search.strip().split()
+        # Build regex pattern that matches all terms (AND logic for word combinations)
+        regex_patterns = [{"$or": [
+            {"filename": {"$regex": term, "$options": "i"}},
+            {"title": {"$regex": term, "$options": "i"}},
+            {"extracted_text": {"$regex": term, "$options": "i"}},
+            {"tags": {"$regex": term, "$options": "i"}}
+        ]} for term in search_terms]
+        
+        if len(regex_patterns) == 1:
+            query["$or"] = regex_patterns[0]["$or"]
+        else:
+            query["$and"] = regex_patterns
+    
     docs = await db.documents.find(
-        {"deleted_at": {"$exists": False}}, 
-        {"_id": 0, "temp_path": 0}
-    ).sort("created_at", -1).to_list(100)
+        query, 
+        {"_id": 0, "temp_path": 0, "html_content": 0}  # Exclude large fields for list view
+    ).sort("created_at", -1).to_list(limit)
     return docs
 
 
