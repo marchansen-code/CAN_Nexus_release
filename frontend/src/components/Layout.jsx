@@ -30,6 +30,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import QuickSearch from "./QuickSearch";
+import NotificationCenter from "./NotificationCenter";
 
 // Navigation items with role-based visibility
 const allNavItems = [
@@ -155,7 +156,7 @@ const Header = () => {
         {/* Spacer for desktop */}
         <div className="hidden lg:block" />
 
-        {/* Quick Search Trigger & User Menu */}
+        {/* Quick Search Trigger, Notification Center & User Menu */}
         <div className="flex items-center gap-3">
           {/* Quick Search Button */}
           <Button 
@@ -173,6 +174,9 @@ const Header = () => {
               <span className="text-xs">⌘</span>K
             </kbd>
           </Button>
+
+          {/* Notification Center */}
+          <NotificationCenter />
 
           {/* User Menu */}
           <DropdownMenu>

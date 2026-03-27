@@ -18,6 +18,7 @@ import {
   AlertTriangle,
   CheckCircle,
   ChevronDown,
+  ChevronRight,
   Check
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
@@ -104,19 +105,22 @@ const Search = () => {
   const [selectedStatus, setSelectedStatus] = useState(""); // "", "published", "draft"
   const [allUsers, setAllUsers] = useState([]);
   const [authorSearchOpen, setAuthorSearchOpen] = useState(false);
+  const [categories, setCategories] = useState([]);
 
   const debouncedQuery = useDebounce(query, 300);
 
-  // Load all tags and users
+  // Load all tags, users and categories
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [tagsRes, usersRes] = await Promise.all([
+        const [tagsRes, usersRes, categoriesRes] = await Promise.all([
           axios.get(`${API}/tags`),
-          axios.get(`${API}/users`)
+          axios.get(`${API}/users`),
+          axios.get(`${API}/categories`)
         ]);
         setAllTags(tagsRes.data.tags || []);
         setAllUsers(usersRes.data || []);
+        setCategories(categoriesRes.data || []);
       } catch (error) {
         console.error("Failed to load data:", error);
       }
@@ -237,7 +241,23 @@ const Search = () => {
     } catch (error) {
       console.error("Failed to mark as viewed:", error);
     }
+    sessionStorage.setItem('article_origin_url', window.location.pathname + window.location.search);
     navigate(`/articles/${articleId}`);
+  };
+
+  // Build category breadcrumb path
+  const buildCategoryPath = (categoryId) => {
+    if (!categoryId || categories.length === 0) return [];
+    
+    const path = [];
+    let currentCat = categories.find(c => c.category_id === categoryId);
+    
+    while (currentCat) {
+      path.unshift(currentCat);
+      currentCat = categories.find(c => c.category_id === currentCat.parent_id);
+    }
+    
+    return path;
   };
 
   // Highlight matching text
@@ -699,14 +719,31 @@ const Search = () => {
                           {highlightMatch(stripHtml(result.content_snippet), query)}
                         </p>
 
+                        {/* Breadcrumb */}
+                        {(result.category_ids?.length > 0 || result.category_id) && (
+                          <div className="flex items-center gap-1 pl-8 text-xs text-muted-foreground flex-wrap">
+                            <FolderTree className="w-3 h-3 shrink-0" />
+                            {buildCategoryPath(result.category_ids?.[0] || result.category_id).map((cat, index, arr) => (
+                              <React.Fragment key={cat.category_id}>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    navigate(`/articles?category=${cat.category_id}`);
+                                  }}
+                                  className="hover:text-foreground transition-colors hover:underline"
+                                >
+                                  {cat.name}
+                                </button>
+                                {index < arr.length - 1 && (
+                                  <ChevronRight className="w-3 h-3 shrink-0" />
+                                )}
+                              </React.Fragment>
+                            ))}
+                          </div>
+                        )}
+
                         {/* Meta */}
                         <div className="flex items-center gap-3 pl-8 text-xs text-muted-foreground flex-wrap">
-                          {result.category_name && (
-                            <span className="flex items-center gap-1">
-                              <FolderTree className="w-3 h-3" />
-                              {result.category_name}
-                            </span>
-                          )}
                           {result.author_name && (
                             <span className="flex items-center gap-1">
                               <User className="w-3 h-3" />

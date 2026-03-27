@@ -28,7 +28,8 @@ import {
   FileUp,
   Mail,
   BookOpen,
-  UserCheck
+  UserCheck,
+  Search
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -192,6 +193,11 @@ const ArticleEditor = () => {
   const [showReviewDialog, setShowReviewDialog] = useState(false);
   const [savingReadingAssignment, setSavingReadingAssignment] = useState(false);
   const [returnUrl, setReturnUrl] = useState("/articles");
+  
+  // Search terms for user selection fields
+  const [contactSearchTerm, setContactSearchTerm] = useState("");
+  const [editPermissionSearchTerm, setEditPermissionSearchTerm] = useState("");
+  const [readingAssignmentSearchTerm, setReadingAssignmentSearchTerm] = useState("");
 
   // Store the origin URL on mount
   useEffect(() => {
@@ -834,8 +840,22 @@ const ArticleEditor = () => {
               <p className="text-xs text-muted-foreground">
                 Wählen Sie einen oder mehrere Ansprechpartner. Der mit dem Radio-Button markierte Benutzer wird über Änderungen und Kommentare benachrichtigt.
               </p>
+              {/* Search Input */}
+              <div className="relative">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Benutzer suchen..."
+                  value={contactSearchTerm}
+                  onChange={(e) => setContactSearchTerm(e.target.value)}
+                  className="pl-8 h-9"
+                  data-testid="contact-search"
+                />
+              </div>
               <div className="max-h-48 overflow-y-auto space-y-1 border rounded-md p-2">
-                {users.map(u => {
+                {users
+                  .filter(u => u.name.toLowerCase().includes(contactSearchTerm.toLowerCase()) || 
+                              u.email?.toLowerCase().includes(contactSearchTerm.toLowerCase()))
+                  .map(u => {
                   const isSelected = article.contact_person_ids?.includes(u.user_id) || article.contact_person_id === u.user_id;
                   const isNotifyPerson = article.contact_person_notify_id === u.user_id || (!article.contact_person_notify_id && article.contact_person_id === u.user_id);
                   
@@ -896,6 +916,9 @@ const ArticleEditor = () => {
                     </div>
                   );
                 })}
+                {users.filter(u => u.name.toLowerCase().includes(contactSearchTerm.toLowerCase())).length === 0 && (
+                  <p className="text-xs text-muted-foreground text-center py-2">Keine Benutzer gefunden</p>
+                )}
               </div>
               {(article.contact_person_ids?.length > 0 || article.contact_person_id) && (
                 <p className="text-xs text-muted-foreground flex items-center gap-1">
@@ -924,8 +947,23 @@ const ArticleEditor = () => {
                 <Label className="flex items-center gap-1 text-sm">
                   <User className="w-3 h-3" /> Benutzer
                 </Label>
+                {/* Search Input */}
+                <div className="relative">
+                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Benutzer suchen..."
+                    value={editPermissionSearchTerm}
+                    onChange={(e) => setEditPermissionSearchTerm(e.target.value)}
+                    className="pl-8 h-9"
+                    data-testid="edit-permission-search"
+                  />
+                </div>
                 <div className="max-h-32 overflow-y-auto space-y-1 border rounded-md p-2">
-                  {users.filter(u => u.role !== "viewer" && u.user_id !== user?.user_id).map(u => (
+                  {users
+                    .filter(u => u.role !== "viewer" && u.user_id !== user?.user_id)
+                    .filter(u => u.name.toLowerCase().includes(editPermissionSearchTerm.toLowerCase()) || 
+                                u.email?.toLowerCase().includes(editPermissionSearchTerm.toLowerCase()))
+                    .map(u => (
                     <div key={u.user_id} className="flex items-center space-x-2">
                       <Checkbox
                         id={`edit-user-${u.user_id}`}
@@ -951,6 +989,10 @@ const ArticleEditor = () => {
                       </label>
                     </div>
                   ))}
+                  {users.filter(u => u.role !== "viewer" && u.user_id !== user?.user_id)
+                    .filter(u => u.name.toLowerCase().includes(editPermissionSearchTerm.toLowerCase())).length === 0 && (
+                    <p className="text-xs text-muted-foreground text-center py-2">Keine Benutzer gefunden</p>
+                  )}
                 </div>
               </div>
 
@@ -1051,11 +1093,48 @@ const ArticleEditor = () => {
                   
                   {/* User Selection */}
                   <div className="space-y-2">
-                    <Label className="flex items-center gap-1">
-                      <User className="w-3 h-3" /> Benutzer
-                    </Label>
+                    <div className="flex items-center justify-between">
+                      <Label className="flex items-center gap-1">
+                        <User className="w-3 h-3" /> Benutzer
+                      </Label>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 text-xs"
+                        onClick={() => {
+                          const allUserIds = users.filter(u => u.user_id !== user?.user_id).map(u => u.user_id);
+                          const allSelected = allUserIds.every(id => article.reading_assignment_user_ids.includes(id));
+                          if (allSelected) {
+                            setArticle(prev => ({ ...prev, reading_assignment_user_ids: [] }));
+                          } else {
+                            setArticle(prev => ({ ...prev, reading_assignment_user_ids: allUserIds }));
+                          }
+                        }}
+                        data-testid="select-all-reading-users"
+                      >
+                        {users.filter(u => u.user_id !== user?.user_id).every(u => article.reading_assignment_user_ids.includes(u.user_id)) 
+                          ? "Keine auswählen" 
+                          : "Alle auswählen"}
+                      </Button>
+                    </div>
+                    {/* Search Input */}
+                    <div className="relative">
+                      <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        placeholder="Benutzer suchen..."
+                        value={readingAssignmentSearchTerm}
+                        onChange={(e) => setReadingAssignmentSearchTerm(e.target.value)}
+                        className="pl-8 h-9"
+                        data-testid="reading-assignment-search"
+                      />
+                    </div>
                     <div className="max-h-32 overflow-y-auto space-y-1 border rounded-md p-2">
-                      {users.filter(u => u.user_id !== user?.user_id).map(u => (
+                      {users
+                        .filter(u => u.user_id !== user?.user_id)
+                        .filter(u => u.name.toLowerCase().includes(readingAssignmentSearchTerm.toLowerCase()) || 
+                                    u.email?.toLowerCase().includes(readingAssignmentSearchTerm.toLowerCase()))
+                        .map(u => (
                         <div key={u.user_id} className="flex items-center space-x-2">
                           <Checkbox
                             id={`ra-user-${u.user_id}`}
@@ -1068,8 +1147,9 @@ const ArticleEditor = () => {
                           </label>
                         </div>
                       ))}
-                      {users.filter(u => u.user_id !== user?.user_id).length === 0 && (
-                        <p className="text-xs text-muted-foreground py-2">Keine anderen Benutzer vorhanden</p>
+                      {users.filter(u => u.user_id !== user?.user_id)
+                        .filter(u => u.name.toLowerCase().includes(readingAssignmentSearchTerm.toLowerCase())).length === 0 && (
+                        <p className="text-xs text-muted-foreground py-2 text-center">Keine Benutzer gefunden</p>
                       )}
                     </div>
                   </div>
@@ -1077,9 +1157,30 @@ const ArticleEditor = () => {
                   {/* Group Selection */}
                   {groups.length > 0 && (
                     <div className="space-y-2">
-                      <Label className="flex items-center gap-1">
-                        <Users className="w-3 h-3" /> Gruppen
-                      </Label>
+                      <div className="flex items-center justify-between">
+                        <Label className="flex items-center gap-1">
+                          <Users className="w-3 h-3" /> Gruppen
+                        </Label>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 text-xs"
+                          onClick={() => {
+                            const allGroupIds = groups.map(g => g.group_id);
+                            const allSelected = allGroupIds.every(id => article.reading_assignment_group_ids.includes(id));
+                            if (allSelected) {
+                              setArticle(prev => ({ ...prev, reading_assignment_group_ids: [] }));
+                            } else {
+                              setArticle(prev => ({ ...prev, reading_assignment_group_ids: allGroupIds }));
+                            }
+                          }}
+                        >
+                          {groups.every(g => article.reading_assignment_group_ids.includes(g.group_id)) 
+                            ? "Keine auswählen" 
+                            : "Alle auswählen"}
+                        </Button>
+                      </div>
                       <div className="max-h-24 overflow-y-auto space-y-1 border rounded-md p-2">
                         {groups.map(g => (
                           <div key={g.group_id} className="flex items-center space-x-2">

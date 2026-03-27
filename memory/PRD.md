@@ -665,17 +665,34 @@ Wissensmanagement-Plattform für CANUSA Touristik GmbH & Co. KG und CU-Travel.
 
 - **Ansprechpartner Mehrfachauswahl**:
   - Mehrere Ansprechpartner können jetzt pro Artikel ausgewählt werden
+  - **Suchfunktion** zum schnellen Finden von Benutzern
   - Radio-Button bestimmt, welcher Ansprechpartner Mail-Benachrichtigungen erhält
   - Kommentar-Benachrichtigungen gehen nur an den ausgewählten Benachrichtigungsempfänger
 
 - **Edit-Berechtigungen für Artikel**:
   - Neues Feld "Bearbeitungsrechte" im ArticleEditor
+  - **Suchfunktion** zum schnellen Finden von Benutzern
   - Benutzer und Gruppen können spezifisch für die Bearbeitung freigegeben werden
   - Nur Berechtigte + Autor + Admins können den Artikel bearbeiten (wenn gesetzt)
 
 - **Leseaufgaben mit Mail-Option**:
+  - **Suchfunktion** zum schnellen Finden von Benutzern
+  - **"Alle auswählen"/"Keine auswählen"** Buttons für Benutzer und Gruppen
   - Neue Checkbox "Benutzer per E-Mail benachrichtigen" bei Leseaufgaben
   - Emails werden nur versendet, wenn die Option aktiviert ist
+
+- **Breadcrumbs überall**:
+  - Vollständige Kategorie-Hierarchie als klickbare Breadcrumbs
+  - Dashboard: Artikelkarten zeigen Breadcrumbs
+  - Artikelübersicht: Artikelkarten zeigen Breadcrumbs (wenn keine Kategorie gewählt)
+  - Suchergebnisse: Ergebnisse zeigen Breadcrumbs
+  - Artikelansicht: Vollständiger Pfad über dem Artikel
+
+- **Benachrichtigungs-Zentrale** (Header):
+  - Glocken-Icon mit Badge zeigt Anzahl ungelesener Benachrichtigungen
+  - Panel zeigt Leseaufgaben, bald ablaufende und abgelaufene Artikel
+  - Direkte Aktionen: Als gelesen markieren, Ausblenden
+  - Auto-Refresh alle 2 Minuten
 
 - **Lösch-Bestätigung mit "DELETE"-Eingabe**:
   - Artikel, Kategorien und Benutzer erfordern jetzt die Eingabe von "DELETE" zur Bestätigung
@@ -693,10 +710,6 @@ Wissensmanagement-Plattform für CANUSA Touristik GmbH & Co. KG und CU-Travel.
 - **Kategorien-Sidebar verbessert**:
   - Breitere Kategorien-Sidebar (w-96 statt w-80)
   - Horizontales Scrolling bei vielen Sub-Ordnern
-
-- **Breadcrumbs in Artikelansicht**:
-  - Vollständige Kategorie-Hierarchie als Breadcrumb über dem Artikel
-  - Klickbare Links zu jeder Kategorie-Ebene
 
 - **Wiedervorlage entfernt**:
   - Das Wiedervorlage-Feld wurde aus dem Artikel-Editor entfernt

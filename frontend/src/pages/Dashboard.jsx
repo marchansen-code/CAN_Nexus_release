@@ -84,7 +84,7 @@ const StatusBadge = ({ status }) => {
   );
 };
 
-const ArticleCard = ({ article, onClick }) => {
+const ArticleCard = ({ article, onClick, categories = [], navigate }) => {
   const formatDate = (dateString) => {
     if (!dateString) return "";
     const date = new Date(dateString);
@@ -95,6 +95,23 @@ const ArticleCard = ({ article, onClick }) => {
     });
   };
 
+  // Build category breadcrumb path
+  const buildPath = (categoryId) => {
+    if (!categoryId || categories.length === 0) return [];
+    
+    const path = [];
+    let currentCat = categories.find(c => c.category_id === categoryId);
+    
+    while (currentCat) {
+      path.unshift(currentCat);
+      currentCat = categories.find(c => c.category_id === currentCat.parent_id);
+    }
+    
+    return path;
+  };
+
+  const breadcrumbPath = buildPath(article.category_ids?.[0] || article.category_id);
+
   return (
     <div
       className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/50 transition-colors cursor-pointer"
@@ -103,6 +120,18 @@ const ArticleCard = ({ article, onClick }) => {
     >
       <div className="space-y-1 min-w-0 flex-1">
         <p className="font-medium truncate">{article.title}</p>
+        {/* Breadcrumb */}
+        {breadcrumbPath.length > 0 && (
+          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+            <FolderTree className="w-3 h-3 shrink-0" />
+            {breadcrumbPath.map((cat, index) => (
+              <React.Fragment key={cat.category_id}>
+                {index > 0 && <ChevronRight className="w-3 h-3 shrink-0" />}
+                <span className="truncate max-w-[80px]">{cat.name}</span>
+              </React.Fragment>
+            ))}
+          </div>
+        )}
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <Clock className="w-3 h-3" />
           {formatDate(article.updated_at)}
@@ -432,6 +461,21 @@ const Dashboard = () => {
     navigate(path);
   };
 
+  // Build category breadcrumb path
+  const buildCategoryPath = (categoryId) => {
+    if (!categoryId || categories.length === 0) return [];
+    
+    const path = [];
+    let currentCat = categories.find(c => c.category_id === categoryId);
+    
+    while (currentCat) {
+      path.unshift(currentCat);
+      currentCat = categories.find(c => c.category_id === currentCat.parent_id);
+    }
+    
+    return path;
+  };
+
   // Mark article as read
   const handleMarkAsRead = async (articleId) => {
     try {
@@ -706,7 +750,9 @@ const Dashboard = () => {
                 <ArticleCard
                   key={article.article_id}
                   article={article}
-                  onClick={() => navigate(`/articles/${article.article_id}`)}
+                  categories={categories}
+                  navigate={navigate}
+                  onClick={() => navigateToArticle(`/articles/${article.article_id}`)}
                 />
               ))}
             </div>
@@ -738,7 +784,9 @@ const Dashboard = () => {
                 <ArticleCard
                   key={article.article_id}
                   article={article}
-                  onClick={() => navigate(`/articles/${article.article_id}`)}
+                  categories={categories}
+                  navigate={navigate}
+                  onClick={() => navigateToArticle(`/articles/${article.article_id}`)}
                 />
               ))}
             </div>
@@ -768,7 +816,9 @@ const Dashboard = () => {
                 <ArticleCard
                   key={article.article_id}
                   article={article}
-                  onClick={() => navigate(`/articles/${article.article_id}`)}
+                  categories={categories}
+                  navigate={navigate}
+                  onClick={() => navigateToArticle(`/articles/${article.article_id}`)}
                 />
               ))}
             </div>

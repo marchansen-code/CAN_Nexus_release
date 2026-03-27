@@ -410,6 +410,21 @@ const Articles = () => {
     navigate(path);
   };
 
+  // Build category breadcrumb path
+  const buildCategoryPath = (categoryId) => {
+    if (!categoryId || categories.length === 0) return [];
+    
+    const path = [];
+    let currentCat = categories.find(c => c.category_id === categoryId);
+    
+    while (currentCat) {
+      path.unshift(currentCat);
+      currentCat = categories.find(c => c.category_id === currentCat.parent_id);
+    }
+    
+    return path;
+  };
+
   // Category management state
   const [catDialog, setCatDialog] = useState({ open: false, mode: 'create', category: null, parentId: null });
   const [catFormData, setCatFormData] = useState({ name: '', description: '', is_pinnwand: false });
@@ -1025,10 +1040,29 @@ const Articles = () => {
                                 <Eye className="w-3 h-3" />
                                 {article.view_count || 0}
                               </span>
-                              {!selectedCategoryId && article.category_id && (
-                                <span className="truncate max-w-[150px]">{getCategoryName(article.category_id)}</span>
-                              )}
                             </div>
+                            {/* Breadcrumb - show full path when no category is selected */}
+                            {!selectedCategoryId && (article.category_ids?.[0] || article.category_id) && (
+                              <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1 flex-wrap">
+                                <FolderTree className="w-3 h-3 shrink-0" />
+                                {buildCategoryPath(article.category_ids?.[0] || article.category_id).map((cat, index, arr) => (
+                                  <React.Fragment key={cat.category_id}>
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setSelectedCategoryId(cat.category_id);
+                                      }}
+                                      className="hover:text-foreground transition-colors hover:underline"
+                                    >
+                                      {cat.name}
+                                    </button>
+                                    {index < arr.length - 1 && (
+                                      <ChevronRight className="w-3 h-3 shrink-0" />
+                                    )}
+                                  </React.Fragment>
+                                ))}
+                              </div>
+                            )}
                           </div>
                           {canEdit && (
                             <DropdownMenu>

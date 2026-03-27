@@ -91,13 +91,17 @@ const StatusBadge = ({ status }) => {
 };
 
 // Breadcrumb Component for displaying article hierarchy
-const ArticleBreadcrumb = ({ article, categories, category, navigate }) => {
-  // Build breadcrumb path from category hierarchy
+const ArticleBreadcrumb = ({ article, categories, navigate }) => {
+  // Build breadcrumb path from category hierarchy using category_ids or category_id
   const buildBreadcrumbPath = () => {
-    if (!category) return [];
+    if (!categories || categories.length === 0) return [];
+    
+    // Get the first category_id (from category_ids array or legacy category_id)
+    const categoryId = article?.category_ids?.[0] || article?.category_id;
+    if (!categoryId) return [];
     
     const path = [];
-    let currentCat = category;
+    let currentCat = categories.find(c => c.category_id === categoryId);
     
     // Traverse up the category tree
     while (currentCat) {
@@ -130,8 +134,9 @@ const ArticleBreadcrumb = ({ article, categories, category, navigate }) => {
           <ChevronRight className="w-3.5 h-3.5" />
           <button
             onClick={() => navigate(`/articles?category=${cat.category_id}`)}
-            className="hover:text-foreground transition-colors"
+            className="hover:text-foreground transition-colors flex items-center gap-1"
           >
+            {index === 0 && <FolderTree className="w-3 h-3" />}
             {cat.name}
           </button>
         </React.Fragment>
@@ -505,7 +510,6 @@ const ArticleView = () => {
       <ArticleBreadcrumb 
         article={article} 
         categories={categories} 
-        category={category} 
         navigate={navigate}
       />
       
