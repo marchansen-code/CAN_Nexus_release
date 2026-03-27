@@ -793,6 +793,24 @@ Wissensmanagement-Plattform für CANUSA Touristik GmbH & Co. KG und CU-Travel.
 - ✅ **Artikel-Suche**: Live-Suche in veröffentlichten Artikeln mit Kategorie-Breadcrumbs
 - ✅ **Bug-Fix**: Fehlende File-Icon-Import in lucide-react behoben
 
+### Dokument-Import "Als Link" Fix (27.03.2026)
+
+- ✅ **"Als Link"-Modus funktioniert**: Fügt einen klickbaren Link mit dem Dokumentnamen direkt in den Editor ein
+- ✅ **EditorRef-Pattern**: RichTextEditor nutzt forwardRef, ArticleEditor fügt Links direkt über die TipTap-API ein
+
+### Persistenter Dokumenten-Speicher (27.03.2026)
+
+- ✅ **Speicherpfad geändert**: Von `/tmp/docs/` (ephemeral) auf `/app/data/docs/` (persistent)
+- ✅ **Automatische Migration**: Bestehende Dateien werden beim Start automatisch kopiert
+- ✅ **Pfad-Aktualisierung**: Datenbank-Einträge werden automatisch auf den neuen Pfad aktualisiert
+- ✅ **Umgebungsvariable**: `DOCS_STORAGE_PATH` kann über .env konfiguriert werden
+
+### Benutzer group_ids Migration (27.03.2026)
+
+- ✅ **Startup-Migration**: Alle Benutzer ohne `group_ids`-Feld erhalten automatisch `[]`
+- ✅ **Neue Benutzer**: Admin-Panel und Google-OAuth-Erstellung setzen jetzt `group_ids: []`
+- ✅ **Gruppen-Zuordnung**: Alle Benutzer können jetzt problemlos zu Gruppen hinzugefügt werden
+
 ## Backlog / Verbleibende Aufgaben
 
 - Google Drive Bugs beheben (Export zu Shared Drives, falsche Dateiliste) - **ON HOLD**: Benutzer muss zuerst Test-URLs in Google Console eintragen
