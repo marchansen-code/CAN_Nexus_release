@@ -223,3 +223,35 @@ async def cleanup_trash(user: User = Depends(get_current_user)):
         "deleted_articles": deleted_articles.deleted_count,
         "deleted_documents": deleted_documents.deleted_count
     }
+
+
+
+@router.delete("/empty-all")
+async def empty_trash(user: User = Depends(get_current_user)):
+    """Permanently delete ALL items in trash (admin only)."""
+    if user.role != "admin":
+        raise HTTPException(status_code=403, detail="Nur Administratoren können den Papierkorb leeren")
+    
+    # Delete all trashed articles
+    deleted_articles = await db.articles.delete_many({"deleted_at": {"$exists": True}})
+    
+    # Get and delete document files, then remove from DB
+    trashed_docs = await db.documents.find({"deleted_at": {"$exists": True}}).to_list(1000)
+    for doc in trashed_docs:
+        file_path = doc.get("file_path") or doc.get("temp_path")
+        if file_path and os.path.exists(file_path):
+            try:
+                os.remove(file_path)
+            except Exception:
+                pass
+    deleted_documents = await db.documents.delete_many({"deleted_at": {"$exists": True}})
+    
+    # Delete all trashed categories
+    deleted_categories = await db.categories.delete_many({"deleted_at": {"$exists": True}})
+    
+    return {
+        "message": "Papierkorb geleert",
+        "deleted_articles": deleted_articles.deleted_count,
+        "deleted_documents": deleted_documents.deleted_count,
+        "deleted_categories": deleted_categories.deleted_count
+    }

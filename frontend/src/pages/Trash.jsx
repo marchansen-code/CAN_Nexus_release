@@ -35,6 +35,8 @@ const Trash = () => {
   const [loading, setLoading] = useState(true);
   const [deleteDialog, setDeleteDialog] = useState({ open: false, type: null, id: null, title: null });
   const [restoreDialog, setRestoreDialog] = useState({ open: false, type: null, id: null, title: null });
+  const [emptyTrashDialog, setEmptyTrashDialog] = useState(false);
+  const [emptyingTrash, setEmptyingTrash] = useState(false);
 
   useEffect(() => {
     fetchTrash();
@@ -79,6 +81,21 @@ const Trash = () => {
       toast.error("Löschen fehlgeschlagen");
     } finally {
       setDeleteDialog({ open: false, type: null, id: null, title: null });
+    }
+  };
+
+  const handleEmptyTrash = async () => {
+    setEmptyingTrash(true);
+    try {
+      const res = await axios.delete(`${API}/trash/empty-all`);
+      const { deleted_articles, deleted_documents, deleted_categories } = res.data;
+      toast.success(`Papierkorb geleert: ${deleted_articles} Artikel, ${deleted_documents} Dokumente, ${deleted_categories} Ordner gelöscht`);
+      fetchTrash();
+    } catch (error) {
+      toast.error("Papierkorb konnte nicht geleert werden");
+    } finally {
+      setEmptyingTrash(false);
+      setEmptyTrashDialog(false);
     }
   };
 
@@ -180,10 +197,22 @@ const Trash = () => {
             </p>
           </div>
         </div>
-        <Button variant="outline" onClick={fetchTrash} disabled={loading}>
-          <RefreshCw className={`w-4 h-4 mr-2 ${loading ? "animate-spin" : ""}`} />
-          Aktualisieren
-        </Button>
+        <div className="flex items-center gap-2">
+          {totalItems > 0 && (
+            <Button 
+              variant="destructive" 
+              onClick={() => setEmptyTrashDialog(true)}
+              data-testid="empty-trash-btn"
+            >
+              <Trash2 className="w-4 h-4 mr-2" />
+              Papierkorb leeren
+            </Button>
+          )}
+          <Button variant="outline" onClick={fetchTrash} disabled={loading}>
+            <RefreshCw className={`w-4 h-4 mr-2 ${loading ? "animate-spin" : ""}`} />
+            Aktualisieren
+          </Button>
+        </div>
       </div>
 
       <Tabs defaultValue="articles" className="space-y-4">
@@ -321,6 +350,49 @@ const Trash = () => {
             <AlertDialogCancel>Abbrechen</AlertDialogCancel>
             <AlertDialogAction onClick={handlePermanentDelete} className="bg-red-600 hover:bg-red-700">
               Endgültig löschen
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Empty Trash Confirmation Dialog */}
+      <AlertDialog open={emptyTrashDialog} onOpenChange={setEmptyTrashDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-red-600 flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5" />
+              Gesamten Papierkorb leeren?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-3">
+              <p>Sie sind dabei, <strong>alle {totalItems} Elemente</strong> endgültig zu löschen:</p>
+              <ul className="list-disc list-inside space-y-1 text-sm">
+                <li>{trash.articles.length} Artikel</li>
+                <li>{trash.documents.length} Dokumente</li>
+                <li>{trash.categories.length} Ordner</li>
+              </ul>
+              <p className="text-red-500 font-medium pt-2">
+                ⚠️ Diese Aktion kann NICHT rückgängig gemacht werden!
+              </p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={emptyingTrash}>Abbrechen</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleEmptyTrash} 
+              className="bg-red-600 hover:bg-red-700"
+              disabled={emptyingTrash}
+            >
+              {emptyingTrash ? (
+                <>
+                  <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                  Wird geleert...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Alles endgültig löschen
+                </>
+              )}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
