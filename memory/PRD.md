@@ -822,6 +822,14 @@ Wissensmanagement-Plattform für CANUSA Touristik GmbH & Co. KG und CU-Travel.
 - ✅ **Dokument-Popup**: Klick öffnet Overlay mit Dokumentvorschau (HTML/Text), Dateityp, Größe
 - ✅ **Demo-Seite**: `/api/widget/demo` mit Einbettungs-Code-Anleitung
 - ✅ **Neutrales Design**: Scoped CSS mit `cnx-`-Prefix, kein Framework-Abhängigkeit
+- ✅ **PDF-Vorschau**: Wenn Datei vorhanden → iframe/object PDF-Viewer; wenn nicht → html_content im Document-Viewer-Container
+- ✅ **Datei-Endpunkt**: `/api/widget/document/{id}/file` für direkten Dateizugriff mit CORS
+
+### Gültigkeits-Datumswähler (30.03.2026)
+
+- ✅ **Drei Dropdowns**: Tag (1–31), Monat (Januar–Dezember), Jahr (aktuell + 10 Jahre)
+- ✅ **Intelligente Tag-Anpassung**: Tag-Dropdown passt sich an Monat/Jahr an (z.B. max 28/29 für Februar)
+- ✅ **"Ablaufdatum entfernen"**: Button zum Zurücksetzen erscheint nach Datumsauswahl
 
 ## Backlog / Verbleibende Aufgaben
 
