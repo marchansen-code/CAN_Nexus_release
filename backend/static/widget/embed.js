@@ -61,6 +61,12 @@
     .cnx-popup-meta { padding: 0 24px 12px; font-size: 12px; color: #6b7280; display: flex; gap: 12px; flex-wrap: wrap; border-bottom: 1px solid #f3f4f6; margin-bottom: 12px; }
     .cnx-popup-breadcrumb { font-size: 12px; color: #6366f1; }
     .cnx-doc-text { white-space: pre-wrap; font-size: 14px; line-height: 1.7; color: #374151; }
+    .cnx-doc-viewer { background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 32px 40px; max-height: 65vh; overflow-y: auto; font-size: 14px; line-height: 1.8; color: #1f2937; box-shadow: inset 0 1px 3px rgba(0,0,0,.04); }
+    .cnx-doc-viewer p { margin: 0 0 12px; }
+    .cnx-doc-viewer table { border-collapse: collapse; width: 100%; margin: 12px 0; }
+    .cnx-doc-viewer td, .cnx-doc-viewer th { border: 1px solid #d1d5db; padding: 8px 12px; font-size: 13px; }
+    .cnx-doc-viewer h1, .cnx-doc-viewer h2, .cnx-doc-viewer h3 { font-weight: 700; margin: 16px 0 8px; color: #111827; }
+    .cnx-doc-viewer img { max-width: 100%; }
     .cnx-highlight { background: #fef08a; padding: 0 2px; border-radius: 2px; }
   `;
 
@@ -201,7 +207,7 @@
             htmlContent = htmlContent.replace(re, '<span class="cnx-highlight">$1</span>');
           });
         }
-        body = htmlContent;
+        body = '<div class="cnx-doc-viewer">' + htmlContent + '</div>';
       } else if (data.extracted_text) {
         body = '<pre class="cnx-doc-text">' + highlightTerms(data.extracted_text, searchTerms) + "</pre>";
       } else {

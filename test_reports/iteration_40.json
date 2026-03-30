@@ -1,0 +1,69 @@
+{
+  "summary": "Iteration 40: Widget PDF Popup and Article Editor Expiry Date Dropdowns - All features working correctly. Both fixes verified: 1) Widget PDF popup shows html_content in styled cnx-doc-viewer when file doesn't exist, 2) Article expiry date uses three dropdowns (Tag/Monat/Jahr) with German months.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/test_reports/iteration_40.json"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Widget embed.js correctly implements html_content fallback with cnx-doc-viewer styling (lines 202-210)",
+    "ArticleEditor.jsx properly implements three Select dropdowns for expiry date with German month names (lines 910-1000)",
+    "All data-testid attributes are correctly placed for testing"
+  ],
+  "updated_files": [],
+  "success_rate": {
+    "backend": "N/A (frontend only test)",
+    "frontend": "100% (all features verified)"
+  },
+  "test_credentials": {
+    "admin_email": "marc.hansen@canusa.de",
+    "admin_password": "CanusaNexus2024!",
+    "widget_demo_url": "https://knowledge-hub-568.preview.emergentagent.com/api/widget/demo"
+  },
+  "seed_data_creation": "None",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Both fixes verified working: 1) Widget PDF popup uses html_content fallback in cnx-doc-viewer when physical file doesn't exist (kaufvertrag_T4.pdf test case), 2) Article expiry date replaced calendar picker with three dropdowns (Tag/Monat/Jahr) with all 12 German months and clear button functionality.",
+  "features_tested": {
+    "widget_pdf_popup": {
+      "search_kaufvertrag": "PASS - Search returns kaufvertrag_T4.pdf document",
+      "popup_opens": "PASS - Clicking document opens popup overlay",
+      "popup_title": "PASS - Shows 'kaufvertrag_T4.pdf'",
+      "popup_meta": "PASS - Shows '.PDF' and '147.6 KB'",
+      "cnx_doc_viewer": "PASS - html_content displayed in styled cnx-doc-viewer container",
+      "content_visible": "PASS - ADAC Kaufvertrag text visible (13953 chars)",
+      "search_highlighting": "PASS - 'Kaufvertrag' highlighted in yellow",
+      "close_button": "PASS - X button closes popup correctly"
+    },
+    "article_expiry_dropdowns": {
+      "dropdowns_visible": "PASS - All three dropdowns visible (Tag, Monat, Jahr)",
+      "day_placeholder": "PASS - Shows 'Tag'",
+      "month_placeholder": "PASS - Shows 'Monat'",
+      "year_placeholder": "PASS - Shows 'Jahr'",
+      "german_months": "PASS - All 12 German months listed (Januar through Dezember)",
+      "month_selection": "PASS - Selecting 'Juni' populates field",
+      "day_selection": "PASS - Selecting '15' populates field",
+      "year_selection": "PASS - Selecting '2026' populates field",
+      "clear_button_appears": "PASS - 'Ablaufdatum entfernen' button appears after setting date",
+      "clear_button_works": "PASS - Clicking clears all dropdowns to placeholders",
+      "clear_button_hides": "PASS - Clear button hidden after reset"
+    }
+  },
+  "data_testids_verified": [
+    "widget-search-input",
+    "widget-search-results",
+    "expiry-date-dropdowns",
+    "expiry-day-select",
+    "expiry-month-select",
+    "expiry-year-select",
+    "expiry-date-clear"
+  ]
+}

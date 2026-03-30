@@ -343,7 +343,7 @@ async def widget_embed_js():
     return Response(
         content=js_path.read_text(encoding="utf-8"),
         media_type="application/javascript",
-        headers={"Access-Control-Allow-Origin": "*", "Cache-Control": "public, max-age=3600"},
+        headers={"Access-Control-Allow-Origin": "*", "Cache-Control": "no-cache"},
     )
 
 

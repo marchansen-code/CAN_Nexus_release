@@ -909,22 +909,102 @@ const ArticleEditor = () => {
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <Label>Artikel läuft ab am</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" className="w-full justify-start text-left font-normal">
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {article.expiry_date ? format(article.expiry_date, "PPP", { locale: de }) : "Kein Ablaufdatum"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
-                    <Calendar
-                      mode="single"
-                      selected={article.expiry_date}
-                      onSelect={(date) => setArticle(prev => ({ ...prev, expiry_date: date }))}
-                      locale={de}
-                    />
-                  </PopoverContent>
-                </Popover>
+                {(() => {
+                  const months = [
+                    "Januar", "Februar", "März", "April", "Mai", "Juni",
+                    "Juli", "August", "September", "Oktober", "November", "Dezember"
+                  ];
+                  const currentYear = new Date().getFullYear();
+                  const years = Array.from({ length: 11 }, (_, i) => currentYear + i);
+                  
+                  const selectedDay = article.expiry_date ? new Date(article.expiry_date).getDate().toString() : "";
+                  const selectedMonth = article.expiry_date ? (new Date(article.expiry_date).getMonth() + 1).toString() : "";
+                  const selectedYear = article.expiry_date ? new Date(article.expiry_date).getFullYear().toString() : "";
+                  
+                  const daysInMonth = (m, y) => {
+                    if (!m || !y) return 31;
+                    return new Date(parseInt(y), parseInt(m), 0).getDate();
+                  };
+                  const maxDays = daysInMonth(selectedMonth || "1", selectedYear || currentYear.toString());
+                  const days = Array.from({ length: maxDays }, (_, i) => i + 1);
+                  
+                  const updateDate = (day, month, year) => {
+                    if (day && month && year) {
+                      const d = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+                      setArticle(prev => ({ ...prev, expiry_date: d }));
+                    } else if (!day && !month && !year) {
+                      setArticle(prev => ({ ...prev, expiry_date: null }));
+                    }
+                  };
+                  
+                  return (
+                    <>
+                      <div className="flex gap-2" data-testid="expiry-date-dropdowns">
+                        <Select
+                          value={selectedDay}
+                          onValueChange={(val) => updateDate(val, selectedMonth || "1", selectedYear || currentYear.toString())}
+                        >
+                          <SelectTrigger className="w-[90px]" data-testid="expiry-day-select">
+                            <SelectValue placeholder="Tag" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {days.map(d => (
+                              <SelectItem key={d} value={d.toString()}>{d}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        
+                        <Select
+                          value={selectedMonth}
+                          onValueChange={(val) => {
+                            const newMax = daysInMonth(val, selectedYear || currentYear.toString());
+                            const newDay = selectedDay && parseInt(selectedDay) > newMax ? newMax.toString() : (selectedDay || "1");
+                            updateDate(newDay, val, selectedYear || currentYear.toString());
+                          }}
+                        >
+                          <SelectTrigger className="flex-1" data-testid="expiry-month-select">
+                            <SelectValue placeholder="Monat" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {months.map((m, i) => (
+                              <SelectItem key={i + 1} value={(i + 1).toString()}>{m}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        
+                        <Select
+                          value={selectedYear}
+                          onValueChange={(val) => {
+                            const newMax = daysInMonth(selectedMonth || "1", val);
+                            const newDay = selectedDay && parseInt(selectedDay) > newMax ? newMax.toString() : (selectedDay || "1");
+                            updateDate(newDay, selectedMonth || "1", val);
+                          }}
+                        >
+                          <SelectTrigger className="w-[100px]" data-testid="expiry-year-select">
+                            <SelectValue placeholder="Jahr" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {years.map(y => (
+                              <SelectItem key={y} value={y.toString()}>{y}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      {article.expiry_date && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-xs text-muted-foreground"
+                          onClick={() => setArticle(prev => ({ ...prev, expiry_date: null }))}
+                          data-testid="expiry-date-clear"
+                        >
+                          <X className="w-3 h-3 mr-1" />
+                          Ablaufdatum entfernen
+                        </Button>
+                      )}
+                    </>
+                  );
+                })()}
                 <p className="text-xs text-muted-foreground">
                   Nach Ablauf wird der Artikel automatisch zum Entwurf
                 </p>
