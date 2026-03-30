@@ -327,7 +327,16 @@ async def widget_get_document_file(request: Request, document_id: str):
         content = f.read()
 
     headers = get_cors_headers(request)
-    headers["Content-Disposition"] = f'inline; filename="{filename}"'
+    # RFC 5987: encode filename for Content-Disposition to handle unicode
+    from urllib.parse import quote
+    ascii_filename = filename.encode('ascii', 'replace').decode('ascii')
+    encoded_filename = quote(filename)
+    headers["Content-Disposition"] = f"inline; filename=\"{ascii_filename}\"; filename*=UTF-8''{encoded_filename}"
+    # Allow embedding in iframes on external sites
+    headers["X-Frame-Options"] = "ALLOWALL"
+    headers["Content-Security-Policy"] = "frame-ancestors *"
+    # Ensure CORS for all origins (file serving for iframe)
+    headers["Access-Control-Allow-Origin"] = "*"
 
     return Response(content=content, media_type=media_type, headers=headers)
 
