@@ -174,7 +174,26 @@
     try {
       const data = await apiGet("/document/" + documentId + "/preview");
       var body = "";
-      if (data.html_content) {
+
+      // File types that can be rendered natively in an iframe
+      var iframeTypes = [".pdf", ".txt", ".csv"];
+      var canIframe = data.has_file && iframeTypes.indexOf(data.file_type) !== -1;
+
+      if (canIframe) {
+        // Render the actual file in an iframe/object (PDF viewer, text, etc.)
+        var fileUrl = API_BASE + "/api/widget/document/" + documentId + "/file";
+        if (data.file_type === ".pdf") {
+          body =
+            '<object data="' + fileUrl + '" type="application/pdf" style="width:100%;height:65vh;border:none;">' +
+              '<iframe src="' + fileUrl + '" style="width:100%;height:65vh;border:none;"></iframe>' +
+            '</object>' +
+            '<div style="text-align:center;margin-top:8px;">' +
+              '<a href="' + fileUrl + '" target="_blank" rel="noopener noreferrer" style="color:#6366f1;font-size:13px;">PDF in neuem Tab öffnen</a>' +
+            '</div>';
+        } else {
+          body = '<iframe src="' + fileUrl + '" style="width:100%;height:65vh;border:none;border-radius:4px;"></iframe>';
+        }
+      } else if (data.html_content) {
         var htmlContent = data.html_content;
         if (searchTerms && searchTerms.length) {
           searchTerms.forEach(function (t) {

@@ -12,6 +12,17 @@ from pathlib import Path
 
 from database import db
 
+SUPPORTED_EXTENSIONS = {
+    '.pdf': 'application/pdf',
+    '.doc': 'application/msword',
+    '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    '.txt': 'text/plain',
+    '.csv': 'text/csv',
+    '.xls': 'application/vnd.ms-excel',
+    '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+}
+DOCS_STORAGE_PATH = os.environ.get("DOCS_STORAGE_PATH", "/app/data/docs")
+
 router = APIRouter(prefix="/widget", tags=["Widget"])
 
 # Allowed origins for widget embedding
@@ -106,6 +117,11 @@ async def widget_article_preflight(request: Request, article_id: str):
 
 @router.options("/document/{document_id}/preview")
 async def widget_document_preflight(request: Request, document_id: str):
+    return cors_response(request)
+
+
+@router.options("/document/{document_id}/file")
+async def widget_document_file_preflight(request: Request, document_id: str):
     return cors_response(request)
 
 
@@ -282,6 +298,38 @@ async def widget_get_document_preview(request: Request, document_id: str):
     }
 
     return cors_response(request, result)
+
+
+# ==================== DOCUMENT FILE (public, for iframe) ====================
+
+@router.get("/document/{document_id}/file")
+async def widget_get_document_file(request: Request, document_id: str):
+    """Serve the actual document file for inline viewing (iframe).
+    Returns the raw file with correct Content-Type and CORS headers."""
+    doc = await db.documents.find_one(
+        {"document_id": document_id, "deleted_at": {"$exists": False}},
+        {"_id": 0, "file_path": 1, "file_type": 1, "filename": 1}
+    )
+    if not doc:
+        headers = get_cors_headers(request)
+        return Response(status_code=404, headers=headers)
+
+    file_path = doc.get("file_path")
+    if not file_path or not os.path.exists(file_path):
+        headers = get_cors_headers(request)
+        return Response(status_code=404, headers=headers)
+
+    file_type = doc.get("file_type", ".pdf")
+    media_type = SUPPORTED_EXTENSIONS.get(file_type, "application/octet-stream")
+    filename = doc.get("filename", "document")
+
+    with open(file_path, "rb") as f:
+        content = f.read()
+
+    headers = get_cors_headers(request)
+    headers["Content-Disposition"] = f'inline; filename="{filename}"'
+
+    return Response(content=content, media_type=media_type, headers=headers)
 
 
 # ==================== EMBED SCRIPT ====================
