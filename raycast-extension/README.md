@@ -33,7 +33,7 @@ Raycast öffnet sich automatisch und die Extension wird geladen.
 
 Beim ersten Start fragt Raycast nach der **API URL**:
 
-- **Entwicklung**: `https://knowledge-hub-568.preview.emergentagent.com`
+- **Entwicklung**: `https://nexus-widget.preview.emergentagent.com`
 - **Produktion**: `https://nexus-knows.de`
 
 Diese Einstellung kann jederzeit in den Raycast-Einstellungen geändert werden:
@@ -53,7 +53,7 @@ Nur die API-URL ändern:
 
 **Raycast → Einstellungen → Extensions → CANUSA Nexus → API URL**
 
-Von: `https://knowledge-hub-568.preview.emergentagent.com`
+Von: `https://nexus-widget.preview.emergentagent.com`
 Auf: `https://nexus-knows.de`
 
 Fertig. Alles andere funktioniert automatisch.

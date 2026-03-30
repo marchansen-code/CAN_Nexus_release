@@ -39,7 +39,7 @@ if APP_URL:
 
 
 def get_cors_headers(request: Request) -> dict:
-    """Return CORS headers if origin is allowed, empty dict otherwise."""
+    """Return CORS headers for file responses that bypass the global middleware."""
     origin = request.headers.get("origin", "")
     if origin in ALLOWED_ORIGINS:
         return {
@@ -51,12 +51,9 @@ def get_cors_headers(request: Request) -> dict:
     return {}
 
 
-def cors_response(request: Request, content: dict = None, status_code: int = 200):
-    """Build a JSONResponse with CORS headers if origin is allowed."""
-    headers = get_cors_headers(request)
-    if content is None:
-        return Response(status_code=200, headers=headers)
-    return JSONResponse(content=content, status_code=status_code, headers=headers)
+def json_result(content: dict, status_code: int = 200):
+    """Return a plain JSONResponse. CORS is handled by the global middleware."""
+    return JSONResponse(content=content, status_code=status_code)
 
 
 def strip_html(html_content: str) -> str:
@@ -103,26 +100,7 @@ async def build_category_breadcrumb(category_ids: list) -> str:
     return " | ".join(parts) if parts else ""
 
 
-# ==================== PREFLIGHT ====================
-
-@router.options("/search")
-async def widget_search_preflight(request: Request):
-    return cors_response(request)
-
-
-@router.options("/article/{article_id}")
-async def widget_article_preflight(request: Request, article_id: str):
-    return cors_response(request)
-
-
-@router.options("/document/{document_id}/preview")
-async def widget_document_preflight(request: Request, document_id: str):
-    return cors_response(request)
-
-
-@router.options("/document/{document_id}/file")
-async def widget_document_file_preflight(request: Request, document_id: str):
-    return cors_response(request)
+# Preflight is handled by the global CORSMiddleware – no manual OPTIONS needed.
 
 
 # ==================== SEARCH ====================
@@ -132,7 +110,7 @@ async def widget_search(request: Request, q: str = "", limit: int = 20):
     """Public search endpoint for the embeddable widget.
     Only returns published articles and completed documents."""
     if not q or len(q) < 2:
-        return cors_response(request, {"articles": [], "documents": [], "query": q})
+        return json_result({"articles": [], "documents": [], "query": q})
 
     search_terms = q.lower().split()
 
@@ -231,7 +209,7 @@ async def widget_search(request: Request, q: str = "", limit: int = 20):
             "type": "document",
         })
 
-    return cors_response(request, {
+    return json_result({
         "articles": articles,
         "documents": documents,
         "query": q,
@@ -249,7 +227,7 @@ async def widget_get_article(request: Request, article_id: str):
          "category_ids": 1, "updated_at": 1, "created_at": 1, "created_by": 1}
     )
     if not article:
-        return cors_response(request, {"detail": "Artikel nicht gefunden"}, 404)
+        return json_result({"detail": "Artikel nicht gefunden"}, 404)
 
     breadcrumb = await build_category_breadcrumb(article.get("category_ids", []))
 
@@ -261,7 +239,7 @@ async def widget_get_article(request: Request, article_id: str):
         if author:
             author_name = author["name"]
 
-    return cors_response(request, {
+    return json_result({
         "article_id": article["article_id"],
         "title": article["title"],
         "content": article.get("content", ""),
@@ -282,7 +260,7 @@ async def widget_get_document_preview(request: Request, document_id: str):
         {"_id": 0}
     )
     if not doc:
-        return cors_response(request, {"detail": "Dokument nicht gefunden"}, 404)
+        return json_result({"detail": "Dokument nicht gefunden"}, 404)
 
     file_path = doc.get("file_path")
     has_file = bool(file_path and os.path.exists(file_path))
@@ -297,7 +275,7 @@ async def widget_get_document_preview(request: Request, document_id: str):
         "extracted_text": doc.get("extracted_text", ""),
     }
 
-    return cors_response(request, result)
+    return json_result(result)
 
 
 # ==================== DOCUMENT FILE (public, for iframe) ====================
