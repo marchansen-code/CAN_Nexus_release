@@ -73,6 +73,15 @@ app.add_middleware(SessionMiddleware, secret_key=secrets.token_urlsafe(32))
 # CORS middleware
 app_url = os.environ.get("APP_URL", "")
 cors_origins = [app_url] if app_url else ["*"]
+# Add widget embedding origins for preflight support
+widget_origins = [
+    "http://lil-explorer.com",
+    "https://powerd.canusa.de",
+    "https://cpv.canusa.de",
+]
+for wo in widget_origins:
+    if wo not in cors_origins:
+        cors_origins.append(wo)
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,

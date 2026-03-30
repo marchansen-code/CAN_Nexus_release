@@ -811,6 +811,17 @@ Wissensmanagement-Plattform für CANUSA Touristik GmbH & Co. KG und CU-Travel.
 - ✅ **Neue Benutzer**: Admin-Panel und Google-OAuth-Erstellung setzen jetzt `group_ids: []`
 - ✅ **Gruppen-Zuordnung**: Alle Benutzer können jetzt problemlos zu Gruppen hinzugefügt werden
 
+### Einbettbares Such-Widget (30.03.2026)
+
+- ✅ **Widget-Backend**: `/api/widget/search`, `/api/widget/article/{id}`, `/api/widget/document/{id}/preview`
+- ✅ **CORS-Konfiguration**: Spezifische Origins (`lil-explorer.com`, `powerd.canusa.de`, `cpv.canusa.de`) mit korrekten Headers (inkl. Preflight)
+- ✅ **Embeddable Script**: `/api/static/widget/embed.js` - eigenständiges JS per `<script data-api="...">` einbettbar
+- ✅ **Suchfunktion**: Live-Suche über veröffentlichte Artikel und Dokumente mit Term-Highlighting
+- ✅ **Artikel-Popup**: Klick öffnet Overlay mit vollständigem HTML-Inhalt, Autor, Datum, Breadcrumb
+- ✅ **Dokument-Popup**: Klick öffnet Overlay mit Dokumentvorschau (HTML/Text), Dateityp, Größe
+- ✅ **Demo-Seite**: `/api/widget/demo` mit Einbettungs-Code-Anleitung
+- ✅ **Neutrales Design**: Scoped CSS mit `cnx-`-Prefix, kein Framework-Abhängigkeit
+
 ## Backlog / Verbleibende Aufgaben
 
 - Google Drive Bugs beheben (Export zu Shared Drives, falsche Dateiliste) - **ON HOLD**: Benutzer muss zuerst Test-URLs in Google Console eintragen
