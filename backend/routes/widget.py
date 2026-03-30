@@ -365,3 +365,24 @@ async def widget_demo():
     if not demo_path.exists():
         return HTMLResponse("<h1>Demo page not found</h1>", status_code=404)
     return HTMLResponse(demo_path.read_text(encoding="utf-8"))
+
+
+
+# ==================== RAYCAST EXTENSION DOWNLOAD ====================
+
+@router.get("/raycast-extension")
+async def widget_raycast_download():
+    """Download the Raycast extension as ZIP."""
+    zip_path = Path(__file__).parent.parent / "static" / "widget" / "canusa-nexus-raycast.zip"
+    if not zip_path.exists():
+        return Response("Extension not found", status_code=404)
+    with open(zip_path, "rb") as f:
+        content = f.read()
+    return Response(
+        content=content,
+        media_type="application/zip",
+        headers={
+            "Content-Disposition": 'attachment; filename="canusa-nexus-raycast.zip"',
+            "Access-Control-Allow-Origin": "*",
+        },
+    )

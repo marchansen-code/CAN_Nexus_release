@@ -1,0 +1,48 @@
+{
+  "$schema": "https://www.raycast.com/schemas/extension.json",
+  "name": "canusa-nexus",
+  "title": "CANUSA Nexus",
+  "description": "Durchsuche die CANUSA Nexus Wissensdatenbank direkt von deinem Mac.",
+  "icon": "extension-icon.png",
+  "author": "canusa",
+  "license": "MIT",
+  "preferences": [
+    {
+      "name": "apiBaseUrl",
+      "title": "API URL",
+      "description": "Die Basis-URL des CANUSA Nexus Servers",
+      "type": "textfield",
+      "required": true,
+      "default": "https://nexus-knows.de",
+      "placeholder": "https://nexus-knows.de"
+    }
+  ],
+  "commands": [
+    {
+      "name": "search-nexus",
+      "title": "Nexus durchsuchen",
+      "subtitle": "CANUSA Nexus",
+      "description": "Artikel und Dokumente in der Wissensdatenbank suchen",
+      "mode": "view"
+    }
+  ],
+  "dependencies": {
+    "@raycast/api": "^1.83.0",
+    "@raycast/utils": "^1.17.0",
+    "node-fetch": "^3.3.2"
+  },
+  "devDependencies": {
+    "@raycast/eslint-config": "^1.0.11",
+    "@types/node": "22.10.2",
+    "@types/react": "19.0.2",
+    "eslint": "^9.16.0",
+    "prettier": "^3.4.2",
+    "typescript": "^5.7.2"
+  },
+  "scripts": {
+    "build": "ray build",
+    "dev": "ray develop",
+    "fix-lint": "ray lint --fix",
+    "lint": "ray lint"
+  }
+}
