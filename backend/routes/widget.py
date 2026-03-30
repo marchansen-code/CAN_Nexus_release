@@ -284,6 +284,21 @@ async def widget_get_document_preview(request: Request, document_id: str):
     return cors_response(request, result)
 
 
+# ==================== EMBED SCRIPT ====================
+
+@router.get("/embed.js")
+async def widget_embed_js():
+    """Serve the embeddable widget script with Access-Control-Allow-Origin: *."""
+    js_path = Path(__file__).parent.parent / "static" / "widget" / "embed.js"
+    if not js_path.exists():
+        return Response("// embed.js not found", status_code=404, media_type="application/javascript")
+    return Response(
+        content=js_path.read_text(encoding="utf-8"),
+        media_type="application/javascript",
+        headers={"Access-Control-Allow-Origin": "*", "Cache-Control": "public, max-age=3600"},
+    )
+
+
 # ==================== DEMO PAGE ====================
 
 @router.get("/demo", response_class=HTMLResponse)

@@ -25,7 +25,7 @@
     <div class="demo-info">
       <h2>Einbettungs-Code</h2>
       <pre><code>&lt;div id="canusa-search"&gt;&lt;/div&gt;
-&lt;script src="https://YOUR_DOMAIN/api/static/widget/embed.js"
+&lt;script src="https://YOUR_DOMAIN/api/widget/embed.js"
         data-api="https://YOUR_DOMAIN"&gt;&lt;/script&gt;</code></pre>
     </div>
 
@@ -36,7 +36,7 @@
   <script>
     // Dynamically load the widget script with same-origin API base
     var s = document.createElement('script');
-    s.src = '/api/static/widget/embed.js';
+    s.src = '/api/widget/embed.js';
     s.setAttribute('data-api', window.location.origin);
     document.body.appendChild(s);
   </script>

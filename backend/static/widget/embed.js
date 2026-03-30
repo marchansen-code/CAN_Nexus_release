@@ -279,7 +279,7 @@
     var resultsEl = container.querySelector(".cnx-results");
     var currentTerms = [];
 
-    var doSearch = debounce(async function () {
+    async function doSearch() {
       var q = input.value.trim();
       if (q.length < 2) {
         resultsEl.innerHTML = "";
@@ -294,9 +294,14 @@
         resultsEl.innerHTML = '<div class="cnx-empty">Fehler bei der Suche</div>';
       }
       spinner.style.display = "none";
-    }, DEBOUNCE_MS);
+    }
 
-    input.addEventListener("input", doSearch);
+    input.addEventListener("keydown", function (e) {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        doSearch();
+      }
+    });
 
     // Delegate click events
     resultsEl.addEventListener("click", function (e) {

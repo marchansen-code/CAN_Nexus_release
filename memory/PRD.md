@@ -815,7 +815,8 @@ Wissensmanagement-Plattform für CANUSA Touristik GmbH & Co. KG und CU-Travel.
 
 - ✅ **Widget-Backend**: `/api/widget/search`, `/api/widget/article/{id}`, `/api/widget/document/{id}/preview`
 - ✅ **CORS-Konfiguration**: Spezifische Origins (`lil-explorer.com`, `powerd.canusa.de`, `cpv.canusa.de`) mit korrekten Headers (inkl. Preflight)
-- ✅ **Embeddable Script**: `/api/static/widget/embed.js` - eigenständiges JS per `<script data-api="...">` einbettbar
+- ✅ **Embeddable Script**: `/api/widget/embed.js` – eigenständiges JS per `<script data-api="...">` einbettbar, mit `Access-Control-Allow-Origin: *` Header
+- ✅ **Suche auf Enter**: Ergebnisse werden nach Drücken der Enter-Taste geladen
 - ✅ **Suchfunktion**: Live-Suche über veröffentlichte Artikel und Dokumente mit Term-Highlighting
 - ✅ **Artikel-Popup**: Klick öffnet Overlay mit vollständigem HTML-Inhalt, Autor, Datum, Breadcrumb
 - ✅ **Dokument-Popup**: Klick öffnet Overlay mit Dokumentvorschau (HTML/Text), Dateityp, Größe
