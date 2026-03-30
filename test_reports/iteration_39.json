@@ -1,0 +1,91 @@
+{
+  "summary": "Iteration 39: Widget API and Frontend Testing - All features working correctly. Backend: 15/15 tests passed. Frontend: All widget features verified working.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {
+        "endpoint": "OPTIONS /api/widget/search",
+        "issue": "Preflight OPTIONS requests are intercepted by global CORS middleware before reaching widget's custom CORS handlers. GET requests work correctly with custom CORS headers.",
+        "priority": "LOW",
+        "note": "This is expected behavior - for full external embedding support, widget origins should be added to global CORS config in server.py"
+      }
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration39_widget.py",
+    "/app/test_reports/pytest/pytest_results_iter39.xml"
+  ],
+  "action_items": [
+    "OPTIONAL: For full external embedding support, add widget allowed origins to global CORS middleware in server.py (lines 74-82). Currently GET requests work with custom CORS headers, but OPTIONS preflight is handled by global middleware."
+  ],
+  "critical_code_review_comments": [
+    "Widget implementation is clean and well-structured with proper CORS handling for GET requests",
+    "embed.js is self-contained with scoped CSS classes (cnx- prefix) to avoid conflicts",
+    "Demo page correctly loads embed.js dynamically with same-origin API base"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration39_widget.py"
+  ],
+  "success_rate": {
+    "backend": "100% (15/15 tests passed)",
+    "frontend": "100% (all widget features verified)"
+  },
+  "test_credentials": {
+    "admin_email": "marc.hansen@canusa.de",
+    "admin_password": "CanusaNexus2024!",
+    "note": "Widget endpoints are public, no auth required"
+  },
+  "seed_data_creation": "None",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Widget feature fully tested and working. All endpoints verified: /api/widget/search, /api/widget/article/{id}, /api/widget/document/{id}/preview, /api/widget/demo. CORS headers work correctly for GET requests from allowed origins. embed.js creates all DOM elements programmatically with cnx- prefixed classes.",
+  "features_tested": {
+    "backend_api": {
+      "widget_search": {
+        "valid_query": "PASS - GET /api/widget/search?q=Reise returns articles and documents arrays",
+        "short_query": "PASS - GET /api/widget/search?q=x returns empty arrays",
+        "empty_query": "PASS - GET /api/widget/search?q= returns empty arrays",
+        "result_structure": "PASS - Articles have article_id, title, snippet, type; Documents have document_id, filename, type"
+      },
+      "widget_article": {
+        "nonexistent": "PASS - GET /api/widget/article/nonexistent returns 404",
+        "structure": "PASS - Returns article_id, title, content, tags, breadcrumb, author, updated_at"
+      },
+      "widget_document": {
+        "nonexistent": "PASS - GET /api/widget/document/nonexistent/preview returns 404",
+        "structure": "PASS - Returns document_id, filename, file_type, has_file, html_content, extracted_text"
+      },
+      "cors_handling": {
+        "allowed_origin_powerd": "PASS - Access-Control-Allow-Origin: https://powerd.canusa.de",
+        "allowed_origin_cpv": "PASS - Access-Control-Allow-Origin: https://cpv.canusa.de",
+        "allowed_origin_lil_explorer": "PASS - Access-Control-Allow-Origin: http://lil-explorer.com",
+        "disallowed_origin": "PASS - No CORS header for https://evil.com"
+      },
+      "demo_page": {
+        "loads": "PASS - GET /api/widget/demo returns HTML with CANUSA Nexus title",
+        "embed_js": "PASS - GET /api/static/widget/embed.js returns JavaScript"
+      }
+    },
+    "frontend_widget": {
+      "demo_page_loads": "PASS - Demo page header and widget container found",
+      "search_input": "PASS - Search input with placeholder 'Suche in der Wissensdatenbank...'",
+      "search_results": "PASS - Typing triggers search, results grouped by 'ARTIKEL' and 'DOKUMENTE'",
+      "article_popup": "PASS - Clicking article opens popup with full content",
+      "document_popup": "PASS - Clicking document opens popup with preview (CSV table rendered)",
+      "popup_close": "PASS - X button closes popup correctly",
+      "search_highlighting": "PASS - Search terms highlighted with yellow background (cnx-highlight class)"
+    }
+  },
+  "cors_implementation_notes": {
+    "custom_cors_in_widget_router": "widget.py lines 30-48 - get_cors_headers() and cors_response() add CORS headers for allowed origins",
+    "allowed_origins": ["http://lil-explorer.com", "https://powerd.canusa.de", "https://cpv.canusa.de", "APP_URL from env"],
+    "get_requests": "Work correctly with custom CORS headers",
+    "options_preflight": "Intercepted by global CORSMiddleware in server.py before reaching widget handlers",
+    "recommendation": "For full external embedding, add widget origins to global CORS config or use a more specific middleware ordering"
+  }
+}

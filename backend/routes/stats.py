@@ -173,34 +173,3 @@ async def get_all_tags(user: User = Depends(get_current_user)):
     result = await db.articles.aggregate(pipeline).to_list(500)
     tags = [r["_id"] for r in result if r["_id"]]
     return {"tags": tags}
-
-
-# ==================== WIDGET API ====================
-
-@router.get("/widget/search")
-async def widget_search(q: str, limit: int = 3):
-    """Public widget search endpoint."""
-    articles = await db.articles.find(
-        {
-            "status": "published",
-            "$or": [
-                {"title": {"$regex": q, "$options": "i"}},
-                {"content": {"$regex": q, "$options": "i"}}
-            ]
-        },
-        {"_id": 0, "article_id": 1, "title": 1, "summary": 1}
-    ).limit(limit).to_list(limit)
-    
-    return {"results": articles, "query": q}
-
-
-@router.get("/widget/article/{article_id}")
-async def widget_get_article(article_id: str):
-    """Public widget article endpoint."""
-    article = await db.articles.find_one(
-        {"article_id": article_id, "status": "published"},
-        {"_id": 0, "article_id": 1, "title": 1, "content": 1, "summary": 1}
-    )
-    if not article:
-        raise HTTPException(status_code=404, detail="Artikel nicht gefunden")
-    return article

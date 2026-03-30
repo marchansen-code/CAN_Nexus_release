@@ -4,6 +4,7 @@ Main application entry point with route registration.
 """
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
 import secrets
 import os
@@ -17,7 +18,7 @@ from database import db, client, DEFAULT_ADMIN_EMAIL, DEFAULT_ADMIN_PASSWORD, DE
 from dependencies import get_password_hash
 
 # Route modules
-from routes import auth, users, groups, categories, articles, search, documents, document_folders, recycle_bin, images, stats, backup, exports, versions, google_auth, google_drive, notifications, ocr, sort_preferences, reading_assignments
+from routes import auth, users, groups, categories, articles, search, documents, document_folders, recycle_bin, images, stats, backup, exports, versions, google_auth, google_drive, notifications, ocr, sort_preferences, reading_assignments, widget
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -59,6 +60,12 @@ app.include_router(notifications.router, prefix="/api")
 app.include_router(ocr.router, prefix="/api")
 app.include_router(sort_preferences.router, prefix="/api")
 app.include_router(reading_assignments.router, prefix="/api")
+app.include_router(widget.router, prefix="/api")
+
+# Static files for widget embedding
+STATIC_DIR = Path(__file__).parent / "static"
+STATIC_DIR.mkdir(exist_ok=True)
+app.mount("/api/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
 # Session middleware for OAuth (required by authlib)
 app.add_middleware(SessionMiddleware, secret_key=secrets.token_urlsafe(32))
