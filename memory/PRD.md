@@ -851,6 +851,20 @@ Wissensmanagement-Plattform für CANUSA Touristik GmbH & Co. KG und CU-Travel.
   - Auge-Icon Toggle bei "Passwort ändern" Dialog
   - Wechselt zwischen verborgenem und sichtbarem Passwort
 
+### Hilfe-Seite "How to Nexus" (31.03.2026)
+
+- **Neues Feature**: Dedizierte Hilfe-Seite unter `/help`
+  - Fragezeichen-Icon (?) im Header neben Glocke und Benutzername
+  - 6 Sektionen: Übersicht, Tipps, Backup/Versionen, Benutzerverwaltung, Kommentare, Berechtigungen
+  - Navigation links, Inhalt rechts (Split-View)
+  - Für alle Rollen sichtbar (Admin, Editor, Viewer)
+  - Inhalte aus den alten "How to Nexus"-Artikeln übernommen
+  - InfoBox-Komponenten mit 4 Typen (Tipp/Info/Warnung/Gefahr)
+  - Statische React-Komponenten (kein DB-Inhalt, wird direkt im Code gepflegt)
+- **Alte Artikel löschen**: Die "How to Nexus"-Artikel sollen nach dem Deployment auf dem Produktionsserver gelöscht werden
+- **Neue Dateien**: `/app/frontend/src/pages/Help.jsx`
+- **Geänderte Dateien**: `Layout.jsx` (Header-Icon), `App.js` (Route)
+
 ## Backlog / Verbleibende Aufgaben
 
 - Google Drive Bugs beheben (Export zu Shared Drives, falsche Dateiliste) - **ON HOLD**: Benutzer muss zuerst Test-URLs in Google Console eintragen
