@@ -831,6 +831,26 @@ Wissensmanagement-Plattform für CANUSA Touristik GmbH & Co. KG und CU-Travel.
 - ✅ **Intelligente Tag-Anpassung**: Tag-Dropdown passt sich an Monat/Jahr an (z.B. max 28/29 für Februar)
 - ✅ **"Ablaufdatum entfernen"**: Button zum Zurücksetzen erscheint nach Datumsauswahl
 
+### Iteration 41 - Dashboard & Benutzerverwaltung (31.03.2026)
+
+- **Bug Fix**: Abgelaufene/Bald ablaufende Artikel für ALLE Benutzer sichtbar
+  - `created_by`-Filter in `stats.py` entfernt
+  - Alle Benutzer (nicht nur der Ersteller) sehen jetzt ablaufende und abgelaufene Artikel auf dem Dashboard
+  - Dismiss-Funktion bleibt pro Benutzer individuell
+
+- **Feature**: "Meine Entwürfe" Sektion auf dem Dashboard
+  - Zeigt alle Artikel im Entwurfsstatus des eingeloggten Benutzers
+  - Platziert unterhalb der Favoriten-Sektion
+  - Zeigt Kategorie-Breadcrumbs, Datum und "Entwurf"-Badge
+  - Klick auf Entwurf öffnet den Artikel-Editor
+  - "Alle anzeigen" Button navigiert zur Artikelübersicht
+  - Backend: `my_drafts` Array im `/api/stats` Endpunkt
+
+- **UI-Verbesserung**: Passwort-Sichtbarkeit in der Benutzerverwaltung
+  - Auge-Icon Toggle bei "Neuer Benutzer" Passwort-Feld
+  - Auge-Icon Toggle bei "Passwort ändern" Dialog
+  - Wechselt zwischen verborgenem und sichtbarem Passwort
+
 ## Backlog / Verbleibende Aufgaben
 
 - Google Drive Bugs beheben (Export zu Shared Drives, falsche Dateiliste) - **ON HOLD**: Benutzer muss zuerst Test-URLs in Google Console eintragen
