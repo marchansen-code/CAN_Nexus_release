@@ -87,7 +87,7 @@ const Sidebar = ({ className = "", onNavigate, userRole }) => {
       {/* Footer */}
       <div className="p-4 border-t">
         <p className="text-xs text-muted-foreground text-center">
-          CANUSA Nexus v1.4
+          CANUSA Nexus v1.5
         </p>
       </div>
     </aside>
