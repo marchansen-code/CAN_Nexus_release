@@ -17,7 +17,8 @@ import {
   UsersRound,
   Trash2,
   Command,
-  Home
+  Home,
+  HelpCircle
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -177,6 +178,18 @@ const Header = () => {
 
           {/* Notification Center */}
           <NotificationCenter />
+
+          {/* Help Button */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-9 w-9 text-muted-foreground hover:text-foreground"
+            onClick={() => navigate("/help")}
+            title="Hilfe — How to Nexus"
+            data-testid="help-btn"
+          >
+            <HelpCircle className="w-5 h-5" />
+          </Button>
 
           {/* User Menu */}
           <DropdownMenu>

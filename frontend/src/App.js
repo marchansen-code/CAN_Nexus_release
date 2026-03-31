@@ -19,6 +19,7 @@ import UserManagement from "@/pages/UserManagement";
 import Groups from "@/pages/Groups";
 import Backup from "@/pages/Backup";
 import Trash from "@/pages/Trash";
+import Help from "@/pages/Help";
 import Layout from "@/components/Layout";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -209,6 +210,16 @@ const AppRouter = () => {
           <ProtectedRoute>
             <Layout>
               <Trash />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/help"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <Help />
             </Layout>
           </ProtectedRoute>
         }
