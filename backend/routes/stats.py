@@ -61,11 +61,26 @@ async def get_stats(user: User = Depends(get_current_user)):
     user_articles_count = await db.articles.count_documents({"created_by": user.user_id})
     user_documents_count = await db.documents.count_documents({"uploaded_by": user.user_id})
     
-    # Get articles with expiry date within 14 days (visible to all users)
+    # Get articles with expiry date within 14 days
+    # Visible to: author (created_by) OR users with edit permissions (user_ids or group_ids)
     now = datetime.now(timezone.utc)
     expiry_threshold = now + timedelta(days=14)
+    
+    # Get user's group memberships for edit permission check
+    user_doc = await db.users.find_one({"user_id": user.user_id}, {"_id": 0, "group_ids": 1})
+    user_group_ids = user_doc.get("group_ids", []) if user_doc else []
+    
+    # Build visibility filter: author OR edit_permission_user_ids OR edit_permission_group_ids
+    visibility_filter = [
+        {"created_by": user.user_id},
+        {"edit_permission_user_ids": user.user_id}
+    ]
+    if user_group_ids:
+        visibility_filter.append({"edit_permission_group_ids": {"$in": user_group_ids}})
+    
     expiring_articles = await db.articles.find(
         {
+            "$or": visibility_filter,
             "expiry_date": {
                 "$ne": None,
                 "$lte": expiry_threshold.isoformat(),
@@ -76,7 +91,7 @@ async def get_stats(user: User = Depends(get_current_user)):
         {"_id": 0}
     ).sort("expiry_date", 1).to_list(50)
     
-    # Get already expired articles (visible to all users)
+    # Get already expired articles (same visibility: author OR edit permissions)
     dismissed_docs = await db.dismissed_expired_articles.find(
         {"user_id": user.user_id},
         {"article_id": 1}
@@ -84,6 +99,7 @@ async def get_stats(user: User = Depends(get_current_user)):
     dismissed_ids = [d.get("article_id") for d in dismissed_docs]
     
     expired_articles_query = {
+        "$or": visibility_filter,
         "expiry_date": {
             "$ne": None,
             "$lte": now.isoformat()

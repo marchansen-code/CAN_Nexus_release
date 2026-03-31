@@ -833,10 +833,10 @@ Wissensmanagement-Plattform für CANUSA Touristik GmbH & Co. KG und CU-Travel.
 
 ### Iteration 41 - Dashboard & Benutzerverwaltung (31.03.2026)
 
-- **Bug Fix**: Abgelaufene/Bald ablaufende Artikel für ALLE Benutzer sichtbar
-  - `created_by`-Filter in `stats.py` entfernt
-  - Alle Benutzer (nicht nur der Ersteller) sehen jetzt ablaufende und abgelaufene Artikel auf dem Dashboard
-  - Dismiss-Funktion bleibt pro Benutzer individuell
+- **Bug Fix (Iteration 41 Korrektur)**: Abgelaufene Artikel nur für Autor + Schreibberechtigte
+  - Ablaufende und abgelaufene Artikel sind nur für den Autor und Benutzer mit Schreibberechtigung sichtbar
+  - Prüft `created_by`, `edit_permission_user_ids` und `edit_permission_group_ids`
+  - Andere Benutzer sehen diese Artikel nicht auf ihrem Dashboard
 
 - **Feature**: "Meine Entwürfe" Sektion auf dem Dashboard
   - Zeigt alle Artikel im Entwurfsstatus des eingeloggten Benutzers
