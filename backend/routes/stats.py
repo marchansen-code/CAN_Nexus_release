@@ -61,24 +61,22 @@ async def get_stats(user: User = Depends(get_current_user)):
     user_articles_count = await db.articles.count_documents({"created_by": user.user_id})
     user_documents_count = await db.documents.count_documents({"uploaded_by": user.user_id})
     
-    # Get articles with expiry date within 14 days (created by this user)
+    # Get articles with expiry date within 14 days (visible to all users)
     now = datetime.now(timezone.utc)
     expiry_threshold = now + timedelta(days=14)
     expiring_articles = await db.articles.find(
         {
-            "created_by": user.user_id,
             "expiry_date": {
                 "$ne": None,
                 "$lte": expiry_threshold.isoformat(),
                 "$gt": now.isoformat()
             },
-            "status": {"$ne": "draft"}  # Only warn for non-draft articles
+            "status": {"$ne": "draft"}
         },
         {"_id": 0}
     ).sort("expiry_date", 1).to_list(50)
     
-    # Get already expired articles (created by this user)
-    # Get dismissed article IDs for this user
+    # Get already expired articles (visible to all users)
     dismissed_docs = await db.dismissed_expired_articles.find(
         {"user_id": user.user_id},
         {"article_id": 1}
@@ -86,7 +84,6 @@ async def get_stats(user: User = Depends(get_current_user)):
     dismissed_ids = [d.get("article_id") for d in dismissed_docs]
     
     expired_articles_query = {
-        "created_by": user.user_id,
         "expiry_date": {
             "$ne": None,
             "$lte": now.isoformat()
@@ -109,8 +106,18 @@ async def get_stats(user: User = Depends(get_current_user)):
                 expiry = datetime.fromisoformat(article["expiry_date"].replace("Z", "+00:00"))
                 days_expired = (now - expiry).days
                 article["days_expired"] = days_expired
-            except:
+            except Exception:
                 article["days_expired"] = 0
+    
+    # Get user's own draft articles for "Meine Entwürfe" section
+    my_drafts = await db.articles.find(
+        {
+            "created_by": user.user_id,
+            "status": "draft",
+            "deleted_at": {"$exists": False}
+        },
+        {"_id": 0}
+    ).sort("updated_at", -1).to_list(20)
     
     return {
         "total_articles": total_articles,
@@ -126,6 +133,7 @@ async def get_stats(user: User = Depends(get_current_user)):
         "recently_viewed": recently_viewed,
         "expiring_articles": expiring_articles,
         "expired_articles": expired_articles,
+        "my_drafts": my_drafts,
         "user_stats": {
             "articles_created": user_articles_count,
             "documents_uploaded": user_documents_count

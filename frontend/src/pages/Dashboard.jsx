@@ -35,7 +35,8 @@ import {
   Mail,
   X,
   XCircle,
-  EyeOff
+  EyeOff,
+  FileEdit
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -765,6 +766,61 @@ const Dashboard = () => {
           )}
         </CardContent>
       </Card>
+
+      {/* Meine Entwürfe Section */}
+      {stats?.my_drafts?.length > 0 && (
+        <Card data-testid="my-drafts-section">
+          <CardHeader className="flex flex-row items-center justify-between pb-3">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <FileEdit className="w-5 h-5 text-slate-500" />
+              Meine Entwürfe
+              <Badge variant="secondary" className="ml-2">
+                {stats.my_drafts.length}
+              </Badge>
+            </CardTitle>
+            <Button variant="ghost" size="sm" onClick={() => navigate("/articles")} data-testid="view-all-drafts-btn">
+              Alle anzeigen
+              <ChevronRight className="w-4 h-4 ml-1" />
+            </Button>
+          </CardHeader>
+          <CardContent>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {stats.my_drafts.slice(0, 6).map((article) => (
+                <div
+                  key={article.article_id}
+                  className="flex items-center justify-between p-3 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-muted/50 transition-colors cursor-pointer"
+                  onClick={() => navigateToArticle(`/articles/${article.article_id}/edit`)}
+                  data-testid={`draft-article-${article.article_id}`}
+                >
+                  <div className="space-y-1 min-w-0 flex-1">
+                    <p className="font-medium truncate">{article.title || "Ohne Titel"}</p>
+                    {/* Breadcrumb */}
+                    {(() => {
+                      const path = buildCategoryPath(article.category_ids?.[0] || article.category_id);
+                      return path.length > 0 ? (
+                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                          <FolderTree className="w-3 h-3 shrink-0" />
+                          {path.map((cat, index) => (
+                            <React.Fragment key={cat.category_id}>
+                              {index > 0 && <ChevronRight className="w-3 h-3 shrink-0" />}
+                              <span className="truncate max-w-[80px]">{cat.name}</span>
+                            </React.Fragment>
+                          ))}
+                        </div>
+                      ) : null;
+                    })()}
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <Clock className="w-3 h-3" />
+                      {article.updated_at ? new Date(article.updated_at).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric" }) : ""}
+                    </div>
+                  </div>
+                  <Badge variant="outline" className="status-draft border shrink-0 ml-2">Entwurf</Badge>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Recently Viewed Section */}
       <Card>

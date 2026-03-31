@@ -7,6 +7,7 @@ import {
   Shield,
   ShieldCheck,
   Eye,
+  EyeOff,
   Edit,
   Search,
   UserPlus,
@@ -102,6 +103,8 @@ const UserManagement = () => {
   const [passwordDialog, setPasswordDialog] = useState({ open: false, user: null });
   const [newUser, setNewUser] = useState({ email: "", name: "", password: "", role: "viewer" });
   const [newPassword, setNewPassword] = useState("");
+  const [showNewUserPassword, setShowNewUserPassword] = useState(false);
+  const [showChangePassword, setShowChangePassword] = useState(false);
   const [saving, setSaving] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
   const [transferToUserId, setTransferToUserId] = useState("");
@@ -225,6 +228,7 @@ const UserManagement = () => {
       toast.success("Benutzer erfolgreich angelegt");
       setCreateDialog(false);
       setNewUser({ email: "", name: "", password: "", role: "viewer" });
+      setShowNewUserPassword(false);
       fetchUsers();
     } catch (error) {
       console.error("Failed to create user:", error);
@@ -249,6 +253,7 @@ const UserManagement = () => {
       toast.success("Passwort erfolgreich geändert");
       setPasswordDialog({ open: false, user: null });
       setNewPassword("");
+      setShowChangePassword(false);
     } catch (error) {
       console.error("Failed to change password:", error);
       toast.error("Passwort konnte nicht geändert werden");
@@ -794,13 +799,27 @@ const UserManagement = () => {
             </div>
             <div className="space-y-2">
               <Label htmlFor="new-password">Passwort *</Label>
-              <Input
-                id="new-password"
-                type="password"
-                placeholder="Mindestens 6 Zeichen"
-                value={newUser.password}
-                onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
-              />
+              <div className="relative">
+                <Input
+                  id="new-password"
+                  type={showNewUserPassword ? "text" : "password"}
+                  placeholder="Mindestens 6 Zeichen"
+                  value={newUser.password}
+                  onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
+                  className="pr-10"
+                  data-testid="new-user-password-input"
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
+                  onClick={() => setShowNewUserPassword(!showNewUserPassword)}
+                  data-testid="toggle-new-user-password"
+                >
+                  {showNewUserPassword ? <EyeOff className="w-4 h-4 text-muted-foreground" /> : <Eye className="w-4 h-4 text-muted-foreground" />}
+                </Button>
+              </div>
             </div>
             <div className="space-y-2">
               <Label>Rolle</Label>
@@ -878,13 +897,27 @@ const UserManagement = () => {
             
             <div className="space-y-2">
               <Label htmlFor="new-password-change">Neues Passwort *</Label>
-              <Input
-                id="new-password-change"
-                type="password"
-                placeholder="Mindestens 6 Zeichen"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-              />
+              <div className="relative">
+                <Input
+                  id="new-password-change"
+                  type={showChangePassword ? "text" : "password"}
+                  placeholder="Mindestens 6 Zeichen"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  className="pr-10"
+                  data-testid="change-password-input"
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
+                  onClick={() => setShowChangePassword(!showChangePassword)}
+                  data-testid="toggle-change-password"
+                >
+                  {showChangePassword ? <EyeOff className="w-4 h-4 text-muted-foreground" /> : <Eye className="w-4 h-4 text-muted-foreground" />}
+                </Button>
+              </div>
             </div>
             
             <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
